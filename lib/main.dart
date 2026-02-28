@@ -8,9 +8,9 @@ import 'layout/widgets/cosmic_background.dart';
 
 // Conditional imports
 import 'web3/web3_stub.dart'
-    if (dart.library.js) 'web3/web3_service.dart';
+    if (dart.library.js) 'web3/web3_web.dart';
 import 'widgets/wallet_connect_stub.dart'
-    if (dart.library.js) 'widgets/wallet_connect_button.dart';
+    if (dart.library.js) 'widgets/wallet_connect_web.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,10 +45,14 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
-  final List<Widget> _pages = [
+
+  // Conditional Web3Service instance for Web
+  late final web3Service = Web3Service();
+
+  late final List<Widget> _pages = [
     const HomeScreen(),
     const MiningScreen(),
-    const WalletScreen(),
+    WalletScreen(web3Service: web3Service),
   ];
 
   @override

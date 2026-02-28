@@ -1,3 +1,4 @@
+// lib/web3/web3_stub.dart
 class Web3Service {
   bool get isConnected => false;
 
