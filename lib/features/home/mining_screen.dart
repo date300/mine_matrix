@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:math' as math;
-import 'dart:async'; // টাইমারের জন্য
+import 'dart:async'; // টাইমার এবং রিয়াল-টাইম আপডেটের জন্য
+
+// আপনার ওয়ালেট কানেক্ট বাটনের ইমপোর্ট
+import '../../../widgets/wallet_connect_button.dart';
 
 void main() {
   runApp(const VexylonApp());
@@ -13,10 +16,10 @@ class VexylonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // ডিব্যাগ ব্যানার সরানো হয়েছে
+      debugShowCheckedModeBanner: false,
       title: 'Vexylon Pro Mining',
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0B0C10), // নিয়ন ইফেক্টের জন্য ডার্ক ব্যাকগ্রাউন্ড
+        scaffoldBackgroundColor: const Color(0xFF0B0C10), // ডার্ক নিয়ন ব্যাকগ্রাউন্ড
       ),
       home: const MiningScreen(),
     );
@@ -34,9 +37,9 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   Timer? _miningTimer;
   
-  bool isMining = false; // শুরুতে মাইনিং বন্ধ থাকবে
+  bool isMining = false; // শুরুতে মাইনিং বন্ধ
   double balance = 4520.5000;
-  double progress = 0.0; // প্রোগ্রেস বারের শুরুর ভ্যালু
+  double progress = 0.0;
 
   @override
   void initState() {
@@ -45,8 +48,6 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(seconds: 8),
     );
-    // যদি শুরুতে isMining true রাখতে চান, তবে নিচের ফাংশন কল করতে পারেন
-    // _startMining(); 
   }
 
   void _toggleMining() {
@@ -63,13 +64,12 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   }
 
   void _startMiningTimer() {
-    // প্রতি ১০০ মিলি-সেকেন্ড পর পর ব্যালেন্স ও প্রোগ্রেস আপডেট হবে
     _miningTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       setState(() {
-        balance += 0.0005; // ডেমো ব্যালেন্স বৃদ্ধি
-        progress += 0.002; // ডেমো প্রোগ্রেস বৃদ্ধি
+        balance += 0.0005; // ব্যালেন্স বৃদ্ধি
+        progress += 0.002; // প্রোগ্রেস বৃদ্ধি
         if (progress >= 1.0) {
-          progress = 0.0; // প্রোগ্রেস ফুল হলে আবার জিরো হবে
+          progress = 0.0;
         }
       });
     });
@@ -78,7 +78,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _controller.dispose();
-    _miningTimer?.cancel(); // অ্যাপ বন্ধ হলে টাইমার ক্যানসেল করা
+    _miningTimer?.cancel();
     super.dispose();
   }
 
@@ -109,13 +109,13 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  _buildHeader(),
+                  _buildHeader(), // হেডার যেখানে ওয়ালেট কানেক্ট বাটন আছে
                   const SizedBox(height: 30),
                   _buildBalanceSection(),
                   const SizedBox(height: 40),
                   _buildMiningOrb(),
                   const SizedBox(height: 30),
-                  _buildProgressBar(), // প্রোগ্রেস বার সবসময় দেখাবে, শুধু মাইনিং হলে এগোবে
+                  _buildProgressBar(),
                   const SizedBox(height: 40),
                   const Align(
                     alignment: Alignment.centerLeft,
@@ -149,14 +149,21 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
             const Text("VEXYLON PRO", style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: const Icon(CupertinoIcons.bell_fill, color: Color(0xFF14F195), size: 20),
+        // ডানদিকের অংশ (ওয়ালেট কানেক্ট বাটন + নোটিফিকেশন আইকন)
+        Row(
+          children: [
+            const WalletConnectButton(), // আপনার কাস্টম উইজেট
+            const SizedBox(width: 12), // মাঝখানে একটু গ্যাপ
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              child: const Icon(CupertinoIcons.bell_fill, color: Color(0xFF14F195), size: 20),
+            ),
+          ],
         )
       ],
     );
@@ -181,7 +188,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                balance.toStringAsFixed(4), // ব্যালেন্স রিয়াল-টাইম আপডেট হবে
+                balance.toStringAsFixed(4),
                 style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w900),
               ),
               const SizedBox(width: 8),
@@ -204,7 +211,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
 
   Widget _buildMiningOrb() {
     return GestureDetector(
-      onTap: _toggleMining, // ট্যাপ করলে মাইনিং শুরু বা বন্ধ হবে
+      onTap: _toggleMining,
       child: SizedBox(
         width: 200,
         height: 200,
@@ -264,14 +271,14 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   Widget _buildProgressBar() {
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 300),
-      opacity: isMining ? 1.0 : 0.3, // মাইনিং বন্ধ থাকলে প্রোগ্রেস বার হালকা হয়ে যাবে
+      opacity: isMining ? 1.0 : 0.3,
       child: Container(
         width: 220,
         height: 6,
         decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
         child: FractionallySizedBox(
           alignment: Alignment.centerLeft,
-          widthFactor: progress, // ডাইনামিক প্রোগ্রেস ভ্যালু
+          widthFactor: progress,
           child: Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
@@ -295,7 +302,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
 
   Widget _actionBtn(String label, IconData icon, Color color) {
     return InkWell(
-      onTap: () {}, // এখানে বাটনের কাজ যোগ করতে পারেন
+      onTap: () {},
       borderRadius: BorderRadius.circular(22),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),

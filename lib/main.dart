@@ -6,7 +6,9 @@ import 'features/home/mining_screen.dart';
 import 'features/home/wallet_screen.dart';
 import 'layout/widgets/bottom_nav.dart';
 import 'layout/widgets/cosmic_background.dart'; // ব্যাকগ্রাউন্ড উইজেট
-
+// Web3 ফাইলগুলো import
+import 'features/web3/web3_service.dart';
+import 'features/web3/widgets/wallet_connect_button.dart';
 void main() {
   // স্ট্যাটাস বার স্বচ্ছ করার জন্য (ঐচ্ছিক)
   WidgetsFlutterBinding.ensureInitialized();
