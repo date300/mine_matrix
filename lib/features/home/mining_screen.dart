@@ -3,8 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'dart:math' as math;
 import 'dart:async'; // টাইমার এবং রিয়াল-টাইম আপডেটের জন্য
 
-// আপনার ওয়ালেট কানেক্ট বাটনের ইমপোর্ট
-import '../../../widgets/wallet_connect_button.dart';
+// কন্ডিশনাল ইমপোর্ট: প্ল্যাটফর্ম অনুযায়ী সঠিক ফাইলটি লোড হবে
+import '../../../widgets/wallet_connect_stub.dart'
+    if (dart.library.js) '../../../widgets/wallet_connect_button.dart';
+import '../../../web3/web3_stub.dart'
+    if (dart.library.js) '../../../web3/web3_service.dart';
 
 void main() {
   runApp(const VexylonApp());
@@ -21,13 +24,16 @@ class VexylonApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0B0C10), // ডার্ক নিয়ন ব্যাকগ্রাউন্ড
       ),
-      home: const MiningScreen(),
+      // এখানে web3Service পাস করতে পারবেন (বর্তমানে null রাখা হয়েছে ডেমোর জন্য)
+      home: const MiningScreen(web3Service: null),
     );
   }
 }
 
 class MiningScreen extends StatefulWidget {
-  const MiningScreen({super.key});
+  final Web3Service? web3Service; // <-- Optional parameter added
+
+  const MiningScreen({super.key, this.web3Service});
 
   @override
   State<MiningScreen> createState() => _MiningScreenState();
@@ -109,7 +115,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  _buildHeader(), // হেডার যেখানে ওয়ালেট কানেক্ট বাটন আছে
+                  _buildHeader(), // হেডার আপডেট করা হয়েছে
                   const SizedBox(height: 30),
                   _buildBalanceSection(),
                   const SizedBox(height: 40),
@@ -152,8 +158,9 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
         // ডানদিকের অংশ (ওয়ালেট কানেক্ট বাটন + নোটিফিকেশন আইকন)
         Row(
           children: [
-            const WalletConnectButton(), // আপনার কাস্টম উইজেট
-            const SizedBox(width: 12), // মাঝখানে একটু গ্যাপ
+            // এখানে Web3Service পাস করা হলো
+            WalletConnectButton(web3Service: widget.web3Service), 
+            const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
