@@ -1,16 +1,25 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-// আপনার প্রজেক্টের ফাইলগুলো ইম্পোর্ট করা হচ্ছে
+
+// Core files
 import 'core/constants.dart';
+
+// Screens
 import 'features/home/home_screen.dart';
 import 'features/home/mining_screen.dart';
 import 'features/home/wallet_screen.dart';
+
+// Layout widgets
 import 'layout/widgets/bottom_nav.dart';
-import 'layout/widgets/cosmic_background.dart'; // ব্যাকগ্রাউন্ড উইজেট
-// Web3 ফাইলগুলো import
-import 'features/web3/web3_service.dart';
-import 'features/web3/widgets/wallet_connect_button.dart';
+import 'layout/widgets/cosmic_background.dart';
+
+// Web3 imports (Mobile uses real service, Web uses stubs)
+import 'web3/web3_service.dart'
+    if (dart.library.html) 'web3/web3_stub.dart';
+import 'widgets/wallet_connect_button.dart'
+    if (dart.library.html) 'widgets/wallet_connect_stub.dart';
+
 void main() {
-  // স্ট্যাটাস বার স্বচ্ছ করার জন্য (ঐচ্ছিক)
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MiningApp());
 }
@@ -23,12 +32,11 @@ class MiningApp extends StatelessWidget {
     return MaterialApp(
       title: 'Mining App',
       debugShowCheckedModeBanner: false,
-      // থিম সেটআপ
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: AppColors.emerald,
-        scaffoldBackgroundColor: AppColors.background, // আপনার দেওয়া 0xFF020617
-        fontFamily: 'Roboto', // আপনার যদি নির্দিষ্ট ফন্ট থাকে তবে এখানে দিন
+        scaffoldBackgroundColor: AppColors.background,
+        fontFamily: 'Roboto',
       ),
       home: const MainWrapper(),
     );
@@ -45,7 +53,6 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
-  // অ্যাপের প্রধান পেজগুলো
   final List<Widget> _pages = [
     const HomeScreen(),
     const MiningScreen(),
@@ -55,18 +62,13 @@ class _MainWrapperState extends State<MainWrapper> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // extendBody true থাকলে বটম নেভিগেশনের পেছনেও ব্যাকগ্রাউন্ড দেখা যাবে
-      extendBody: true, 
-      
-      // CosmicBackground আপনার পুরো অ্যাপের পেছনে এনিমেটেড আকাশ ও গ্রহ দেখাবে
+      extendBody: true,
       body: CosmicBackground(
         child: IndexedStack(
           index: _currentIndex,
           children: _pages,
         ),
       ),
-
-      // আপনার কাস্টম বটম নেভিগেশন বার
       bottomNavigationBar: FloatingBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {

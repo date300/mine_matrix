@@ -1,41 +1,40 @@
 import 'package:flutter_web3/flutter_web3.dart';
 
 class Web3Service {
-  // Project ID based provider (Infura / Alchemy)
-  // Replace YOUR_PROJECT_ID with your actual project ID
-  static final rpcProvider =
-      Web3Provider("https://goerli.infura.io/v3/YOUR_PROJECT_ID");
+  Ethereum? ethereum;
 
-  // Check if Ethereum is supported (MetaMask)
-  static bool get isSupported => Ethereum.isSupported;
+  // Infura Project ID দিয়ে RPC URL
+  static const String infuraProjectId = "a8db11f4eba940ae8baef730fd23792b"; // এখানে তোমার Project ID বসাও
 
-  // Connect Wallet (MetaMask)
-  static Future<String?> connectWallet() async {
-    if (!isSupported) return null;
-    try {
-      final accounts = await ethereum!.requestAccount();
-      return accounts.first;
-    } catch (e) {
-      print("Wallet connect failed: $e");
-      return null;
+  final Map<int, String> rpc = {
+    1: "https://mainnet.infura.io/v3/$infuraProjectId", // Ethereum Mainnet
+    5: "https://goerli.infura.io/v3/$infuraProjectId",  // Goerli Testnet
+  };
+
+  Web3Service() {
+    if (Ethereum.isSupported) {
+      ethereum = Ethereum();
     }
   }
 
-  // Get Balance using MetaMask
-  static Future<String?> getWalletBalance(String account) async {
-    if (!isSupported) return null;
+  bool get isConnected => ethereum != null && ethereum!.isConnected;
+
+  /// Connected account address ফেরত দেয়
+  Future<String?> getAccount() async {
+    if (ethereum == null) return null;
+    final accounts = await ethereum!.requestAccount();
+    return accounts.isNotEmpty ? accounts.first : null;
+  }
+
+  /// Account balance Ether এ ফেরত দেয়
+  Future<String?> getBalance(String account) async {
+    if (ethereum == null) return null;
     try {
       final balance = await ethereum!.getBalance(account);
-      return (balance.getValueInUnit(EtherUnit.ether)).toString();
+      return EtherAmount.fromBigInt(balance).getValueInUnit(EtherUnit.ether).toString();
     } catch (e) {
-      print("Get wallet balance failed: $e");
+      print("Error fetching balance: $e");
       return null;
     }
-  }
-
-  // Get Balance using RPC provider (project ID required)
-  static Future<String> getBalanceRPC(String account) async {
-    final balance = await rpcProvider.getBalance(account);
-    return (balance.getValueInUnit(EtherUnit.ether)).toString();
   }
 }

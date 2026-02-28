@@ -2,43 +2,43 @@ import 'package:flutter/material.dart';
 import '../web3/web3_service.dart';
 
 class WalletConnectButton extends StatefulWidget {
-  final Function(String account, String? balance)? onConnected;
-
-  const WalletConnectButton({super.key, this.onConnected});
+  const WalletConnectButton({super.key});
 
   @override
   State<WalletConnectButton> createState() => _WalletConnectButtonState();
 }
 
 class _WalletConnectButtonState extends State<WalletConnectButton> {
+  final Web3Service _web3 = Web3Service();
   String? _account;
   String? _balance;
 
   @override
+  void initState() {
+    super.initState();
+    _initWallet();
+  }
+
+  Future<void> _initWallet() async {
+    final account = await _web3.getAccount();
+    if (account != null) {
+      final balance = await _web3.getBalance(account);
+      setState(() {
+        _account = account;
+        _balance = balance;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ElevatedButton(
-          onPressed: () async {
-            final account = await Web3Service.connectWallet();
-            if (account != null) {
-              final balance = await Web3Service.getWalletBalance(account);
-              setState(() {
-                _account = account;
-                _balance = balance;
-              });
-              if (widget.onConnected != null) {
-                widget.onConnected!(account, balance);
-              }
-            }
-          },
-          child: Text(_account == null
-              ? "Connect Wallet"
-              : "Connected: ${_account!.substring(0, 6)}...${_account!.substring(_account!.length - 4)}"),
-        ),
-        if (_balance != null) Text("Balance: $_balance ETH")
-      ],
+    return ElevatedButton(
+      onPressed: _initWallet,
+      child: Text(
+        _account != null
+            ? "Connected: ${_account!.substring(0, 6)}...${_account!.substring(_account!.length - 4)} | $_balance ETH"
+            : "Connect Wallet",
+      ),
     );
   }
 }
