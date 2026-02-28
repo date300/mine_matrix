@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:math' as math;
+import 'dart:async'; // টাইমারের জন্য
+
+void main() {
+  runApp(const VexylonApp());
+}
+
+class VexylonApp extends StatelessWidget {
+  const VexylonApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false, // ডিব্যাগ ব্যানার সরানো হয়েছে
+      title: 'Vexylon Pro Mining',
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0B0C10), // নিয়ন ইফেক্টের জন্য ডার্ক ব্যাকগ্রাউন্ড
+      ),
+      home: const MiningScreen(),
+    );
+  }
+}
 
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
@@ -11,8 +32,11 @@ class MiningScreen extends StatefulWidget {
 
 class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  bool isMining = true; 
+  Timer? _miningTimer;
+  
+  bool isMining = false; // শুরুতে মাইনিং বন্ধ থাকবে
   double balance = 4520.5000;
+  double progress = 0.0; // প্রোগ্রেস বারের শুরুর ভ্যালু
 
   @override
   void initState() {
@@ -20,19 +44,48 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
-    )..repeat();
+    );
+    // যদি শুরুতে isMining true রাখতে চান, তবে নিচের ফাংশন কল করতে পারেন
+    // _startMining(); 
+  }
+
+  void _toggleMining() {
+    setState(() {
+      isMining = !isMining;
+      if (isMining) {
+        _controller.repeat();
+        _startMiningTimer();
+      } else {
+        _controller.stop();
+        _miningTimer?.cancel();
+      }
+    });
+  }
+
+  void _startMiningTimer() {
+    // প্রতি ১০০ মিলি-সেকেন্ড পর পর ব্যালেন্স ও প্রোগ্রেস আপডেট হবে
+    _miningTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      setState(() {
+        balance += 0.0005; // ডেমো ব্যালেন্স বৃদ্ধি
+        progress += 0.002; // ডেমো প্রোগ্রেস বৃদ্ধি
+        if (progress >= 1.0) {
+          progress = 0.0; // প্রোগ্রেস ফুল হলে আবার জিরো হবে
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _miningTimer?.cancel(); // অ্যাপ বন্ধ হলে টাইমার ক্যানসেল করা
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // ব্যাকগ্রাউন্ড ট্রান্সপারেন্ট
+      backgroundColor: Colors.transparent, 
       body: Stack(
         children: [
           // ওপরের দিকে হালকা নিয়ন গ্লো
@@ -59,10 +112,10 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
                   _buildHeader(),
                   const SizedBox(height: 30),
                   _buildBalanceSection(),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
                   _buildMiningOrb(),
                   const SizedBox(height: 30),
-                  if (isMining) _buildProgressBar(),
+                  _buildProgressBar(), // প্রোগ্রেস বার সবসময় দেখাবে, শুধু মাইনিং হলে এগোবে
                   const SizedBox(height: 40),
                   const Align(
                     alignment: Alignment.centerLeft,
@@ -124,11 +177,11 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.baseline, // এররটি এখানে ফিক্স করা হয়েছে
+            crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                balance.toStringAsFixed(4),
+                balance.toStringAsFixed(4), // ব্যালেন্স রিয়াল-টাইম আপডেট হবে
                 style: const TextStyle(color: Colors.white, fontSize: 38, fontWeight: FontWeight.w900),
               ),
               const SizedBox(width: 8),
@@ -150,72 +203,80 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   }
 
   Widget _buildMiningOrb() {
-    return SizedBox(
-      width: 200,
-      height: 200,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (isMining)
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Container(
-                  width: 160 + (15 * math.sin(_controller.value * 2 * math.pi)),
-                  height: 160 + (15 * math.sin(_controller.value * 2 * math.pi)),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF14F195).withOpacity(0.05),
-                  ),
-                );
-              },
-            ),
-          RotationTransition(
-            turns: _controller,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF14F195).withOpacity(0.2), width: 1),
+    return GestureDetector(
+      onTap: _toggleMining, // ট্যাপ করলে মাইনিং শুরু বা বন্ধ হবে
+      child: SizedBox(
+        width: 200,
+        height: 200,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (isMining)
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Container(
+                    width: 160 + (15 * math.sin(_controller.value * 2 * math.pi)),
+                    height: 160 + (15 * math.sin(_controller.value * 2 * math.pi)),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF14F195).withOpacity(0.05),
+                    ),
+                  );
+                },
+              ),
+            RotationTransition(
+              turns: _controller,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF14F195).withOpacity(0.2), width: 1),
+                ),
               ),
             ),
-          ),
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.4),
-              shape: BoxShape.circle,
-              border: Border.all(color: isMining ? const Color(0xFF14F195) : Colors.white24, width: 3),
-              boxShadow: isMining ? [BoxShadow(color: const Color(0xFF14F195).withOpacity(0.2), blurRadius: 15)] : [],
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4),
+                shape: BoxShape.circle,
+                border: Border.all(color: isMining ? const Color(0xFF14F195) : Colors.white24, width: 3),
+                boxShadow: isMining ? [BoxShadow(color: const Color(0xFF14F195).withOpacity(0.2), blurRadius: 15)] : [],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill, color: isMining ? const Color(0xFF14F195) : Colors.grey, size: 28),
+                  const SizedBox(height: 5),
+                  Text(isMining ? "RUNNING" : "START", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
+                ],
+              ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill, color: isMining ? const Color(0xFF14F195) : Colors.grey, size: 28),
-                const SizedBox(height: 5),
-                Text(isMining ? "RUNNING" : "START", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildProgressBar() {
-    return Container(
-      width: 220,
-      height: 6,
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-      child: FractionallySizedBox(
-        alignment: Alignment.centerLeft,
-        widthFactor: 0.45,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
-            borderRadius: BorderRadius.circular(10),
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 300),
+      opacity: isMining ? 1.0 : 0.3, // মাইনিং বন্ধ থাকলে প্রোগ্রেস বার হালকা হয়ে যাবে
+      child: Container(
+        width: 220,
+        height: 6,
+        decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: progress, // ডাইনামিক প্রোগ্রেস ভ্যালু
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         ),
       ),
@@ -233,19 +294,23 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   }
 
   Widget _actionBtn(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 26),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
-        ],
+    return InkWell(
+      onTap: () {}, // এখানে বাটনের কাজ যোগ করতে পারেন
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 26),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900)),
+          ],
+        ),
       ),
     );
   }
@@ -253,7 +318,7 @@ class _MiningScreenState extends State<MiningScreen> with SingleTickerProviderSt
   Widget _buildStatsGrid() {
     return Row(
       children: [
-        Expanded(child: _statCard("HASHRATE", "450 TH/S", CupertinoIcons.gauge, const Color(0xFF14F195))),
+        Expanded(child: _statCard("HASHRATE", isMining ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, const Color(0xFF14F195))),
         const SizedBox(width: 15),
         Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent)),
       ],
