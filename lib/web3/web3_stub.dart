@@ -1,11 +1,7 @@
 class Web3Service {
-  Web3Service();
+  bool get isConnected => false;
 
-  Future<String> getBalance(String account) async {
-    return "0"; // Web এ dummy balance
-  }
+  Future<String?> getAccount() async => null;
 
-  Future<String> sendTransaction(String to, double amount) async {
-    return "0x0"; // Web এ dummy txn
-  }
+  Future<String?> getBalance(String account) async => null;
 }

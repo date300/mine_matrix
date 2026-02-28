@@ -8,7 +8,7 @@ class WalletConnectButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: () {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Wallet connect not available on Web")),
+          const SnackBar(content: Text("Wallet connection is only available on Web")),
         );
       },
       child: const Text("Connect Wallet"),

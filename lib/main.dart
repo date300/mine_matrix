@@ -1,23 +1,16 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-
-// Core files
 import 'core/constants.dart';
-
-// Screens
 import 'features/home/home_screen.dart';
 import 'features/home/mining_screen.dart';
 import 'features/home/wallet_screen.dart';
-
-// Layout widgets
 import 'layout/widgets/bottom_nav.dart';
 import 'layout/widgets/cosmic_background.dart';
 
-// Web3 imports (Mobile uses real service, Web uses stubs)
-import 'web3/web3_service.dart'
-    if (dart.library.html) 'web3/web3_stub.dart';
-import 'widgets/wallet_connect_button.dart'
-    if (dart.library.html) 'widgets/wallet_connect_stub.dart';
+// Conditional imports
+import 'web3/web3_stub.dart'
+    if (dart.library.js) 'web3/web3_service.dart';
+import 'widgets/wallet_connect_stub.dart'
+    if (dart.library.js) 'widgets/wallet_connect_button.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +45,6 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
-
   final List<Widget> _pages = [
     const HomeScreen(),
     const MiningScreen(),
