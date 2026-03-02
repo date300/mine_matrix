@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:animated_background/animated_background.dart'; // পার্টিকল এনিমেশনের জন্য ইমপোর্ট করা হয়েছে
 
 class CosmicBackground extends StatefulWidget {
   final Widget child;
@@ -15,10 +16,10 @@ class _CosmicBackgroundState extends State<CosmicBackground> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    // এনিমেশনটি লুপে চলার জন্য। ৩-৫ সেকেন্ড দিলে তারাগুলো খুব প্রফেশনালভাবে জ্বলবে-নিভবে।
+    // তারাগুলোর টুইঙ্কলিং ইফেক্টের জন্য এনিমেশন কন্ট্রোলার
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4), 
+      duration: const Duration(seconds: 4),
     )..repeat();
   }
 
@@ -31,10 +32,10 @@ class _CosmicBackgroundState extends State<CosmicBackground> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF020617), // আপনার নির্দিষ্ট ব্যাকগ্রাউন্ড কালার
+      backgroundColor: const Color(0xFF020617), // ডার্ক কসমিক ব্যাকগ্রাউন্ড
       body: Stack(
         children: [
-          // প্রফেশনাল স্টার এনিমেশন লেয়ার
+          // ১. স্টার এনিমেশন লেয়ার (Custom Painter)
           AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
@@ -44,7 +45,29 @@ class _CosmicBackgroundState extends State<CosmicBackground> with SingleTickerPr
               );
             },
           ),
-          // আপনার অ্যাপের কন্টেন্ট (HomeScreen)
+
+          // ২. মাইনিং পেজের ব্যাকগ্রাউন্ড লেয়ার (পার্টিকল এনিমেশন)
+          // আপনার প্রথম ফাইলে দেওয়া ব্যাকগ্রাউন্ড লজিকটি এখানে যুক্ত করা হয়েছে
+          AnimatedBackground(
+            vsync: this,
+            behaviour: RandomParticleBehaviour(
+              options: ParticleOptions(
+                baseColor: const Color(0xFF14F195).withOpacity(0.2),
+                spawnOpacity: 0.1,
+                opacityChangeRate: 0.25,
+                minOpacity: 0.1,
+                maxOpacity: 0.3,
+                particleCount: 20,
+                spawnMaxRadius: 15,
+                spawnMinRadius: 5,
+                spawnMaxSpeed: 20,
+                spawnMinSpeed: 10,
+              ),
+            ),
+            child: Container(),
+          ),
+
+          // ৩. আপনার অ্যাপের মেইন কন্টেন্ট (যা এই ব্যাকগ্রাউন্ডের উপরে থাকবে)
           widget.child,
         ],
       ),
@@ -52,29 +75,24 @@ class _CosmicBackgroundState extends State<CosmicBackground> with SingleTickerPr
   }
 }
 
+// আপনার কাস্টম স্টার পেইন্টার লজিক
 class StarFieldPainter extends CustomPainter {
   final double animationValue;
   StarFieldPainter(this.animationValue);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final random = Random(42); // তারাগুলোর পজিশন ফিক্সড রাখার জন্য
+    final random = Random(42);
     final paint = Paint()..color = Colors.white;
 
     for (int i = 0; i < 120; i++) {
-      // র‍্যান্ডম পজিশন
       double x = random.nextDouble() * size.width;
       double y = random.nextDouble() * size.height;
-      
-      // তারার সাইজ (কিছু ছোট, কিছু বড় - এতে ডেপথ তৈরি হয়)
       double starSize = random.nextDouble() * 1.8;
 
-      // প্রফেশনাল টুইঙ্কলিং লজিক (Fade in & Fade out)
-      // সিনাসয়ডাল ওয়েভ ব্যবহার করা হয়েছে যাতে হঠাৎ করে অদৃশ্য না হয়ে ধীরে ধীরে হয়
       double individualOffset = random.nextDouble() * pi * 2;
       double opacity = (sin(animationValue * pi * 2 + individualOffset) + 1) / 2;
 
-      // ঝকঝকে ইফেক্টের জন্য একটু গ্লো যোগ করা (ঐচ্ছিক)
       canvas.drawCircle(
         Offset(x, y),
         starSize,
