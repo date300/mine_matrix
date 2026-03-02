@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart'; // GetX যোগ করা হয়েছে
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // ScreenUtil যোগ করা হয়েছে
+import 'package:google_fonts/google_fonts.dart';
+
+// আপনার প্রোজেক্টের পাথ অনুযায়ী এগুলো চেক করে নিন
 import 'core/constants.dart';
 import 'features/home/home_screen.dart';
 import 'features/home/mining_screen.dart';
 import 'features/home/wallet_screen.dart';
 import 'layout/widgets/bottom_nav.dart';
-import 'layout/widgets/cosmic_background.dart';
-
-// Conditional imports
-import 'web3/web3_stub.dart'
-    if (dart.library.js) 'web3/web3_web.dart';
-import 'widgets/wallet_connect_stub.dart'
-    if (dart.library.js) 'widgets/wallet_connect_web.dart';
+// cosmic_background যদি গ্লাস ইফেক্টের সাথে ক্ল্যাশ করে তবে এটি অপশনাল রাখতে পারেন
+// import 'layout/widgets/cosmic_background.dart'; 
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,16 +22,25 @@ class MiningApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Mining App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: AppColors.emerald,
-        scaffoldBackgroundColor: AppColors.background,
-        fontFamily: 'Roboto',
-      ),
-      home: const MainWrapper(),
+    // ScreenUtilInit ব্যবহার করে পুরো অ্যাপকে রেস্পন্সিভ করা হলো
+    return ScreenUtilInit(
+      designSize: const Size(390, 844), // আইফোন স্ট্যান্ডার্ড সাইজ
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return GetMaterialApp( // MaterialApp এর বদলে GetMaterialApp
+          title: 'Vexylon Pro Mining',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: const Color(0xFF14F195),
+            scaffoldBackgroundColor: const Color(0xFF0D0D12),
+            // গুগল ফন্টস ব্যবহার করে প্রিমিয়াম লুক দেওয়া হয়েছে
+            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+          ),
+          home: const MainWrapper(),
+        );
+      },
     );
   }
 }
@@ -46,24 +55,21 @@ class MainWrapper extends StatefulWidget {
 class _MainWrapperState extends State<MainWrapper> {
   int _currentIndex = 0;
 
-  // Conditional Web3Service instance for Web
-  late final web3Service = Web3Service();
-
-  late final List<Widget> _pages = [
+  // পেজ লিস্ট
+  final List<Widget> _pages = [
     const HomeScreen(),
-    const MiningScreen(),
-    WalletScreen(web3Service: web3Service),
+    const MiningScreen(), // এটি আমরা আগে ডিজাইন করেছি
+    const WalletScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
-      body: CosmicBackground(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
+      // extendBody: true দিলে নিচের নেভিগেশন বারের পেছনে কন্টেন্ট দেখা যায় (Blur effect এর জন্য জরুরি)
+      extendBody: true, 
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
       ),
       bottomNavigationBar: FloatingBottomNav(
         currentIndex: _currentIndex,
