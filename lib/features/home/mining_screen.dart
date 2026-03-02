@@ -19,7 +19,7 @@ class VexylonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(390, 844),
+      designSize: const Size(390, 844), // Standard design size
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -94,11 +94,11 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                 opacityChangeRate: 0.25,
                 minOpacity: 0.1,
                 maxOpacity: 0.3,
-                particleCount: 20,
-                spawnMaxRadius: 15,
-                spawnMinRadius: 5,
-                spawnMaxSpeed: 20,
-                spawnMinSpeed: 10,
+                particleCount: 15, // হালকা করার জন্য কমানো হয়েছে
+                spawnMaxRadius: 12,
+                spawnMinRadius: 4,
+                spawnMaxSpeed: 15,
+                spawnMinSpeed: 8,
               ),
             ),
             child: Container(),
@@ -106,22 +106,22 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              padding: EdgeInsets.symmetric(horizontal: 18.w),
               child: Column(
                 children: [
-                  SizedBox(height: 20.h),
-                  _buildHeader().animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
-                  SizedBox(height: 30.h),
-                  _buildBalanceSection().animate().fadeIn(delay: 200.ms).scale(),
-                  SizedBox(height: 40.h),
-                  _buildMiningOrb().animate().fadeIn(delay: 400.ms).scale(),
-                  SizedBox(height: 30.h),
-                  _buildProgressBar().animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-                  SizedBox(height: 40.h),
-                  _buildActionButtons().animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
                   SizedBox(height: 15.h),
+                  _buildHeader().animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
+                  SizedBox(height: 20.h),
+                  _buildBalanceSection().animate().fadeIn(delay: 200.ms).scale(),
+                  SizedBox(height: 30.h),
+                  _buildMiningOrb().animate().fadeIn(delay: 400.ms).scale(),
+                  SizedBox(height: 25.h),
+                  _buildProgressBar().animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
+                  SizedBox(height: 30.h),
+                  _buildActionButtons().animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
+                  SizedBox(height: 12.h),
                   _buildStatsGrid().animate().fadeIn(delay: 700.ms).slideY(begin: 0.2),
-                  SizedBox(height: 50.h),
+                  SizedBox(height: 30.h),
                 ],
               ),
             ),
@@ -140,25 +140,24 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
           children: [
             Text(
               "HELLO, MINER!",
-              style: GoogleFonts.inter(color: Colors.white60, fontSize: 12.sp, fontWeight: FontWeight.w600),
+              style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp, fontWeight: FontWeight.w600),
             ),
             Text(
               "VEXYLON PRO",
-              // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 24.sp, fontWeight: FontWeight.w900),
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 22.sp, fontWeight: FontWeight.w900),
             ),
           ],
         ),
         GlassmorphicContainer(
-          width: 45.w,
-          height: 45.w,
-          borderRadius: 15.r,
+          width: 42.w,
+          height: 42.w,
+          borderRadius: 12.r,
           blur: 15,
           alignment: Alignment.center,
           border: 1,
           linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
           borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.white.withOpacity(0.0)]),
-          child: Icon(CupertinoIcons.bell_fill, color: const Color(0xFF14F195), size: 22.sp),
+          child: Icon(CupertinoIcons.bell_fill, color: const Color(0xFF14F195), size: 20.sp),
         ),
       ],
     );
@@ -167,8 +166,8 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 140.h,
-      borderRadius: 24.r,
+      height: 125.h,
+      borderRadius: 22.r,
       blur: 20,
       alignment: Alignment.center,
       border: 1,
@@ -181,8 +180,8 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text("CURRENT MINED BALANCE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
-          SizedBox(height: 10.h),
+          Text("CURRENT MINED BALANCE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+          SizedBox(height: 8.h),
           Obx(() => Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -190,11 +189,10 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                 children: [
                   Text(
                     controller.balance.value.toStringAsFixed(4),
-                    // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 40.sp, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 36.sp, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(width: 8.w),
-                  Text("VXL", style: GoogleFonts.inter(color: const Color(0xFF14F195), fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 6.w),
+                  Text("VXL", style: GoogleFonts.inter(color: const Color(0xFF14F195), fontSize: 14.sp, fontWeight: FontWeight.bold)),
                 ],
               )),
         ],
@@ -208,18 +206,18 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
       child: Obx(() {
         bool isMining = controller.isMining.value;
         return Container(
-          width: 180.w,
-          height: 180.w,
+          width: 165.w,
+          height: 165.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: isMining
-                ? [BoxShadow(color: const Color(0xFF14F195).withOpacity(0.3), blurRadius: 40, spreadRadius: 10)]
+                ? [BoxShadow(color: const Color(0xFF14F195).withOpacity(0.25), blurRadius: 35, spreadRadius: 8)]
                 : [],
           ),
           child: GlassmorphicContainer(
-            width: 180.w,
-            height: 180.w,
-            borderRadius: 90.w,
+            width: 165.w,
+            height: 165.w,
+            borderRadius: 85.w,
             blur: 15,
             alignment: Alignment.center,
             border: isMining ? 2 : 1,
@@ -235,12 +233,12 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                 Icon(
                   isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill,
                   color: isMining ? const Color(0xFF14F195) : Colors.grey,
-                  size: 40.sp,
+                  size: 35.sp,
                 ).animate(target: isMining ? 1 : 0).shimmer(duration: 1000.ms, color: Colors.white),
-                SizedBox(height: 8.h),
+                SizedBox(height: 6.h),
                 Text(
                   isMining ? "MINING..." : "TAP TO START",
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -253,7 +251,7 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _buildProgressBar() {
     return Obx(() {
       return LinearPercentIndicator(
-        lineHeight: 8.h,
+        lineHeight: 7.h,
         percent: controller.progress.value,
         backgroundColor: Colors.white.withOpacity(0.1),
         linearGradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
@@ -267,7 +265,7 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     return Row(
       children: [
         Expanded(child: _glassButton("CLAIM", CupertinoIcons.arrow_down_circle_fill, const Color(0xFF14F195))),
-        SizedBox(width: 15.w),
+        SizedBox(width: 12.w),
         Expanded(child: _glassButton("BOOST", CupertinoIcons.bolt_circle_fill, const Color(0xFF9945FF))),
       ],
     );
@@ -276,8 +274,8 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _glassButton(String label, IconData icon, Color color) {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 80.h,
-      borderRadius: 20.r,
+      height: 75.h,
+      borderRadius: 18.r,
       blur: 15,
       alignment: Alignment.center,
       border: 1,
@@ -285,13 +283,13 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
       borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
       child: InkWell(
         onTap: () {},
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(18.r),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 28.sp),
-            SizedBox(height: 6.h),
-            Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.bold)),
+            Icon(icon, color: color, size: 24.sp),
+            SizedBox(height: 5.h),
+            Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -302,7 +300,7 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     return Row(
       children: [
         Expanded(child: Obx(() => _statCard("HASHRATE", controller.isMining.value ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, const Color(0xFF14F195)))),
-        SizedBox(width: 15.w),
+        SizedBox(width: 12.w),
         Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent)),
       ],
     );
@@ -311,11 +309,11 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _statCard(String label, String value, IconData icon, Color color) {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 90.h,
-      borderRadius: 20.r,
+      height: 85.h,
+      borderRadius: 18.r,
       blur: 10,
       alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 15.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
       border: 1,
       linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.white.withOpacity(0.01)]),
       borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.transparent]),
@@ -325,16 +323,15 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 18.sp),
-              SizedBox(width: 6.w),
-              Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+              Icon(icon, color: color, size: 16.sp),
+              SizedBox(width: 5.w),
+              Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp, fontWeight: FontWeight.bold)),
             ],
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 8.h),
           Text(
             value, 
-            // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)
           ),
         ],
       ),
