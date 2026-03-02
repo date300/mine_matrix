@@ -18,9 +18,8 @@ class VexylonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ScreenUtil ইনিশিয়ালাইজেশন (রেস্পন্সিভ ডিজাইনের জন্য)
     return ScreenUtilInit(
-      designSize: const Size(390, 844), // iPhone 13/14 Pro সাইজ
+      designSize: const Size(390, 844),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -38,9 +37,6 @@ class VexylonApp extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------
-// GETX CONTROLLER (লজিক অংশ)
-// ---------------------------------------------------------
 class MiningController extends GetxController {
   var isMining = false.obs;
   var balance = 4520.5000.obs;
@@ -74,9 +70,6 @@ class MiningController extends GetxController {
   }
 }
 
-// ---------------------------------------------------------
-// UI SCREEN (ডিজাইন অংশ)
-// ---------------------------------------------------------
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
 
@@ -85,7 +78,6 @@ class MiningScreen extends StatefulWidget {
 }
 
 class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMixin {
-  // GetX কন্ট্রোলার ইনজেক্ট করা হলো
   final MiningController controller = Get.put(MiningController());
 
   @override
@@ -93,7 +85,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     return Scaffold(
       body: Stack(
         children: [
-          // ডাইনামিক ব্যাকগ্রাউন্ড (Animated Background)
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
@@ -112,7 +103,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
             ),
             child: Container(),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -141,7 +131,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     );
   }
 
-  // হেডার সেকশন
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -155,7 +144,8 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
             ),
             Text(
               "VEXYLON PRO",
-              style: GoogleFonts.sfProDisplay(color: Colors.white, fontSize: 24.sp, fontWeight: FontWeight.w900),
+              // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 24.sp, fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -174,7 +164,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     );
   }
 
-  // ব্যালেন্স সেকশন (Glassmorphism + GetX Reactive)
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -201,7 +190,8 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                 children: [
                   Text(
                     controller.balance.value.toStringAsFixed(4),
-                    style: GoogleFonts.sfProDisplay(color: Colors.white, fontSize: 40.sp, fontWeight: FontWeight.bold),
+                    // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 40.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(width: 8.w),
                   Text("VXL", style: GoogleFonts.inter(color: const Color(0xFF14F195), fontSize: 16.sp, fontWeight: FontWeight.bold)),
@@ -212,7 +202,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     );
   }
 
-  // মাইনিং অর্ব (অ্যানিমেটেড বাটন)
   Widget _buildMiningOrb() {
     return GestureDetector(
       onTap: controller.toggleMining,
@@ -243,7 +232,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // এখানে Lottie অ্যানিমেশন যোগ করতে পারেন 
                 Icon(
                   isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill,
                   color: isMining ? const Color(0xFF14F195) : Colors.grey,
@@ -262,7 +250,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     );
   }
 
-  // প্রোগ্রেস বার (Percent Indicator)
   Widget _buildProgressBar() {
     return Obx(() {
       return LinearPercentIndicator(
@@ -271,12 +258,11 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
         backgroundColor: Colors.white.withOpacity(0.1),
         linearGradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
         barRadius: const Radius.circular(10),
-        animation: false, // GetX থেকে রিয়েলটাইম আপডেট হচ্ছে
+        animation: false,
       );
     });
   }
 
-  // অ্যাকশন বাটনস
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -312,7 +298,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     );
   }
 
-  // স্ট্যাটাস গ্রিড
   Widget _buildStatsGrid() {
     return Row(
       children: [
@@ -346,7 +331,11 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
             ],
           ),
           SizedBox(height: 10.h),
-          Text(value, style: GoogleFonts.sfProDisplay(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)),
+          Text(
+            value, 
+            // এখানে sfProDisplay পরিবর্তন করে inter করা হয়েছে
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)
+          ),
         ],
       ),
     );
