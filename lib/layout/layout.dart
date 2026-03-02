@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:animated_background/animated_background.dart';
 
-// সঠিক পাথ অনুযায়ী ইম্পোর্টগুলো ঠিক করা হলো
+// সঠিক পাথ অনুযায়ী ইম্পোর্টগুলো
 import 'topbar.dart';
-import 'nevbar.dart'; // আপনার ফাইলের নাম 'nevbar.dart' ছিল, তাই সেটিই দেওয়া হলো
+import 'nevbar.dart'; 
 import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
 
+// --- এটি আপনার কাঙ্ক্ষিত AppColors ক্লাস ---
+class AppColors {
+  static const Color blue = Color(0xFF2196F3); // আপনার পছন্দের ব্লু কোড
+  static const Color glassWhite = Color(0xAAFFFFFF); // ট্রান্সপারেন্ট সাদা
+  // প্রোজেক্টে আরও কোনো কালার থাকলে এখানে যোগ করতে পারেন
+}
+
 // পেজ ইনডেক্স কন্ট্রোল করার জন্য GetX Controller
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs; // ডিফল্ট মাইニング স্ক্রিন
+  var selectedIndex = 1.obs; // ডিফল্ট মাইনিং স্ক্রিন
 }
 
 class AppLayout extends StatefulWidget {
@@ -24,17 +31,17 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   final controller = Get.put(AppLayoutController());
 
-  // স্ক্রিন লিস্ট - এখানে আপনার পেজগুলো কানেক্ট করা হলো
+  // স্ক্রিন লিস্ট
   final List<Widget> pages = [
-    const HomeScreen(),   // pages/home_screen.dart থেকে
-    const MiningScreen(), // pages/mining_screen.dart থেকে
-    const WalletScreen(), // pages/wallet_screen.dart থেকে
+    const HomeScreen(),   
+    const MiningScreen(), 
+    const WalletScreen(), 
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, 
+      extendBody: true,
       body: Stack(
         children: [
           // গ্লোবাল এনিমেটেড ব্যাকগ্রাউন্ড
@@ -55,7 +62,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
             bottom: false,
             child: Column(
               children: [
-                const TopBar(), // layout/topbar.dart থেকে
+                const TopBar(), 
                 Expanded(
                   child: Obx(() => AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
@@ -68,7 +75,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
         ],
       ),
 
-      // কাস্টম নেভিগেশন বার (আপনার nevbar.dart এ FloatingBottomNav থাকতে হবে)
+      // কাস্টম নেভিগেশন বার
       bottomNavigationBar: Obx(() => FloatingBottomNav(
         currentIndex: controller.selectedIndex.value,
         onTap: (index) => controller.selectedIndex.value = index,

@@ -6,9 +6,47 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:animated_background/animated_background.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-// --- মাইনিং কন্ট্রোলার লজিক ---
+// --- AppColors ক্লাস (এটি আপনার প্রোজেক্টের সব কালার কন্ট্রোল করবে) ---
+class AppColors {
+  static const Color background = Color(0xFF0D0D12);
+  static const Color accentGreen = Color(0xFF14F195);
+  static const Color accentPurple = Color(0xFF9945FF);
+  static const Color blue = Color(0xFF2196F3);
+  static const Color glassWhite = Color(0xAAFFFFFF);
+  static const Color cardGrey = Color(0xFF1E1E26);
+}
+
+void main() {
+  runApp(const VexylonApp());
+}
+
+class VexylonApp extends StatelessWidget {
+  const VexylonApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return GetMaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Vexylon Pro',
+          theme: ThemeData.dark().copyWith(
+            scaffoldBackgroundColor: AppColors.background,
+            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+          ),
+          home: const MiningScreen(),
+        );
+      },
+    );
+  }
+}
+
 class MiningController extends GetxController {
   var isMining = false.obs;
   var balance = 4520.5000.obs;
@@ -42,7 +80,6 @@ class MiningController extends GetxController {
   }
 }
 
-// --- আপডেট করা মাইনিং স্ক্রিন UI ---
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
 
@@ -50,36 +87,52 @@ class MiningScreen extends StatefulWidget {
   State<MiningScreen> createState() => _MiningScreenState();
 }
 
-class _MiningScreenState extends State<MiningScreen> {
+class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMixin {
   final MiningController controller = Get.put(MiningController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ব্যাকগ্রাউন্ড স্বচ্ছ করা হয়েছে যাতে কসমিক ব্যাকগ্রাউন্ড দেখা যায়
-      backgroundColor: Colors.transparent, 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: 20.w),
-          child: Column(
-            children: [
-              SizedBox(height: 20.h),
-              _buildHeader().animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
-              SizedBox(height: 30.h),
-              _buildBalanceSection().animate().fadeIn(delay: 200.ms).scale(),
-              SizedBox(height: 40.h),
-              _buildMiningOrb().animate().fadeIn(delay: 400.ms).scale(),
-              SizedBox(height: 30.h),
-              _buildProgressBar().animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-              SizedBox(height: 40.h),
-              _buildActionButtons().animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
-              SizedBox(height: 15.h),
-              _buildStatsGrid().animate().fadeIn(delay: 700.ms).slideY(begin: 0.2),
-              SizedBox(height: 50.h),
-            ],
+      body: Stack(
+        children: [
+          AnimatedBackground(
+            vsync: this,
+            behaviour: RandomParticleBehaviour(
+              options: ParticleOptions(
+                baseColor: AppColors.accentGreen.withOpacity(0.2),
+                spawnOpacity: 0.1,
+                opacityChangeRate: 0.25,
+                minOpacity: 0.1,
+                maxOpacity: 0.3,
+                particleCount: 20,
+              ),
+            ),
+            child: Container(),
           ),
-        ),
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Column(
+                children: [
+                  SizedBox(height: 20.h),
+                  _buildHeader().animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
+                  SizedBox(height: 30.h),
+                  _buildBalanceSection().animate().fadeIn(delay: 200.ms).scale(),
+                  SizedBox(height: 40.h),
+                  _buildMiningOrb().animate().fadeIn(delay: 400.ms).scale(),
+                  SizedBox(height: 30.h),
+                  _buildProgressBar().animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
+                  SizedBox(height: 40.h),
+                  _buildActionButtons().animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
+                  SizedBox(height: 15.h),
+                  _buildStatsGrid().animate().fadeIn(delay: 700.ms).slideY(begin: 0.2),
+                  SizedBox(height: 50.h),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -101,22 +154,18 @@ class _MiningScreenState extends State<MiningScreen> {
             ),
           ],
         ),
-        _glassIcon(CupertinoIcons.bell_fill),
+        GlassmorphicContainer(
+          width: 45.w,
+          height: 45.w,
+          borderRadius: 15.r,
+          blur: 15,
+          alignment: Alignment.center,
+          border: 1,
+          linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
+          borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
+          child: Icon(CupertinoIcons.bell_fill, color: AppColors.accentGreen, size: 22.sp),
+        ),
       ],
-    );
-  }
-
-  Widget _glassIcon(IconData icon) {
-    return GlassmorphicContainer(
-      width: 45.w,
-      height: 45.w,
-      borderRadius: 15.r,
-      blur: 15,
-      alignment: Alignment.center,
-      border: 1,
-      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-      borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.white.withOpacity(0.0)]),
-      child: Icon(icon, color: const Color(0xFF14F195), size: 22.sp),
     );
   }
 
@@ -131,9 +180,9 @@ class _MiningScreenState extends State<MiningScreen> {
       linearGradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [const Color(0xFF14F195).withOpacity(0.1), Colors.white.withOpacity(0.02)],
+        colors: [AppColors.accentGreen.withOpacity(0.1), Colors.white.withOpacity(0.02)],
       ),
-      borderGradient: LinearGradient(colors: [const Color(0xFF14F195).withOpacity(0.3), Colors.white.withOpacity(0.0)]),
+      borderGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.3), Colors.transparent]),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -149,7 +198,7 @@ class _MiningScreenState extends State<MiningScreen> {
                     style: GoogleFonts.inter(color: Colors.white, fontSize: 40.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(width: 8.w),
-                  Text("VXL", style: GoogleFonts.inter(color: const Color(0xFF14F195), fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                  Text("VXL", style: GoogleFonts.inter(color: AppColors.accentGreen, fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 ],
               )),
         ],
@@ -168,7 +217,7 @@ class _MiningScreenState extends State<MiningScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: isMining
-                ? [BoxShadow(color: const Color(0xFF14F195).withOpacity(0.3), blurRadius: 40, spreadRadius: 10)]
+                ? [BoxShadow(color: AppColors.accentGreen.withOpacity(0.3), blurRadius: 40, spreadRadius: 10)]
                 : [],
           ),
           child: GlassmorphicContainer(
@@ -181,7 +230,7 @@ class _MiningScreenState extends State<MiningScreen> {
             linearGradient: LinearGradient(colors: [Colors.black.withOpacity(0.5), Colors.black.withOpacity(0.2)]),
             borderGradient: LinearGradient(
               colors: isMining 
-                ? [const Color(0xFF14F195), const Color(0xFF9945FF)] 
+                ? [AppColors.accentGreen, AppColors.accentPurple] 
                 : [Colors.white24, Colors.white10]
             ),
             child: Column(
@@ -189,7 +238,7 @@ class _MiningScreenState extends State<MiningScreen> {
               children: [
                 Icon(
                   isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill,
-                  color: isMining ? const Color(0xFF14F195) : Colors.grey,
+                  color: isMining ? AppColors.accentGreen : Colors.grey,
                   size: 40.sp,
                 ).animate(target: isMining ? 1 : 0).shimmer(duration: 1000.ms, color: Colors.white),
                 SizedBox(height: 8.h),
@@ -211,7 +260,7 @@ class _MiningScreenState extends State<MiningScreen> {
         lineHeight: 8.h,
         percent: controller.progress.value,
         backgroundColor: Colors.white.withOpacity(0.1),
-        linearGradient: const LinearGradient(colors: [Color(0xFF9945FF), Color(0xFF14F195)]),
+        linearGradient: const LinearGradient(colors: [AppColors.accentPurple, AppColors.accentGreen]),
         barRadius: const Radius.circular(10),
         animation: false,
       );
@@ -221,9 +270,9 @@ class _MiningScreenState extends State<MiningScreen> {
   Widget _buildActionButtons() {
     return Row(
       children: [
-        Expanded(child: _glassButton("CLAIM", CupertinoIcons.arrow_down_circle_fill, const Color(0xFF14F195))),
+        Expanded(child: _glassButton("CLAIM", CupertinoIcons.arrow_down_circle_fill, AppColors.accentGreen)),
         SizedBox(width: 15.w),
-        Expanded(child: _glassButton("BOOST", CupertinoIcons.bolt_circle_fill, const Color(0xFF9945FF))),
+        Expanded(child: _glassButton("BOOST", CupertinoIcons.bolt_circle_fill, AppColors.accentPurple)),
       ],
     );
   }
@@ -256,9 +305,9 @@ class _MiningScreenState extends State<MiningScreen> {
   Widget _buildStatsGrid() {
     return Row(
       children: [
-        Expanded(child: Obx(() => _statCard("HASHRATE", controller.isMining.value ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, const Color(0xFF14F195)))),
+        Expanded(child: Obx(() => _statCard("HASHRATE", controller.isMining.value ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, AppColors.accentGreen))),
         SizedBox(width: 15.w),
-        Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent)),
+        Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent))),
       ],
     );
   }
@@ -286,10 +335,7 @@ class _MiningScreenState extends State<MiningScreen> {
             ],
           ),
           SizedBox(height: 10.h),
-          Text(
-            value, 
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)
-          ),
+          Text(value, style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)),
         ],
       ),
     );
