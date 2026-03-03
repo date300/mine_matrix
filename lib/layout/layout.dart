@@ -2,25 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:animated_background/animated_background.dart';
 
-// সঠিক পাথ অনুযায়ী ইম্পোর্টগুলো
 import 'topbar.dart';
 import 'nevbar.dart';
 import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
 
-// --- আপডেট করা AppColors ক্লাস (সবগুলো মিসিং কালার এখানে যোগ করা হয়েছে) ---
 class AppColors {
-  static const Color blue = Color(0xFF2196F3); 
-  static const Color accentGreen = Color(0xFF14F195); // এটি মিসিং ছিল
-  static const Color accentPurple = Color(0xFF9945FF); // এটিও যোগ করা হলো
-  static const Color glassWhite = Color(0xAAFFFFFF); 
+  static const Color blue = Color(0xFF2196F3);
+  static const Color accentGreen = Color(0xFF14F195);
+  static const Color accentPurple = Color(0xFF9945FF);
+  static const Color glassWhite = Color(0xAAFFFFFF);
   static const Color background = Color(0xFF0D0D12);
 }
 
-// পেজ ইনডেক্স কন্ট্রোল করার জন্য GetX Controller
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs; // ডিফল্ট মাইনিং স্ক্রিন
+  var selectedIndex = 1.obs;
 }
 
 class AppLayout extends StatefulWidget {
@@ -33,7 +30,6 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   final controller = Get.put(AppLayoutController());
 
-  // স্ক্রিন লিস্ট
   final List<Widget> pages = [
     const HomeScreen(),
     const MiningScreen(),
@@ -43,20 +39,24 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background, // বেস ডার্ক কালার
       extendBody: true,
       body: Stack(
         children: [
-          // গ্লোবাল এনিমেটেড ব্যাকগ্রাউন্ড
+          // মাইনিং পেজের হুবহু এনিমেটেড ব্যাকগ্রাউন্ড
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
               options: ParticleOptions(
                 baseColor: AppColors.accentGreen.withOpacity(0.2),
                 spawnOpacity: 0.1,
-                particleCount: 25,
+                opacityChangeRate: 0.25, // এটি এনিমেশনকে স্মুথ করবে
+                minOpacity: 0.1,
+                maxOpacity: 0.3,
+                particleCount: 20, // মাইনিং স্ক্রিনের মতো সংখ্যা
               ),
             ),
-            child: Container(),
+            child: const SizedBox.expand(),
           ),
 
           // মেইন কন্টেন্ট
@@ -68,6 +68,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
                 Expanded(
                   child: Obx(() => AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
+                    // পেজ পরিবর্তনের সময় ফেইড এনিমেশন
                     child: pages[controller.selectedIndex.value],
                   )),
                 ),
@@ -77,7 +78,6 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
         ],
       ),
 
-      // কাস্টম নেভিগেশন বার (FloatingBottomNav আপনার nevbar.dart এ ডিফাইন করা আছে)
       bottomNavigationBar: Obx(() => FloatingBottomNav(
         currentIndex: controller.selectedIndex.value,
         onTap: (index) => controller.selectedIndex.value = index,
