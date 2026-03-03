@@ -9,7 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_background/animated_background.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-// --- AppColors ক্লাস (এটি আপনার প্রোজেক্টের সব কালার কন্ট্রোল করবে) ---
+// --- AppColors ক্লাস ---
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
   static const Color accentGreen = Color(0xFF14F195);
@@ -307,7 +307,7 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
       children: [
         Expanded(child: Obx(() => _statCard("HASHRATE", controller.isMining.value ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, AppColors.accentGreen))),
         SizedBox(width: 15.w),
-        Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent))),
+        Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent)),
       ],
     );
   }

@@ -27,28 +27,29 @@ class HomeScreen extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ).animate().fadeIn().slideX(),
-          
+
           SizedBox(height: 20.h),
-          
+
           // মাইনিং স্ট্যাটাস কার্ড
           _buildFeatureCard(
             "Active Miners",
             "1,240 Nodes",
-            CupertinoIcons.cpu,
+            // এখানে .cpu পরিবর্তন করে .processor করা হয়েছে বিল্ড এরর ফিক্স করতে
+            CupertinoIcons.processor, 
             AppColors.blue,
           ).animate().fadeIn(delay: 200.ms).scale(),
-          
+
           SizedBox(height: 15.h),
-          
+
           _buildFeatureCard(
             "Network Hashrate",
             "850.5 PH/s",
             CupertinoIcons.waveform_path_ecg,
             AppColors.accentGreen,
           ).animate().fadeIn(delay: 400.ms).scale(),
-          
+
           SizedBox(height: 25.h),
-          
+
           Text(
             "Recent Activity",
             style: GoogleFonts.inter(
@@ -57,13 +58,13 @@ class HomeScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
+
           SizedBox(height: 15.h),
-          
+
           // লিস্ট আইটেম
           _buildActivityItem("Daily Reward", "+0.45 VXL", "2 hours ago"),
           _buildActivityItem("Mining Started", "Session Active", "5 hours ago"),
-          
+
           SizedBox(height: 100.h), // নিচের নেভবার এর জন্য গ্যাপ
         ],
       ),
