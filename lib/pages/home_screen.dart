@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// layout.dart থেকে AppColors পাওয়ার জন্য ইম্পোর্ট
 import '../layout/layout.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -12,6 +11,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // এখানে কোনো Scaffold বা Container (with color) ব্যবহার করা হয়নি
+    // যাতে layout.dart এর AnimatedBackground সরাসরি দেখা যায়।
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: 20.w),
       physics: const BouncingScrollPhysics(),
@@ -30,12 +31,11 @@ class HomeScreen extends StatelessWidget {
 
           SizedBox(height: 20.h),
 
-          // মাইনিং স্ট্যাটাস কার্ড
+          // একটি স্বচ্ছ গ্লাস কার্ড
           _buildFeatureCard(
             "Active Miners",
             "1,240 Nodes",
-            // CupertinoIcons এর বদলে Material Icons ব্যবহার করা হলো এরর এড়াতে
-            Icons.memory_rounded, 
+            Icons.memory_rounded, // বিল্ড এরর এড়াতে মেটেরিয়াল আইকন
             AppColors.blue,
           ).animate().fadeIn(delay: 200.ms).scale(),
 
@@ -44,7 +44,6 @@ class HomeScreen extends StatelessWidget {
           _buildFeatureCard(
             "Network Hashrate",
             "850.5 PH/s",
-            // এটিও Material Icons এ পরিবর্তন করা হয়েছে
             Icons.insights_rounded, 
             AppColors.accentGreen,
           ).animate().fadeIn(delay: 400.ms).scale(),
@@ -62,7 +61,6 @@ class HomeScreen extends StatelessWidget {
 
           SizedBox(height: 15.h),
 
-          // লিস্ট আইটেম
           _buildActivityItem("Daily Reward", "+0.45 VXL", "2 hours ago"),
           _buildActivityItem("Mining Started", "Session Active", "5 hours ago"),
 
@@ -77,14 +75,22 @@ class HomeScreen extends StatelessWidget {
       width: double.infinity,
       height: 100.h,
       borderRadius: 20.r,
-      blur: 20,
+      blur: 15, // হালকা ব্লার দিয়ে ব্যাকগ্রাউন্ড দৃশ্যমান রাখা হয়েছে
       alignment: Alignment.center,
-      border: 1,
+      border: 0.5, // চিকন বর্ডার যাতে আরও প্রিমিয়াম লাগে
       linearGradient: LinearGradient(
-        colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.02)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withOpacity(0.05), // অত্যন্ত স্বচ্ছ
+          Colors.white.withOpacity(0.01),
+        ],
       ),
       borderGradient: LinearGradient(
-        colors: [color.withOpacity(0.5), Colors.transparent],
+        colors: [
+          color.withOpacity(0.3),
+          Colors.transparent,
+        ],
       ),
       child: ListTile(
         leading: Container(
@@ -106,8 +112,9 @@ class HomeScreen extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(15.w),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withOpacity(0.02), // সলিড কালারের বদলে হালকা অপাসিটি
         borderRadius: BorderRadius.circular(15.r),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
