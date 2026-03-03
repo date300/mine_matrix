@@ -34,8 +34,8 @@ class HomeScreen extends StatelessWidget {
           _buildFeatureCard(
             "Active Miners",
             "1,240 Nodes",
-            // এখানে .cpu পরিবর্তন করে .processor করা হয়েছে বিল্ড এরর ফিক্স করতে
-            CupertinoIcons.processor, 
+            // CupertinoIcons এর বদলে Material Icons ব্যবহার করা হলো এরর এড়াতে
+            Icons.memory_rounded, 
             AppColors.blue,
           ).animate().fadeIn(delay: 200.ms).scale(),
 
@@ -44,7 +44,8 @@ class HomeScreen extends StatelessWidget {
           _buildFeatureCard(
             "Network Hashrate",
             "850.5 PH/s",
-            CupertinoIcons.waveform_path_ecg,
+            // এটিও Material Icons এ পরিবর্তন করা হয়েছে
+            Icons.insights_rounded, 
             AppColors.accentGreen,
           ).animate().fadeIn(delay: 400.ms).scale(),
 
@@ -65,7 +66,7 @@ class HomeScreen extends StatelessWidget {
           _buildActivityItem("Daily Reward", "+0.45 VXL", "2 hours ago"),
           _buildActivityItem("Mining Started", "Session Active", "5 hours ago"),
 
-          SizedBox(height: 100.h), // নিচের নেভবার এর জন্য গ্যাপ
+          SizedBox(height: 100.h), 
         ],
       ),
     );
