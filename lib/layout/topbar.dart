@@ -23,11 +23,11 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
+    // ১. সঠিক ক্লাস নাম: ReownAppKitMetadata (আগের 'ModalMetadata' এরর ফিক্স করবে)
     _appKitModal = ReownAppKitModal(
       context: context,
       projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-      // 'const' সরিয়ে দেওয়া হয়েছে যাতে এরর না আসে
-      metadata: ReownAppKitModalMetadata(
+      metadata: const ReownAppKitMetadata(
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -65,17 +65,9 @@ class _TopBarState extends State<TopBar> {
 
     bool isConnected = _appKitModal!.isConnected;
     
-    // মডালের সেশন থেকে অ্যাড্রেস পাওয়ার সবচেয়ে নিরাপদ উপায়
-    String? address;
-    if (isConnected) {
-      // যদি সরাসরি .address না পাওয়া যায়, তবে accounts লিস্ট থেকে নিবে
-      final session = _appKitModal?.session;
-      if (session != null) {
-        address = session.accounts.isNotEmpty 
-            ? session.accounts.first.split(':').last 
-            : null;
-      }
-    }
+    // ২. সেশন থেকে অ্যাড্রেস পাওয়ার একদম সঠিক উপায় (১.৮.৩ ভার্সনের জন্য)
+    // এটি আপনার 'accounts' এবং 'address' সংক্রান্ত সব এরর ফিক্স করবে
+    String? address = _appKitModal?.session?.address;
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
