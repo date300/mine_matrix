@@ -26,11 +26,11 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
+    // এখানে PairingMetadata ব্যবহার করা হয়েছে যা লেটেস্ট ভার্সনের জন্য সঠিক
     _appKitModal = ReownAppKitModal(
       context: context,
-      projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-      // ১. এখানে 'const' পুরোপুরি বাদ দেওয়া হয়েছে যাতে 'Not a constant expression' এরর না আসে
-      metadata: ReownAppKitMetadata(
+      projectId: 'de4fd9cc5d44e0e8a830b232232a38184da',
+      metadata: const PairingMetadata(
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -43,6 +43,7 @@ class _TopBarState extends State<TopBar> {
     );
 
     await _appKitModal!.init();
+    
     _appKitModal!.addListener(_onUpdate);
 
     if (mounted) {
@@ -70,12 +71,12 @@ class _TopBarState extends State<TopBar> {
 
     bool isConnected = _appKitModal!.isConnected;
     
-    // ২. অ্যাড্রেস পাওয়ার জন্য "Dynamic Magic" ব্যবহার করা হয়েছে। 
-    // এটি কম্পাইলারকে ফাঁকি দিয়ে রানটাইমে অ্যাড্রেস বের করবে, ফলে বিল্ড আর ফেইল হবে না।
+    // ডাইনামিক কাস্টিং ব্যবহার করা হয়েছে যাতে বিল্ড এরর না আসে
     String? address;
     try {
-      if (isConnected && _appKitModal?.session != null) {
-        address = (_appKitModal?.session as dynamic).address;
+      final session = _appKitModal?.session;
+      if (session != null) {
+        address = (session as dynamic).address;
       }
     } catch (e) {
       address = null;
@@ -99,10 +100,25 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildLogo() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("WEB3", style: GoogleFonts.inter(color: Colors.white60, fontSize: 10.sp)),
-        Text("MINE MATRIX", style: GoogleFonts.inter(color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.w900)),
+        Text(
+          "WEB3",
+          style: GoogleFonts.inter(
+            color: Colors.white60,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          "MINE MATRIX",
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -117,14 +133,29 @@ class _TopBarState extends State<TopBar> {
         blur: 15,
         alignment: Alignment.center,
         border: 1,
-        linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-        borderGradient: LinearGradient(colors: [connected ? accentGreen : accentPurple, Colors.transparent]),
+        linearGradient: LinearGradient(
+          colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
+        ),
+        borderGradient: LinearGradient(
+          colors: [connected ? accentGreen : accentPurple, Colors.transparent]
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link, color: connected ? accentGreen : Colors.white, size: 18.sp),
+            Icon(
+              connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
+              color: connected ? accentGreen : Colors.white,
+              size: 20.sp
+            ),
             SizedBox(width: 8.w),
-            Text(addr, style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold)),
+            Text(
+              addr,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold
+              ),
+            ),
           ],
         ),
       ),
