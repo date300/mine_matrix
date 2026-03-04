@@ -29,7 +29,8 @@ class _TopBarState extends State<TopBar> {
     _appKitModal = ReownAppKitModal(
       context: context,
       projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-      metadata: const ReownAppKitMetadata(
+      // ১. এখানে 'const' থাকবে না (এটিই 'Not a constant expression' এরর ফিক্স করবে)
+      metadata: ReownAppKitMetadata(
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -52,7 +53,9 @@ class _TopBarState extends State<TopBar> {
     }
   }
 
-  void _onUpdate() => setState(() {});
+  void _onUpdate() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -67,7 +70,9 @@ class _TopBarState extends State<TopBar> {
     }
 
     bool isConnected = _appKitModal!.isConnected;
-    String? address = _appKitModal!.session?.address;
+    
+    // ২. অ্যাড্রেস পাওয়ার সঠিক নিয়ম (এটিই 'getter address isn't defined' এরর ফিক্স করবে)
+    String? address = _appKitModal!.address;
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
@@ -93,10 +98,26 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildLogo() {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("WEB3", style: GoogleFonts.inter(color: Colors.white60, fontSize: 10.sp)),
-        Text("MINE MATRIX", style: GoogleFonts.inter(color: Colors.white, fontSize: 22.sp, fontWeight: FontWeight.w900)),
+        Text(
+          "WEB3",
+          style: GoogleFonts.inter(
+            color: Colors.white60,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
+          ),
+        ),
+        Text(
+          "MINE MATRIX",
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -111,15 +132,33 @@ class _TopBarState extends State<TopBar> {
         blur: 15,
         alignment: Alignment.center,
         border: 1,
-        linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-        borderGradient: LinearGradient(colors: [connected ? accentGreen : accentPurple, Colors.transparent]),
+        linearGradient: LinearGradient(
+          colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
+        ),
+        borderGradient: LinearGradient(
+          colors: [
+            connected ? accentGreen.withOpacity(0.5) : accentPurple.withOpacity(0.5),
+            Colors.transparent
+          ]
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link, color: connected ? accentGreen : Colors.white, size: 20.sp),
+            Icon(
+              connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
+              color: connected ? accentGreen : Colors.white,
+              size: 20.sp
+            ),
             if (connected) ...[
               SizedBox(width: 8.w),
-              Text(addr, style: GoogleFonts.inter(color: Colors.white, fontSize: 11.sp, fontWeight: FontWeight.bold)),
+              Text(
+                addr,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.bold
+                ),
+              ),
             ]
           ],
         ),
@@ -135,8 +174,12 @@ class _TopBarState extends State<TopBar> {
       blur: 15,
       alignment: Alignment.center,
       border: 1,
-      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-      borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
+      linearGradient: LinearGradient(
+        colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
+      ),
+      borderGradient: LinearGradient(
+        colors: [Colors.white.withOpacity(0.2), Colors.transparent]
+      ),
       child: Icon(icon, color: accentGreen, size: 22.sp),
     );
   }
