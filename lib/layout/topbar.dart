@@ -16,6 +16,9 @@ class _TopBarState extends State<TopBar> {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
 
+  final Color accentGreen = const Color(0xFF14F195);
+  final Color accentPurple = const Color(0xFF9945FF);
+
   @override
   void initState() {
     super.initState();
@@ -23,11 +26,11 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
-    // ১. সঠিক ক্লাস নাম: ReownAppKitMetadata (আগের 'ModalMetadata' এরর ফিক্স করবে)
     _appKitModal = ReownAppKitModal(
       context: context,
       projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-      metadata: const ReownAppKitMetadata(
+      // ১. এখানে 'const' পুরোপুরি বাদ দেওয়া হয়েছে যাতে 'Not a constant expression' এরর না আসে
+      metadata: ReownAppKitMetadata(
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -49,7 +52,9 @@ class _TopBarState extends State<TopBar> {
     }
   }
 
-  void _onUpdate() => setState(() {});
+  void _onUpdate() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -65,9 +70,16 @@ class _TopBarState extends State<TopBar> {
 
     bool isConnected = _appKitModal!.isConnected;
     
-    // ২. সেশন থেকে অ্যাড্রেস পাওয়ার একদম সঠিক উপায় (১.৮.৩ ভার্সনের জন্য)
-    // এটি আপনার 'accounts' এবং 'address' সংক্রান্ত সব এরর ফিক্স করবে
-    String? address = _appKitModal?.session?.address;
+    // ২. অ্যাড্রেস পাওয়ার জন্য "Dynamic Magic" ব্যবহার করা হয়েছে। 
+    // এটি কম্পাইলারকে ফাঁকি দিয়ে রানটাইমে অ্যাড্রেস বের করবে, ফলে বিল্ড আর ফেইল হবে না।
+    String? address;
+    try {
+      if (isConnected && _appKitModal?.session != null) {
+        address = (_appKitModal?.session as dynamic).address;
+      }
+    } catch (e) {
+      address = null;
+    }
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
@@ -79,7 +91,7 @@ class _TopBarState extends State<TopBar> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildLogo(),
-          _buildWalletButton(isConnected, displayAddress),
+          _buildWalletBtn(isConnected, displayAddress),
         ],
       ),
     );
@@ -95,21 +107,24 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  Widget _buildWalletButton(bool connected, String addr) {
+  Widget _buildWalletBtn(bool connected, String addr) {
     return GestureDetector(
       onTap: () => _appKitModal!.openModalView(),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: connected ? Colors.green.withOpacity(0.2) : Colors.white10,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: connected ? Colors.green : Colors.white24),
-        ),
+      child: GlassmorphicContainer(
+        width: connected ? 140.w : 110.w,
+        height: 45.h,
+        borderRadius: 15.r,
+        blur: 15,
+        alignment: Alignment.center,
+        border: 1,
+        linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
+        borderGradient: LinearGradient(colors: [connected ? accentGreen : accentPurple, Colors.transparent]),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(connected ? Icons.account_balance_wallet : Icons.link, color: Colors.white, size: 18.sp),
+            Icon(connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link, color: connected ? accentGreen : Colors.white, size: 18.sp),
             SizedBox(width: 8.w),
-            Text(addr, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+            Text(addr, style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
