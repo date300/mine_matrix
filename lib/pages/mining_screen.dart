@@ -9,14 +9,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_background/animated_background.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-// --- AppColors ক্লাস ---
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
   static const Color accentGreen = Color(0xFF14F195);
   static const Color accentPurple = Color(0xFF9945FF);
-  static const Color blue = Color(0xFF2196F3);
   static const Color glassWhite = Color(0xAAFFFFFF);
-  static const Color cardGrey = Color(0xFF1E1E26);
 }
 
 void main() {
@@ -29,13 +26,11 @@ class VexylonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(390, 844),
+      designSize: const Size(360, 690), // ছোট সাইজ সেট করা হয়েছে রেসপন্সিভনেসের জন্য
       minTextAdapt: true,
-      splitScreenMode: true,
       builder: (context, child) {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Vexylon Pro',
           theme: ThemeData.dark().copyWith(
             scaffoldBackgroundColor: AppColors.background,
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
@@ -51,38 +46,23 @@ class MiningController extends GetxController {
   var isMining = false.obs;
   var balance = 4520.5000.obs;
   var progress = 0.0.obs;
-  
-  Timer? _miningTimer;
+  Timer? _timer;
 
   void toggleMining() {
     isMining.value = !isMining.value;
     if (isMining.value) {
-      _startMiningTimer();
+      _timer = Timer.periodic(100.ms, (t) {
+        balance.value += 0.0005;
+        progress.value = (progress.value + 0.002) % 1.0;
+      });
     } else {
-      _miningTimer?.cancel();
+      _timer?.cancel();
     }
-  }
-
-  void _startMiningTimer() {
-    _miningTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      balance.value += 0.0005;
-      progress.value += 0.002;
-      if (progress.value >= 1.0) {
-        progress.value = 0.0;
-      }
-    });
-  }
-
-  @override
-  void onClose() {
-    _miningTimer?.cancel();
-    super.onClose();
   }
 }
 
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
-
   @override
   State<MiningScreen> createState() => _MiningScreenState();
 }
@@ -98,206 +78,143 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
-              options: ParticleOptions(
-                baseColor: AppColors.accentGreen.withOpacity(0.2),
-                spawnOpacity: 0.1,
-                opacityChangeRate: 0.25,
-                minOpacity: 0.1,
-                maxOpacity: 0.3,
-                particleCount: 20,
-              ),
+              options: const ParticleOptions(baseColor: AppColors.accentGreen, spawnOpacity: 0.1, particleCount: 15),
             ),
             child: Container(),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w),
               child: Column(
                 children: [
+                  SizedBox(height: 15.h), // হেডার ডিলিট করা হয়েছে
+                  _buildBalanceSection(),
+                  const Spacer(), // ফ্লেক্সিবল স্পেস
+                  _buildMiningOrb(),
+                  const Spacer(),
+                  _buildProgressBar(),
+                  SizedBox(height: 25.h),
+                  _buildActionButtons(),
+                  SizedBox(height: 12.h),
+                  _buildStatsGrid(),
                   SizedBox(height: 20.h),
-                  _buildHeader().animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
-                  SizedBox(height: 30.h),
-                  _buildBalanceSection().animate().fadeIn(delay: 200.ms).scale(),
-                  SizedBox(height: 40.h),
-                  _buildMiningOrb().animate().fadeIn(delay: 400.ms).scale(),
-                  SizedBox(height: 30.h),
-                  _buildProgressBar().animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-                  SizedBox(height: 40.h),
-                  _buildActionButtons().animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
-                  SizedBox(height: 15.h),
-                  _buildStatsGrid().animate().fadeIn(delay: 700.ms).slideY(begin: 0.2),
-                  SizedBox(height: 50.h),
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "HELLO, MINER!",
-              style: GoogleFonts.inter(color: Colors.white60, fontSize: 12.sp, fontWeight: FontWeight.w600),
-            ),
-            Text(
-              "VEXYLON PRO",
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 24.sp, fontWeight: FontWeight.w900),
-            ),
-          ],
-        ),
-        GlassmorphicContainer(
-          width: 45.w,
-          height: 45.w,
-          borderRadius: 15.r,
-          blur: 15,
-          alignment: Alignment.center,
-          border: 1,
-          linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-          borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
-          child: Icon(CupertinoIcons.bell_fill, color: AppColors.accentGreen, size: 22.sp),
-        ),
-      ],
     );
   }
 
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 140.h,
-      borderRadius: 24.r,
+      height: 100.h, // উচ্চতা কমানো হয়েছে
+      borderRadius: 20.r,
       blur: 20,
       alignment: Alignment.center,
-      border: 1,
-      linearGradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppColors.accentGreen.withOpacity(0.1), Colors.white.withOpacity(0.02)],
-      ),
-      borderGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.3), Colors.transparent]),
+      border: 0.5,
+      linearGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.05), Colors.white.withOpacity(0.02)]),
+      borderGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.2), Colors.transparent]),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text("CURRENT MINED BALANCE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
-          SizedBox(height: 10.h),
+          Text("MINED BALANCE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
           Obx(() => Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    controller.balance.value.toStringAsFixed(4),
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 40.sp, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(width: 8.w),
-                  Text("VXL", style: GoogleFonts.inter(color: AppColors.accentGreen, fontSize: 16.sp, fontWeight: FontWeight.bold)),
-                ],
-              )),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(controller.balance.value.toStringAsFixed(4), style: GoogleFonts.inter(color: Colors.white, fontSize: 32.sp, fontWeight: FontWeight.bold)),
+              SizedBox(width: 5.w),
+              Text("VXL", style: GoogleFonts.inter(color: AppColors.accentGreen, fontSize: 14.sp, fontWeight: FontWeight.w800)),
+            ],
+          )),
         ],
       ),
-    );
+    ).animate().fadeIn().slideY(begin: -0.1);
   }
 
   Widget _buildMiningOrb() {
-    return GestureDetector(
-      onTap: controller.toggleMining,
-      child: Obx(() {
-        bool isMining = controller.isMining.value;
-        return Container(
-          width: 180.w,
-          height: 180.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: isMining
-                ? [BoxShadow(color: AppColors.accentGreen.withOpacity(0.3), blurRadius: 40, spreadRadius: 10)]
-                : [],
-          ),
-          child: GlassmorphicContainer(
-            width: 180.w,
-            height: 180.w,
-            borderRadius: 90.w,
-            blur: 15,
-            alignment: Alignment.center,
-            border: isMining ? 2 : 1,
-            linearGradient: LinearGradient(colors: [Colors.black.withOpacity(0.5), Colors.black.withOpacity(0.2)]),
-            borderGradient: LinearGradient(
-              colors: isMining 
-                ? [AppColors.accentGreen, AppColors.accentPurple] 
-                : [Colors.white24, Colors.white10]
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isMining ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_slash_fill,
-                  color: isMining ? AppColors.accentGreen : Colors.grey,
-                  size: 40.sp,
-                ).animate(target: isMining ? 1 : 0).shimmer(duration: 1000.ms, color: Colors.white),
-                SizedBox(height: 8.h),
-                Text(
-                  isMining ? "MINING..." : "TAP TO START",
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold),
+    return Obx(() {
+      bool active = controller.isMining.value;
+      return GestureDetector(
+        onTap: controller.toggleMining,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // প্রিমিয়াম রোটেটিং বর্ডার এনিমেশন
+            if (active)
+              Container(
+                width: 160.w,
+                height: 160.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5), width: 2),
                 ),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
+              ).animate(onPlay: (c) => c.repeat()).rotate(duration: 3.seconds).scale(begin: Offset(1, 1), end: Offset(1.1, 1.1), curve: Curves.easeInOutSine).then().scale(begin: Offset(1.1, 1.1), end: Offset(1, 1)),
+            
+            GlassmorphicContainer(
+              width: 140.w, // অর্ব ছোট করা হয়েছে
+              height: 140.w,
+              borderRadius: 70.w,
+              blur: 15,
+              alignment: Alignment.center,
+              border: 1,
+              linearGradient: LinearGradient(colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.3)]),
+              borderGradient: LinearGradient(colors: active ? [AppColors.accentGreen, AppColors.accentPurple] : [Colors.white24, Colors.white10]),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(active ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_fill, color: active ? AppColors.accentGreen : Colors.white38, size: 35.sp),
+                  SizedBox(height: 5.h),
+                  Text(active ? "MINING" : "START", style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.w900)),
+                ],
+              ),
+            ).animate(target: active ? 1 : 0).shimmer(duration: 1.5.seconds, color: Colors.white24),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildProgressBar() {
-    return Obx(() {
-      return LinearPercentIndicator(
-        lineHeight: 8.h,
-        percent: controller.progress.value,
-        backgroundColor: Colors.white.withOpacity(0.1),
-        linearGradient: const LinearGradient(colors: [AppColors.accentPurple, AppColors.accentGreen]),
-        barRadius: const Radius.circular(10),
-        animation: false,
-      );
-    });
+    return Obx(() => LinearPercentIndicator(
+      lineHeight: 6.h,
+      percent: controller.progress.value,
+      backgroundColor: Colors.white10,
+      linearGradient: const LinearGradient(colors: [AppColors.accentPurple, AppColors.accentGreen]),
+      barRadius: const Radius.circular(10),
+      padding: EdgeInsets.zero,
+    ));
   }
 
   Widget _buildActionButtons() {
     return Row(
       children: [
-        Expanded(child: _glassButton("CLAIM", CupertinoIcons.arrow_down_circle_fill, AppColors.accentGreen)),
-        SizedBox(width: 15.w),
-        Expanded(child: _glassButton("BOOST", CupertinoIcons.bolt_circle_fill, AppColors.accentPurple)),
+        Expanded(child: _smallButton("CLAIM", CupertinoIcons.drop_fill, AppColors.accentGreen)),
+        SizedBox(width: 12.w),
+        Expanded(child: _smallButton("BOOST", CupertinoIcons.rocket_fill, AppColors.accentPurple)),
       ],
     );
   }
 
-  Widget _glassButton(String label, IconData icon, Color color) {
+  Widget _smallButton(String label, IconData icon, Color color) {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 80.h,
-      borderRadius: 20.r,
-      blur: 15,
+      height: 60.h, // বাটন ছোট করা হয়েছে
+      borderRadius: 15.r,
+      blur: 10,
       alignment: Alignment.center,
-      border: 1,
-      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.white.withOpacity(0.01)]),
-      borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.2), Colors.transparent]),
-      child: InkWell(
-        onTap: () {},
-        borderRadius: BorderRadius.circular(20.r),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 28.sp),
-            SizedBox(height: 6.h),
-            Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.bold)),
-          ],
-        ),
+      border: 0.5,
+      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.transparent]),
+      borderGradient: LinearGradient(colors: [Colors.white24, Colors.transparent]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 18.sp),
+          SizedBox(width: 8.w),
+          Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
@@ -305,37 +222,22 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _buildStatsGrid() {
     return Row(
       children: [
-        Expanded(child: Obx(() => _statCard("HASHRATE", controller.isMining.value ? "450 TH/S" : "0 TH/S", CupertinoIcons.gauge, AppColors.accentGreen))),
-        SizedBox(width: 15.w),
-        Expanded(child: _statCard("REFERRALS", "12 USERS", CupertinoIcons.person_2_fill, Colors.orangeAccent)),
+        Expanded(child: _statBox("SPEED", "450 TH/S", AppColors.accentGreen)),
+        SizedBox(width: 12.w),
+        Expanded(child: _statBox("REFS", "12", Colors.orangeAccent)),
       ],
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color) {
-    return GlassmorphicContainer(
-      width: double.infinity,
-      height: 90.h,
-      borderRadius: 20.r,
-      blur: 10,
-      alignment: Alignment.centerLeft,
-      padding: EdgeInsets.symmetric(horizontal: 15.w),
-      border: 1,
-      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.white.withOpacity(0.01)]),
-      borderGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.transparent]),
+  Widget _statBox(String label, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.03), borderRadius: BorderRadius.circular(15.r)),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 18.sp),
-              SizedBox(width: 6.w),
-              Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Text(value, style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold)),
+          Text(label, style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+          Text(value, style: GoogleFonts.inter(color: color, fontSize: 16.sp, fontWeight: FontWeight.bold)),
         ],
       ),
     );
