@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:animated_background/animated_background.dart';
 
+// আপনার প্রোজেক্টের পাথ অনুযায়ী ইম্পোর্টগুলো চেক করে নিন
 import 'topbar.dart';
 import 'nevbar.dart';
 import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
 
+// গ্লোবাল কালার এবং স্টাইল
 class AppColors {
-  static const Color blue = Color(0xFF2196F3);
+  static const Color background = Color(0xFF0D0D12);
   static const Color accentGreen = Color(0xFF14F195);
   static const Color accentPurple = Color(0xFF9945FF);
-  static const Color glassWhite = Color(0xAAFFFFFF);
-  static const Color background = Color(0xFF0D0D12);
 }
 
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs;
+  var selectedIndex = 1.obs; // ডিফল্ট মাইনিং স্ক্রিন
 }
 
 class AppLayout extends StatefulWidget {
@@ -39,27 +39,27 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // বেস ডার্ক কালার
+      backgroundColor: AppColors.background,
       extendBody: true,
       body: Stack(
         children: [
-          // মাইনিং পেজের হুবহু এনিমেটেড ব্যাকগ্রাউন্ড
+          // এটিই আপনার মাইনিং পেজের সেই নির্দিষ্ট এনিমেশন ব্যাকগ্রাউন্ড
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
               options: ParticleOptions(
                 baseColor: AppColors.accentGreen.withOpacity(0.2),
                 spawnOpacity: 0.1,
-                opacityChangeRate: 0.25, // এটি এনিমেশনকে স্মুথ করবে
+                opacityChangeRate: 0.25, // এনিমেশনের গতির স্টাইল
                 minOpacity: 0.1,
                 maxOpacity: 0.3,
-                particleCount: 20, // মাইনিং স্ক্রিনের মতো সংখ্যা
+                particleCount: 20, // পার্টিকেলের সঠিক সংখ্যা
               ),
             ),
             child: const SizedBox.expand(),
           ),
 
-          // মেইন কন্টেন্ট
+          // মেইন কন্টেন্ট লেয়ার
           SafeArea(
             bottom: false,
             child: Column(
@@ -67,8 +67,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
                 const TopBar(),
                 Expanded(
                   child: Obx(() => AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    // পেজ পরিবর্তনের সময় ফেইড এনিমেশন
+                    duration: const Duration(milliseconds: 300),
                     child: pages[controller.selectedIndex.value],
                   )),
                 ),
@@ -78,6 +77,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
         ],
       ),
 
+      // নেভিগেশন বার
       bottomNavigationBar: Obx(() => FloatingBottomNav(
         currentIndex: controller.selectedIndex.value,
         onTap: (index) => controller.selectedIndex.value = index,
