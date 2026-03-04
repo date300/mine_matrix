@@ -59,3 +59,5 @@ flutter:
   #   - family: SFPro
   #     fonts:
   #       - asset: assets/fonts/SF-Pro-Display-Regular.otf
+dependency_overrides:
+  app_check: ^0.3.0
