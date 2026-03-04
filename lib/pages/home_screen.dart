@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+// layout.dart থেকে AppColors পাওয়ার জন্য ইম্পোর্ট
 import '../layout/layout.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -11,61 +12,64 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // এখানে কোনো Scaffold বা Container (with color) ব্যবহার করা হয়নি
-    // যাতে layout.dart এর AnimatedBackground সরাসরি দেখা যায়।
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 20.h),
-          Text(
-            "Dashboard",
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 28.sp,
-              fontWeight: FontWeight.w900,
+    // Scaffold যোগ করা হয়েছে এবং backgroundColor স্বচ্ছ করা হয়েছে
+    return Scaffold(
+      backgroundColor: Colors.transparent, 
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 20.h),
+            Text(
+              "Dashboard",
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 28.sp,
+                fontWeight: FontWeight.w900,
+              ),
+            ).animate().fadeIn().slideX(),
+
+            SizedBox(height: 20.h),
+
+            // মাইনিং স্ট্যাটাস কার্ড (Blue)
+            _buildFeatureCard(
+              "Active Miners",
+              "1,240 Nodes",
+              Icons.memory_rounded, 
+              AppColors.blue,
+            ).animate().fadeIn(delay: 200.ms).scale(),
+
+            SizedBox(height: 15.h),
+
+            // নেটওয়ার্ক কার্ড (Green)
+            _buildFeatureCard(
+              "Network Hashrate",
+              "850.5 PH/s",
+              Icons.insights_rounded,
+              AppColors.accentGreen,
+            ).animate().fadeIn(delay: 400.ms).scale(),
+
+            SizedBox(height: 25.h),
+
+            Text(
+              "Recent Activity",
+              style: GoogleFonts.inter(
+                color: Colors.white70,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ).animate().fadeIn().slideX(),
 
-          SizedBox(height: 20.h),
+            SizedBox(height: 15.h),
 
-          // একটি স্বচ্ছ গ্লাস কার্ড
-          _buildFeatureCard(
-            "Active Miners",
-            "1,240 Nodes",
-            Icons.memory_rounded, // বিল্ড এরর এড়াতে মেটেরিয়াল আইকন
-            AppColors.blue,
-          ).animate().fadeIn(delay: 200.ms).scale(),
+            _buildActivityItem("Daily Reward", "+0.45 VXL", "2 hours ago"),
+            _buildActivityItem("Mining Started", "Session Active", "5 hours ago"),
 
-          SizedBox(height: 15.h),
-
-          _buildFeatureCard(
-            "Network Hashrate",
-            "850.5 PH/s",
-            Icons.insights_rounded, 
-            AppColors.accentGreen,
-          ).animate().fadeIn(delay: 400.ms).scale(),
-
-          SizedBox(height: 25.h),
-
-          Text(
-            "Recent Activity",
-            style: GoogleFonts.inter(
-              color: Colors.white70,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          SizedBox(height: 15.h),
-
-          _buildActivityItem("Daily Reward", "+0.45 VXL", "2 hours ago"),
-          _buildActivityItem("Mining Started", "Session Active", "5 hours ago"),
-
-          SizedBox(height: 100.h), 
-        ],
+            SizedBox(height: 100.h), 
+          ],
+        ),
       ),
     );
   }
@@ -75,20 +79,20 @@ class HomeScreen extends StatelessWidget {
       width: double.infinity,
       height: 100.h,
       borderRadius: 20.r,
-      blur: 15, // হালকা ব্লার দিয়ে ব্যাকগ্রাউন্ড দৃশ্যমান রাখা হয়েছে
+      blur: 15,
       alignment: Alignment.center,
-      border: 0.5, // চিকন বর্ডার যাতে আরও প্রিমিয়াম লাগে
+      border: 1,
       linearGradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withOpacity(0.05), // অত্যন্ত স্বচ্ছ
-          Colors.white.withOpacity(0.01),
+          Colors.white.withOpacity(0.08), 
+          Colors.white.withOpacity(0.03),
         ],
       ),
       borderGradient: LinearGradient(
         colors: [
-          color.withOpacity(0.3),
+          color.withOpacity(0.4),
           Colors.transparent,
         ],
       ),
@@ -112,7 +116,7 @@ class HomeScreen extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(15.w),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02), // সলিড কালারের বদলে হালকা অপাসিটি
+        color: Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(15.r),
         border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
