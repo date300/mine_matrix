@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.0
+  sdk: '>=3.0.0 <4.0.0' # আপনার SDK ভার্সন অনুযায়ী কিছুটা অ্যাডজাস্ট করা হয়েছে
 
 dependencies:
   flutter:
@@ -13,27 +13,31 @@ dependencies:
 
   # UI & Styling
   cupertino_icons: ^1.0.8
-  google_fonts: ^8.0.2
+  google_fonts: ^6.1.0
   glassmorphism: ^3.0.0
   flutter_screenutil: ^5.9.3
   responsive_framework: ^1.1.1
-  
+
   # Animation & Effects
   flutter_animate: ^4.5.2
   lottie: ^3.1.2
   shimmer: ^3.0.0
   animated_background: ^2.0.0
   percent_indicator: ^4.2.5
-  
+
   # State Management & Utilities
   get: ^4.7.3
   flutter_svg: ^2.0.10+1
-  flutter_web3: ^2.1.9 # আপনার ফাইলে এটি আগে থেকেই ছিল
+  url_launcher: ^6.3.0 # ওয়ালেট অ্যাপ ওপেন করার জন্য এটি মাস্ট লাগবে
+
+  # Web3 & Wallet Connection (আমার দেওয়া কোডটি কাজ করানোর জন্য)
+  web3modal_flutter: ^1.2.0
+  # flutter_web3: ^2.1.9 # আপনার যদি প্রয়োজন হয় রাখতে পারেন, না হলে কেটে দিতে পারেন
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
 # অ্যাপ আইকন কনফিগারেশন
@@ -45,13 +49,13 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
 
-  # আপনার প্রোজেক্টে Lottie বা SVG ব্যবহারের জন্য অ্যাসেট ফোল্ডার ডিক্লেয়ার করা হলো
+  # অ্যাসেট ফোল্ডার ডিক্লেয়ারেশন
   assets:
     - assets/images/
     - assets/icons/
     - assets/lottie/
 
-  # ফন্ট কনফিগারেশন (যদি কাস্টম ফন্ট ফাইল ব্যবহার করেন)
+  # ফন্ট কনফিগারেশন (যদি থাকে তবে আন-কমেন্ট করুন)
   # fonts:
   #   - family: SFPro
   #     fonts:
