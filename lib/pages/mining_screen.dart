@@ -9,6 +9,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_background/animated_background.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+// কালার প্যালেট
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
   static const Color accentGreen = Color(0xFF14F195);
@@ -26,7 +27,7 @@ class VexylonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(360, 690), // ছোট সাইজ সেট করা হয়েছে রেসপন্সিভনেসের জন্য
+      designSize: const Size(360, 690),
       minTextAdapt: true,
       builder: (context, child) {
         return GetMaterialApp(
@@ -42,6 +43,7 @@ class VexylonApp extends StatelessWidget {
   }
 }
 
+// কন্ট্রোলার লজিক
 class MiningController extends GetxController {
   var isMining = false.obs;
   var balance = 4520.5000.obs;
@@ -51,13 +53,20 @@ class MiningController extends GetxController {
   void toggleMining() {
     isMining.value = !isMining.value;
     if (isMining.value) {
-      _timer = Timer.periodic(100.ms, (t) {
+      // ফিক্স: ১০০.ms এর বদলে সরাসরি Duration ব্যবহার
+      _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
         balance.value += 0.0005;
         progress.value = (progress.value + 0.002) % 1.0;
       });
     } else {
       _timer?.cancel();
     }
+  }
+
+  @override
+  void onClose() {
+    _timer?.cancel();
+    super.onClose();
   }
 }
 
@@ -75,10 +84,15 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     return Scaffold(
       body: Stack(
         children: [
+          // ব্যাকগ্রাউন্ড এনিমেশন
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
-              options: const ParticleOptions(baseColor: AppColors.accentGreen, spawnOpacity: 0.1, particleCount: 15),
+              options: const ParticleOptions(
+                baseColor: AppColors.accentGreen, 
+                spawnOpacity: 0.1, 
+                particleCount: 15
+              ),
             ),
             child: Container(),
           ),
@@ -87,9 +101,9 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
               padding: EdgeInsets.symmetric(horizontal: 18.w),
               child: Column(
                 children: [
-                  SizedBox(height: 15.h), // হেডার ডিলিট করা হয়েছে
+                  SizedBox(height: 15.h),
                   _buildBalanceSection(),
-                  const Spacer(), // ফ্লেক্সিবল স্পেস
+                  const Spacer(),
                   _buildMiningOrb(),
                   const Spacer(),
                   _buildProgressBar(),
@@ -110,23 +124,46 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 100.h, // উচ্চতা কমানো হয়েছে
+      height: 100.h,
       borderRadius: 20.r,
       blur: 20,
       alignment: Alignment.center,
       border: 0.5,
-      linearGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.05), Colors.white.withOpacity(0.02)]),
-      borderGradient: LinearGradient(colors: [AppColors.accentGreen.withOpacity(0.2), Colors.transparent]),
+      linearGradient: LinearGradient(
+        colors: [AppColors.accentGreen.withOpacity(0.05), Colors.white.withOpacity(0.02)]
+      ),
+      borderGradient: LinearGradient(
+        colors: [AppColors.accentGreen.withOpacity(0.2), Colors.transparent]
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text("MINED BALANCE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp, fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+          Text("MINED BALANCE", 
+            style: GoogleFonts.inter(
+              color: Colors.white54, 
+              fontSize: 10.sp, 
+              fontWeight: FontWeight.w600, 
+              letterSpacing: 1.2
+            )
+          ),
           Obx(() => Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(controller.balance.value.toStringAsFixed(4), style: GoogleFonts.inter(color: Colors.white, fontSize: 32.sp, fontWeight: FontWeight.bold)),
+              Text(controller.balance.value.toStringAsFixed(4), 
+                style: GoogleFonts.inter(
+                  color: Colors.white, 
+                  fontSize: 32.sp, 
+                  fontWeight: FontWeight.bold
+                )
+              ),
               SizedBox(width: 5.w),
-              Text("VXL", style: GoogleFonts.inter(color: AppColors.accentGreen, fontSize: 14.sp, fontWeight: FontWeight.w800)),
+              Text("VXL", 
+                style: GoogleFonts.inter(
+                  color: AppColors.accentGreen, 
+                  fontSize: 14.sp, 
+                  fontWeight: FontWeight.w800
+                )
+              ),
             ],
           )),
         ],
@@ -142,7 +179,6 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // প্রিমিয়াম রোটেটিং বর্ডার এনিমেশন
             if (active)
               Container(
                 width: 160.w,
@@ -151,26 +187,44 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.accentGreen.withOpacity(0.5), width: 2),
                 ),
-              ).animate(onPlay: (c) => c.repeat()).rotate(duration: 3.seconds).scale(begin: Offset(1, 1), end: Offset(1.1, 1.1), curve: Curves.easeInOutSine).then().scale(begin: Offset(1.1, 1.1), end: Offset(1, 1)),
+              ).animate(onPlay: (c) => c.repeat())
+               .rotate(duration: const Duration(seconds: 3)) // ফিক্স: কনফ্লিক্ট দূর করা হয়েছে
+               .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), curve: Curves.easeInOutSine)
+               .then()
+               .scale(begin: const Offset(1.1, 1.1), end: const Offset(1, 1)),
             
             GlassmorphicContainer(
-              width: 140.w, // অর্ব ছোট করা হয়েছে
+              width: 140.w,
               height: 140.w,
               borderRadius: 70.w,
               blur: 15,
               alignment: Alignment.center,
               border: 1,
-              linearGradient: LinearGradient(colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.3)]),
-              borderGradient: LinearGradient(colors: active ? [AppColors.accentGreen, AppColors.accentPurple] : [Colors.white24, Colors.white10]),
+              linearGradient: LinearGradient(
+                colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.3)]
+              ),
+              borderGradient: LinearGradient(
+                colors: active ? [AppColors.accentGreen, AppColors.accentPurple] : [Colors.white24, Colors.white10]
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(active ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_fill, color: active ? AppColors.accentGreen : Colors.white38, size: 35.sp),
+                  Icon(active ? CupertinoIcons.hammer_fill : CupertinoIcons.bolt_fill, 
+                    color: active ? AppColors.accentGreen : Colors.white38, 
+                    size: 35.sp
+                  ),
                   SizedBox(height: 5.h),
-                  Text(active ? "MINING" : "START", style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.w900)),
+                  Text(active ? "MINING" : "START", 
+                    style: GoogleFonts.inter(
+                      color: Colors.white, 
+                      fontSize: 12.sp, 
+                      fontWeight: FontWeight.w900
+                    )
+                  ),
                 ],
               ),
-            ).animate(target: active ? 1 : 0).shimmer(duration: 1.5.seconds, color: Colors.white24),
+            ).animate(target: active ? 1 : 0)
+             .shimmer(duration: const Duration(milliseconds: 1500), color: Colors.white24), // ফিক্স
           ],
         ),
       );
@@ -201,7 +255,7 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
   Widget _smallButton(String label, IconData icon, Color color) {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 60.h, // বাটন ছোট করা হয়েছে
+      height: 60.h,
       borderRadius: 15.r,
       blur: 10,
       alignment: Alignment.center,
