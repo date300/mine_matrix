@@ -2,87 +2,99 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:glassmorphism/glassmorphism.dart';
 
 class TopBar extends StatelessWidget {
   const TopBar({super.key});
 
+  final Color accentGreen = const Color(0xFF14F195);
+  final Color accentPurple = const Color(0xFF9945FF); // ওয়ালেটের জন্য একটু আলাদা কালার
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70.h,
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      color: Colors.transparent, // পুরোপুরি স্বচ্ছ ব্যাকগ্রাউন্ড
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
+          // টেক্সট সেকশন
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 22.r,
-                backgroundColor: const Color(0xFF14F195).withOpacity(0.15),
-                child: Icon(
-                  CupertinoIcons.person_solid,
-                  color: const Color(0xFF14F195),
-                  size: 24.sp
+              Text(
+                "WEB3",
+                style: GoogleFonts.inter(
+                  color: Colors.white60, 
+                  fontSize: 12.sp, 
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
                 ),
               ),
-              SizedBox(width: 12.w),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Hello, Miner 👋",
-                    style: GoogleFonts.inter(
-                      color: Colors.white60,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    "Mine Matrix",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              Text(
+                "MINE MATRIX",
+                style: GoogleFonts.inter(
+                  color: Colors.white, 
+                  fontSize: 24.sp, 
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  CupertinoIcons.bell,
-                  color: Colors.white,
-                  size: 24.sp
-                ),
-                Positioned(
-                  right: 2.w,
-                  top: 2.h,
-                  child: Container(
-                    height: 8.w,
-                    width: 8.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF4D4D),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF0D0D12), width: 1.5),
-                    ),
+          
+          // অ্যাকশন বাটন সেকশন (ওয়ালেট + নোটিফিকেশন)
+          Row(
+            children: [
+              // ওয়ালেট কানেক্ট বাটন
+              GestureDetector(
+                onTap: () {
+                  // এখানে ওয়ালেট কানেক্ট লজিক বসবে
+                },
+                child: GlassmorphicContainer(
+                  width: 45.w,
+                  height: 45.w,
+                  borderRadius: 15.r,
+                  blur: 15,
+                  alignment: Alignment.center,
+                  border: 1,
+                  linearGradient: LinearGradient(
+                    colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
+                  ),
+                  borderGradient: LinearGradient(
+                    colors: [accentPurple.withOpacity(0.5), Colors.transparent]
+                  ),
+                  child: Icon(
+                    CupertinoIcons.link, // অথবা CupertinoIcons.creditcard
+                    color: Colors.white, 
+                    size: 20.sp
                   ),
                 ),
-              ],
-            ),
-          )
+              ),
+              
+              SizedBox(width: 12.w), // দুই বাটনের মাঝে গ্যাপ
+
+              // নোটিফিকেশন বাটন
+              GlassmorphicContainer(
+                width: 45.w,
+                height: 45.w,
+                borderRadius: 15.r,
+                blur: 15,
+                alignment: Alignment.center,
+                border: 1,
+                linearGradient: LinearGradient(
+                  colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
+                ),
+                borderGradient: LinearGradient(
+                  colors: [Colors.white.withOpacity(0.2), Colors.transparent]
+                ),
+                child: Icon(
+                  CupertinoIcons.bell_fill, 
+                  color: accentGreen, 
+                  size: 22.sp
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
