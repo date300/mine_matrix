@@ -1,7 +1,6 @@
 name: mine_matrix
 description: "A professional modern iOS style Mining App"
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -10,28 +9,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # UI & Styling
   cupertino_icons: ^1.0.8
   google_fonts: ^6.1.0
   glassmorphism: ^3.0.0
   flutter_screenutil: ^5.9.3
   responsive_framework: ^1.1.1
-
-  # Animation & Effects
   flutter_animate: ^4.5.2
   lottie: ^3.1.2
   shimmer: ^3.0.0
   animated_background: ^2.0.0
   percent_indicator: ^4.2.5
-
-  # State Management & Utilities
   get: ^4.7.3
   flutter_svg: ^2.0.10+1
   url_launcher: ^6.3.0
-
-  # Web3 & Wallet Connection
-  web3modal_flutter: ^3.0.1
+  reown_appkit: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -39,7 +30,6 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
-# App Icon Configuration
 flutter_launcher_icons:
   android: true
   ios: true
@@ -47,12 +37,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/images/
     - assets/icons/
     - assets/lottie/
-
-
-dependency_overrides:
-  app_check: 0.1.5
