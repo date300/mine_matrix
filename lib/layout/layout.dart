@@ -16,7 +16,7 @@ class AppColors {
 }
 
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs;
+  var selectedIndex = 1.obs; // ডিফল্টভাবে মাইনিং পেজ (১) সিলেক্ট করা
 }
 
 class AppLayout extends StatefulWidget {
@@ -39,22 +39,15 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBody: true, // নিচের নেভিবারকে স্বচ্ছ করতে
-      extendBodyBehindAppBar: true, // টপ বারের পেছনে এনিমেশন দেখানোর জন্য
       
-      // এখানে টপ বার সেট করা হয়েছে যা ওয়েবেও কাজ করবে
-      appBar: const PreferredSize(
-        preferredSize: Size.fromHeight(70),
-        child: SafeArea(child: TopBar()), 
-      ),
-
       body: Stack(
         children: [
-          // ব্যাকগ্রাউন্ড এনিমেশন
+          // ১. ব্যাকগ্রাউন্ড এনিমেশন (সবার নিচে থাকবে এবং সব পেজে দেখাবে)
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
               options: const ParticleOptions(
-                baseColor: Color(0xFF14F195),
+                baseColor: AppColors.accentGreen,
                 spawnOpacity: 0.1,
                 opacityChangeRate: 0.25,
                 minOpacity: 0.1,
@@ -65,11 +58,24 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
             child: const SizedBox.expand(),
           ),
 
-          // পেজ কন্টেন্ট
-          Obx(() => AnimatedSwitcher(
-            duration: const Duration(milliseconds: 400),
-            child: pages[controller.selectedIndex.value],
-          )),
+          // ২. টপবার এবং পেজ কন্টেন্ট
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // ফিক্সড টপবার
+                const TopBar(),
+                
+                // পেজ কন্টেন্ট
+                Expanded(
+                  child: Obx(() => AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: pages[controller.selectedIndex.value],
+                  )),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
 
