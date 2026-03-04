@@ -26,11 +26,11 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
+    // ReownAppKitModal তৈরি করার সময় metadata ক্লাসটির নাম হবে ReownAppKitModalMetadata
     _appKitModal = ReownAppKitModal(
       context: context,
-      projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-      // ১. এখানে 'const' থাকবে না (এটিই 'Not a constant expression' এরর ফিক্স করবে)
-      metadata: ReownAppKitMetadata(
+      projectId: 'de4fd9cc5d44e0e8a830b232232a38184da', // আপনার Project ID
+      metadata: const ReownAppKitModalMetadata( // এখানে ModalMetadata হবে
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -71,8 +71,8 @@ class _TopBarState extends State<TopBar> {
 
     bool isConnected = _appKitModal!.isConnected;
     
-    // ২. অ্যাড্রেস পাওয়ার সঠিক নিয়ম (এটিই 'getter address isn't defined' এরর ফিক্স করবে)
-    String? address = _appKitModal!.address;
+    // লেটেস্ট ভার্সনে অ্যাড্রেস পাওয়ার সঠিক উপায়:
+    String? address = _appKitModal?.session?.address;
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
@@ -88,7 +88,7 @@ class _TopBarState extends State<TopBar> {
             children: [
               _buildWalletBtn(isConnected, displayAddress),
               SizedBox(width: 12.w),
-              _buildIconBtn(CupertinoIcons.bell_fill),
+              _buildNotificationButton(),
             ],
           ),
         ],
@@ -166,7 +166,7 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  Widget _buildIconBtn(IconData icon) {
+  Widget _buildNotificationButton() {
     return GlassmorphicContainer(
       width: 45.w,
       height: 45.w,
@@ -180,7 +180,8 @@ class _TopBarState extends State<TopBar> {
       borderGradient: LinearGradient(
         colors: [Colors.white.withOpacity(0.2), Colors.transparent]
       ),
-      child: Icon(icon, color: accentGreen, size: 22.sp),
+      child: Icon(CupertinoIcons.bell_fill, color: accentGreen, size: 22.sp),
     );
   }
 }
+
