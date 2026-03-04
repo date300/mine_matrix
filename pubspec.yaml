@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # আপনার SDK ভার্সন অনুযায়ী কিছুটা অ্যাডজাস্ট করা হয়েছে
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -28,11 +28,10 @@ dependencies:
   # State Management & Utilities
   get: ^4.7.3
   flutter_svg: ^2.0.10+1
-  url_launcher: ^6.3.0 # ওয়ালেট অ্যাপ ওপেন করার জন্য এটি মাস্ট লাগবে
+  url_launcher: ^6.3.0
 
-  # Web3 & Wallet Connection (আমার দেওয়া কোডটি কাজ করানোর জন্য)
-  web3modal_flutter: ^1.2.0
-  # flutter_web3: ^2.1.9 # আপনার যদি প্রয়োজন হয় রাখতে পারেন, না হলে কেটে দিতে পারেন
+  # Web3 & Wallet Connection (Fixed version conflict)
+  web3modal_flutter: ^3.0.1
 
 dev_dependencies:
   flutter_test:
