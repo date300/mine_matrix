@@ -16,9 +16,6 @@ class _TopBarState extends State<TopBar> {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
 
-  final Color accentGreen = const Color(0xFF14F195);
-  final Color accentPurple = const Color(0xFF9945FF);
-
   @override
   void initState() {
     super.initState();
@@ -26,11 +23,11 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
-    // ReownAppKitModal তৈরি করার সময় metadata ক্লাসটির নাম হবে ReownAppKitModalMetadata
     _appKitModal = ReownAppKitModal(
       context: context,
-      projectId: 'de4fd9cc5d44e0e8a830b232232a38184da', // আপনার Project ID
-      metadata: const ReownAppKitModalMetadata( // এখানে ModalMetadata হবে
+      projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+      // 'const' সরিয়ে দেওয়া হয়েছে যাতে এরর না আসে
+      metadata: ReownAppKitModalMetadata(
         name: 'Web3 Mine Matrix',
         description: 'Decentralized Mining Platform',
         url: 'https://yourwebsite.com',
@@ -43,7 +40,6 @@ class _TopBarState extends State<TopBar> {
     );
 
     await _appKitModal!.init();
-    
     _appKitModal!.addListener(_onUpdate);
 
     if (mounted) {
@@ -53,9 +49,7 @@ class _TopBarState extends State<TopBar> {
     }
   }
 
-  void _onUpdate() {
-    if (mounted) setState(() {});
-  }
+  void _onUpdate() => setState(() {});
 
   @override
   void dispose() {
@@ -71,8 +65,17 @@ class _TopBarState extends State<TopBar> {
 
     bool isConnected = _appKitModal!.isConnected;
     
-    // লেটেস্ট ভার্সনে অ্যাড্রেস পাওয়ার সঠিক উপায়:
-    String? address = _appKitModal?.session?.address;
+    // মডালের সেশন থেকে অ্যাড্রেস পাওয়ার সবচেয়ে নিরাপদ উপায়
+    String? address;
+    if (isConnected) {
+      // যদি সরাসরি .address না পাওয়া যায়, তবে accounts লিস্ট থেকে নিবে
+      final session = _appKitModal?.session;
+      if (session != null) {
+        address = session.accounts.isNotEmpty 
+            ? session.accounts.first.split(':').last 
+            : null;
+      }
+    }
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
@@ -84,13 +87,7 @@ class _TopBarState extends State<TopBar> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildLogo(),
-          Row(
-            children: [
-              _buildWalletBtn(isConnected, displayAddress),
-              SizedBox(width: 12.w),
-              _buildNotificationButton(),
-            ],
-          ),
+          _buildWalletButton(isConnected, displayAddress),
         ],
       ),
     );
@@ -98,90 +95,32 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildLogo() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "WEB3",
-          style: GoogleFonts.inter(
-            color: Colors.white60,
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.5,
-          ),
-        ),
-        Text(
-          "MINE MATRIX",
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
+        Text("WEB3", style: GoogleFonts.inter(color: Colors.white60, fontSize: 10.sp)),
+        Text("MINE MATRIX", style: GoogleFonts.inter(color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.w900)),
       ],
     );
   }
 
-  Widget _buildWalletBtn(bool connected, String addr) {
+  Widget _buildWalletButton(bool connected, String addr) {
     return GestureDetector(
       onTap: () => _appKitModal!.openModalView(),
-      child: GlassmorphicContainer(
-        width: connected ? 140.w : 50.w,
-        height: 45.w,
-        borderRadius: 15.r,
-        blur: 15,
-        alignment: Alignment.center,
-        border: 1,
-        linearGradient: LinearGradient(
-          colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
-        ),
-        borderGradient: LinearGradient(
-          colors: [
-            connected ? accentGreen.withOpacity(0.5) : accentPurple.withOpacity(0.5),
-            Colors.transparent
-          ]
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: connected ? Colors.green.withOpacity(0.2) : Colors.white10,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: connected ? Colors.green : Colors.white24),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
-              color: connected ? accentGreen : Colors.white,
-              size: 20.sp
-            ),
-            if (connected) ...[
-              SizedBox(width: 8.w),
-              Text(
-                addr,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold
-                ),
-              ),
-            ]
+            Icon(connected ? Icons.account_balance_wallet : Icons.link, color: Colors.white, size: 18.sp),
+            SizedBox(width: 8.w),
+            Text(addr, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildNotificationButton() {
-    return GlassmorphicContainer(
-      width: 45.w,
-      height: 45.w,
-      borderRadius: 15.r,
-      blur: 15,
-      alignment: Alignment.center,
-      border: 1,
-      linearGradient: LinearGradient(
-        colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
-      ),
-      borderGradient: LinearGradient(
-        colors: [Colors.white.withOpacity(0.2), Colors.transparent]
-      ),
-      child: Icon(CupertinoIcons.bell_fill, color: accentGreen, size: 22.sp),
-    );
-  }
 }
-
