@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -39,27 +39,16 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
 
-# অ্যাপ আইকন কনফিগারেশন
+# App Icon Configuration
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/icon.png"
+  image_path: assets/icon/icon.png
 
 flutter:
   uses-material-design: true
 
-  # অ্যাসেট ফোল্ডার ডিক্লেয়ারেশন
   assets:
     - assets/images/
     - assets/icons/
     - assets/lottie/
-
-  # ফন্ট কনফিগারেশন (যদি থাকে তবে আন-কমেন্ট করুন)
-  # fonts:
-  #   - family: SFPro
-  #     fonts:
-  #       - asset: assets/fonts/SF-Pro-Display-Regular.otf
-
-# প্যাকেজ কনফ্লিক্ট সল্যুশন (নাম ঠিক করা হয়েছে: appcheck)
-dependency_overrides:
-  appcheck: ^0.3.0
