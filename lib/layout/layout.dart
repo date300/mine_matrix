@@ -7,17 +7,16 @@ import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
 
-// সব কালার এখানে সেন্ট্রালি থাকবে যাতে এরর না আসে
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
   static const Color accentGreen = Color(0xFF14F195);
   static const Color accentPurple = Color(0xFF9945FF);
-  static const Color blue = Color(0xFF2196F3); // এটি মিসিং ছিল
+  static const Color blue = Color(0xFF2196F3);
   static const Color glassWhite = Color(0xAAFFFFFF);
 }
 
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs; 
+  var selectedIndex = 1.obs;
 }
 
 class AppLayout extends StatefulWidget {
@@ -39,41 +38,42 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBody: true,
+      extendBody: true, // নিচের নেভিবারকে স্বচ্ছ করতে
+      extendBodyBehindAppBar: true, // টপ বারের পেছনে এনিমেশন দেখানোর জন্য
+      
+      // এখানে টপ বার সেট করা হয়েছে যা ওয়েবেও কাজ করবে
+      appBar: const PreferredSize(
+        preferredSize: Size.fromHeight(70),
+        child: SafeArea(child: TopBar()), 
+      ),
+
       body: Stack(
         children: [
-          // মাইনিং পেজের সেই স্পেসিফিক এনিমেশন স্টাইল
+          // ব্যাকগ্রাউন্ড এনিমেশন
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
-              options: ParticleOptions(
-                baseColor: AppColors.accentGreen.withOpacity(0.2),
+              options: const ParticleOptions(
+                baseColor: Color(0xFF14F195),
                 spawnOpacity: 0.1,
                 opacityChangeRate: 0.25,
                 minOpacity: 0.1,
                 maxOpacity: 0.3,
-                particleCount: 20,
+                particleCount: 25,
               ),
             ),
             child: const SizedBox.expand(),
           ),
 
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const TopBar(),
-                Expanded(
-                  child: Obx(() => AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    child: pages[controller.selectedIndex.value],
-                  )),
-                ),
-              ],
-            ),
-          ),
+          // পেজ কন্টেন্ট
+          Obx(() => AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: pages[controller.selectedIndex.value],
+          )),
         ],
       ),
+
+      // ট্রান্সপারেন্ট নেভিগেশন বার
       bottomNavigationBar: Obx(() => FloatingBottomNav(
         currentIndex: controller.selectedIndex.value,
         onTap: (index) => controller.selectedIndex.value = index,
