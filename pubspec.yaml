@@ -52,3 +52,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/lottie/
+
+
+dependency_overrides:
+  app_check: 0.1.5
