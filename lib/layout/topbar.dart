@@ -26,7 +26,6 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
-    // UI রেন্ডার হওয়ার পর ইনিশিয়ালাইজ করার জন্য এটি জরুরি
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         _appKitModal = ReownAppKitModal(
@@ -44,7 +43,6 @@ class _TopBarState extends State<TopBar> {
           ),
         );
 
-        // ১০ সেকেন্ডের টাইমআউট দেওয়া হয়েছে যাতে লোডিং আটকে না থাকে
         await _appKitModal!.init().timeout(
           const Duration(seconds: 10),
           onTimeout: () {
@@ -58,7 +56,7 @@ class _TopBarState extends State<TopBar> {
       } finally {
         if (mounted) {
           setState(() {
-            _isInitialized = true; // সাকসেস হোক বা এরর, লোডিং বন্ধ হবে
+            _isInitialized = true;
           });
         }
       }
@@ -77,8 +75,9 @@ class _TopBarState extends State<TopBar> {
 
   @override
   Widget build(BuildContext context) {
+    // এখানে এররটি ছিল - ReownAppKitModal থেকে সরাসরি address নিতে হয়
     bool isConnected = _appKitModal?.isConnected ?? false;
-    String? address = _appKitModal?.session?.address;
+    String? address = _appKitModal?.address; 
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
@@ -110,7 +109,7 @@ class _TopBarState extends State<TopBar> {
           ),
         ),
         Text(
-          "MINE MATRIX",
+          "MINE MATRIX", // প্রজেক্টের নাম বজায় রাখা হলো
           style: GoogleFonts.inter(
             color: Colors.white,
             fontSize: 22.sp,
@@ -161,8 +160,8 @@ class _TopBarState extends State<TopBar> {
             ),
             child: !_isInitialized
                 ? SizedBox(
-                    height: 20.h,
-                    width: 20.h,
+                    height: 18.h,
+                    width: 18.h,
                     child: const CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
