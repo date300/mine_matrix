@@ -1,4 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <queries>
+        <package android:name="app.phantom" />
+        <package android:name="com.solflare.mobile" />
+        <package android:name="io.metamask" />
+        <package android:name="com.wallet.crypto.trustapp" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="wc" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
+
     <application
         android:label="Mine Matrix"
         android:name="${applicationName}"
@@ -7,8 +23,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            /* ১. launchMode বদলে singleTask করা হয়েছে */
-            android:launchMode="singleTask" 
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -25,7 +40,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            /* ২. নতুন ইনটেন্ট ফিল্টার: ওয়ালেট থেকে অ্যাপে ফিরে আসার জন্য */
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -39,20 +53,4 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-
-    /* ৩. কুয়েরিজ: আপনার ফোন চেক করবে এই ওয়ালেট অ্যাপগুলো ইন্সটল আছে কি না */
-    <queries>
-        <package android:name="app.phantom" />
-        <package android:name="com.solflare.mobile" />
-        <package android:name="io.metamask" />
-        <package android:name="com.wallet.crypto.trustapp" />
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="wc" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-    </queries>
 </manifest>
