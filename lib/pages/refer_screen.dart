@@ -4,12 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-class ReferPage extends StatelessWidget {
-  const ReferPage({super.key});
+// ক্লাসের নাম পরিবর্তন করে ReferScreen করা হলো যাতে layout.dart এর সাথে মিলে যায়
+class ReferScreen extends StatelessWidget {
+  const ReferScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    String referCode = "MINER786"; // আপনার ডাইনামিক কোড এখানে বসবে
+    String referCode = "MINER786"; 
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D12),
@@ -20,8 +21,7 @@ class ReferPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 40.h),
-              
-              // উপরের আইকন বা ইমেজ
+
               Container(
                 height: 150.h,
                 width: 150.w,
@@ -36,7 +36,6 @@ class ReferPage extends StatelessWidget {
 
               SizedBox(height: 30.h),
 
-              // টাইটেল
               Text(
                 "Refer & Earn",
                 style: GoogleFonts.inter(
@@ -57,7 +56,6 @@ class ReferPage extends StatelessWidget {
 
               SizedBox(height: 40.h),
 
-              // রেফারেল কোড বক্স
               Container(
                 padding: EdgeInsets.all(20.w),
                 decoration: BoxDecoration(
@@ -102,13 +100,12 @@ class ReferPage extends StatelessWidget {
 
               SizedBox(height: 30.h),
 
-              // শেয়ার বাটন
               SizedBox(
                 width: double.infinity,
                 height: 55.h,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // শেয়ার লজিক এখানে হবে
+                    // শেয়ার লজিক
                   },
                   icon: const Icon(Icons.share, color: Colors.black),
                   label: Text(
@@ -124,7 +121,6 @@ class ReferPage extends StatelessWidget {
 
               SizedBox(height: 40.h),
 
-              // পরিসংখ্যান (Stats)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -132,8 +128,8 @@ class ReferPage extends StatelessWidget {
                   _buildStatCard("Earnings", "120.50 SOL"),
                 ],
               ),
-              
-              SizedBox(height: 120.h), // নেভবার এর জন্য নিচের ফাঁকা জায়গা
+
+              SizedBox(height: 120.h), 
             ],
           ),
         ),

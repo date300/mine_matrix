@@ -20,7 +20,7 @@ class FloatingBottomNav extends StatelessWidget {
     return Container(
       height: 100.h,
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 15.w), // সাইড প্যাডিং কিছুটা কমানো হয়েছে ৪টি আইটেমের জন্য
+      padding: EdgeInsets.symmetric(horizontal: 15.w),
       color: Colors.transparent,
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -30,32 +30,33 @@ class FloatingBottomNav extends StatelessWidget {
             width: double.infinity,
             height: 65.h,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D0D12), // হালকা কালো ব্যাকগ্রাউন্ড দেয়া হলো যাতে আইকন ফুটে ওঠে
+              color: const Color(0xFF0D0D12), 
               borderRadius: BorderRadius.circular(30.r),
-              border: Border.all(color: Colors.white10, width: 1), // হালকা বর্ডার
+              border: Border.all(color: Colors.white10, width: 1),
             ),
             alignment: Alignment.center,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _navItem(0, CupertinoIcons.square_grid_2x2_fill, "Home"),
-                _navItem(2, CupertinoIcons.person_2_fill, "Refer"), // নতুন যুক্ত করা হয়েছে
-                
+                _navItem(2, CupertinoIcons.person_2_fill, "Refer"), 
+
                 SizedBox(width: 60.w), // মাঝখানের মাইনিং বাটনের জন্য গ্যাপ
-                
+
                 _navItem(3, CupertinoIcons.briefcase_fill, "Wallet"),
-                _navItem(4, CupertinoIcons.settings_fill, "More"), // উদাহরন হিসেবে আরেকটি (ইচ্ছাধীন)
+                // এখানে settings_fill এর বদলে settings ব্যবহার করা হয়েছে
+                _navItem(4, CupertinoIcons.settings, "More"), 
               ],
             ),
           ),
-          
+
           // মাঝখানের ফ্লোটিং মাইনিং বাটন
           Positioned(
             bottom: 20.h,
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.mediumImpact();
-                onTap(1); // Mining index 1
+                onTap(1); 
               },
               child: _miningBtn(currentIndex == 1),
             ),
@@ -65,7 +66,6 @@ class FloatingBottomNav extends StatelessWidget {
     );
   }
 
-  // নিচের আইটেম গুলোর জন্য উইজেট
   Widget _navItem(int index, IconData icon, String label) {
     bool active = currentIndex == index;
     return GestureDetector(
@@ -90,14 +90,13 @@ class FloatingBottomNav extends StatelessWidget {
           ),
         ],
       ).animate(target: active ? 1 : 0).scale(
-        begin: const Offset(1, 1), 
+        begin: const Offset(1, 1),
         end: const Offset(1.1, 1.1),
         duration: 200.ms
       ),
     );
   }
 
-  // মাইনিং বাটন ডিজাইন
   Widget _miningBtn(bool isActive) {
     return Container(
       padding: EdgeInsets.all(4.w),
