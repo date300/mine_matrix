@@ -6,7 +6,7 @@ import 'nevbar.dart';
 import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
-import 'refer_screen.dart'; // ১. রেফার স্ক্রিন ইম্পোর্ট করুন
+import 'refer_screen.dart'; // নিশ্চিত করো ফাইলের নাম refer_screen.dart (সব ছোট হাতের)
 
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
@@ -17,7 +17,7 @@ class AppColors {
 }
 
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs; // ডিফল্টভাবে মাইনিং পেজ (১) সিলেক্ট করা
+  var selectedIndex = 1.obs; 
 }
 
 class AppLayout extends StatefulWidget {
@@ -29,24 +29,22 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   final controller = Get.put(AppLayoutController());
 
-  // ২. পেজ লিস্ট আপডেট করুন (নেভবারের ইনডেক্স অনুযায়ী)
+  // পেজ লিস্ট (নেভবারের ইনডেক্স অনুযায়ী)
   final List<Widget> pages = [
     const HomeScreen(),      // Index 0
-    const MiningScreen(),    // Index 1 (সেন্ট্রাল বাটন)
-    const ReferScreen(),     // Index 2 (আপনার নতুন বানানো পেজ)
+    const MiningScreen(),    // Index 1
+    const ReferScreen(),     // Index 2 (ক্লাস নাম ReferScreen হতে হবে)
     const WalletScreen(),    // Index 3
-    const Center(child: Text("Settings/More", style: TextStyle(color: Colors.white))), // Index 4
+    const Center(child: Text("Settings", style: TextStyle(color: Colors.white))), // Index 4
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      extendBody: true, 
-
+      extendBody: true,
       body: Stack(
         children: [
-          // ব্যাকগ্রাউন্ড এনিমেশন
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
@@ -61,17 +59,14 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
             ),
             child: const SizedBox.expand(),
           ),
-
           SafeArea(
             bottom: false,
             child: Column(
               children: [
                 const TopBar(),
-
                 Expanded(
                   child: Obx(() => AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
-                    // ইনডেক্স অনুযায়ী পেজ দেখাবে
                     child: pages[controller.selectedIndex.value],
                   )),
                 ),
@@ -80,7 +75,6 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
           ),
         ],
       ),
-
       bottomNavigationBar: Obx(() => FloatingBottomNav(
         currentIndex: controller.selectedIndex.value,
         onTap: (index) => controller.selectedIndex.value = index,
