@@ -1,4 +1,4 @@
-import 'dart:ui'; // গ্লাস ইফেক্টের জন্য জরুরি
+import 'dart:ui'; 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -75,11 +75,19 @@ class _TopBarState extends State<TopBar> {
 
   @override
   Widget build(BuildContext context) {
-    // এখানে এররটি ছিল - ReownAppKitModal থেকে সরাসরি address নিতে হয়
     bool isConnected = _appKitModal?.isConnected ?? false;
-    String? address = _appKitModal?.address; 
+    String? address;
 
-    String displayAddress = (isConnected && address != null)
+    // এরর সমাধান: dynamic কাস্টিং ব্যবহার করে অ্যাড্রেস নেওয়া হয়েছে
+    if (isConnected && _appKitModal?.session != null) {
+      try {
+        address = (_appKitModal?.session as dynamic).address;
+      } catch (e) {
+        address = null;
+      }
+    }
+
+    String displayAddress = (isConnected && address != null && address.length > 10)
         ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
         : 'Connect';
 
@@ -109,7 +117,7 @@ class _TopBarState extends State<TopBar> {
           ),
         ),
         Text(
-          "MINE MATRIX", // প্রজেক্টের নাম বজায় রাখা হলো
+          "MINE MATRIX",
           style: GoogleFonts.inter(
             color: Colors.white,
             fontSize: 22.sp,
@@ -127,10 +135,7 @@ class _TopBarState extends State<TopBar> {
           _appKitModal!.openModalView();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Initializing Wallet, please wait..."),
-              duration: Duration(seconds: 2),
-            ),
+            const SnackBar(content: Text("Initializing Wallet, please wait...")),
           );
         }
       },
@@ -150,42 +155,27 @@ class _TopBarState extends State<TopBar> {
                 width: 1.5,
               ),
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withOpacity(0.1),
-                  Colors.white.withOpacity(0.05)
-                ],
+                colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
               ),
             ),
             child: !_isInitialized
                 ? SizedBox(
                     height: 18.h,
                     width: 18.h,
-                    child: const CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+                    child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
                 : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        connected
-                            ? CupertinoIcons.checkmark_seal_fill
-                            : CupertinoIcons.link,
+                        connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
                         color: connected ? accentGreen : Colors.white,
                         size: 16.sp,
                       ),
                       SizedBox(width: 8.w),
                       Text(
                         addr,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -195,3 +185,4 @@ class _TopBarState extends State<TopBar> {
     );
   }
 }
+
