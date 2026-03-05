@@ -26,35 +26,43 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
-    try {
-      _appKitModal = ReownAppKitModal(
-        context: context,
-        projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-        metadata: const PairingMetadata(
-          name: 'Mine Matrix',
-          description: 'Decentralized Mining Platform',
-          url: 'https://minematrix.com',
-          icons: ['https://minematrix.com/logo.png'],
-          redirect: Redirect(
-            native: 'minematrix://',
-            universal: 'https://minematrix.com',
+    // UI রেন্ডার হওয়ার পর ইনিশিয়ালাইজ করার জন্য এটি জরুরি
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        _appKitModal = ReownAppKitModal(
+          context: context,
+          projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+          metadata: const PairingMetadata(
+            name: 'Mine Matrix',
+            description: 'Decentralized Mining Platform',
+            url: 'https://minematrix.com',
+            icons: ['https://minematrix.com/logo.png'],
+            redirect: Redirect(
+              native: 'minematrix://',
+              universal: 'https://minematrix.com',
+            ),
           ),
-        ),
-      );
+        );
 
-      await _appKitModal!.init();
-      _appKitModal!.addListener(_onUpdate);
+        // ১০ সেকেন্ডের টাইমআউট দেওয়া হয়েছে যাতে লোডিং আটকে না থাকে
+        await _appKitModal!.init().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint("Reown Initialization Timeout");
+          },
+        );
 
-    } catch (e) {
-      debugPrint("Wallet Init Error: $e");
-    } finally {
-      // এরর হোক বা সফল, টপবার লোড করে দেবে, আর গায়েব হবে না!
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
+        _appKitModal!.addListener(_onUpdate);
+      } catch (e) {
+        debugPrint("Wallet Init Error: $e");
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true; // সাকসেস হোক বা এরর, লোডিং বন্ধ হবে
+          });
+        }
       }
-    }
+    });
   }
 
   void _onUpdate() {
@@ -69,19 +77,8 @@ class _TopBarState extends State<TopBar> {
 
   @override
   Widget build(BuildContext context) {
-    bool isConnected = false;
-    String? address;
-
-    if (_isInitialized && _appKitModal != null) {
-      isConnected = _appKitModal!.isConnected;
-      try {
-        if (isConnected && _appKitModal?.session != null) {
-          address = (_appKitModal?.session as dynamic).address;
-        }
-      } catch (e) {
-        address = null;
-      }
-    }
+    bool isConnected = _appKitModal?.isConnected ?? false;
+    String? address = _appKitModal?.session?.address;
 
     String displayAddress = (isConnected && address != null)
         ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
@@ -124,7 +121,6 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  // ফ্লাটারের নিজস্ব গ্লাস ইফেক্ট যা ওয়েব এবং অ্যাপ দুই জায়গাতেই ১০০% কাজ করবে
   Widget _buildWalletBtn(bool connected, String addr) {
     return GestureDetector(
       onTap: () {
@@ -132,7 +128,10 @@ class _TopBarState extends State<TopBar> {
           _appKitModal!.openModalView();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Initializing Wallet, please wait...")),
+            const SnackBar(
+              content: Text("Initializing Wallet, please wait..."),
+              duration: Duration(seconds: 2),
+            ),
           );
         }
       },
@@ -141,8 +140,9 @@ class _TopBarState extends State<TopBar> {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            width: connected ? 140.w : 120.w,
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
             height: 45.h,
+            constraints: BoxConstraints(minWidth: 110.w),
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15.r),
@@ -159,32 +159,37 @@ class _TopBarState extends State<TopBar> {
                 ],
               ),
             ),
-            // যতক্ষণ ইনিশিয়ালাইজ না হচ্ছে, বাটনের ভেতর একটি ছোট লোডিং স্পিনার দেখাবে
-            child: !_isInitialized 
-              ? SizedBox(
-                  height: 20.h, 
-                  width: 20.h, 
-                  child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
-                      color: connected ? accentGreen : Colors.white,
-                      size: 18.sp
+            child: !_isInitialized
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.h,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      addr,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        connected
+                            ? CupertinoIcons.checkmark_seal_fill
+                            : CupertinoIcons.link,
+                        color: connected ? accentGreen : Colors.white,
+                        size: 16.sp,
                       ),
-                    ),
-                  ],
-                ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        addr,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
