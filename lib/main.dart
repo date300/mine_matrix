@@ -6,13 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 // আপনার লেআউট ইমপোর্ট
 import 'layout/layout.dart';
 
-// (যদি MiningController অন্য কোনো ফাইলে থাকে, তবে সেটির ইমপোর্ট এখানে দিতে হবে। 
-// আপাতত অ্যাপ যেন ক্র্যাশ না করে তাই এটি কমেন্ট করে রাখলাম। আপনার যদি কন্ট্রোলার বানানো থাকে, তবে // সরিয়ে দেবেন।)
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Get.put(MiningController()); 
+  // ওয়েব এবং অ্যাপ দুই জায়গাতেই স্ক্রিন সাইজ ঠিক রাখার জন্য এটি অত্যন্ত জরুরি
+  await ScreenUtil.ensureScreenSize();
+
+  // Get.put(MiningController());
 
   runApp(const MiningApp());
 }
@@ -36,7 +36,6 @@ class MiningApp extends StatelessWidget {
             scaffoldBackgroundColor: const Color(0xFF0D0D12),
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           ),
-          // এখানে সরাসরি আপনার তৈরি করা AppLayout কল করা হয়েছে
           home: const AppLayout(),
         );
       },
