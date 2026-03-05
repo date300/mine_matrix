@@ -26,24 +26,26 @@ class _TopBarState extends State<TopBar> {
   }
 
   void _initializeReown() async {
-    // এখানে PairingMetadata ব্যবহার করা হয়েছে যা লেটেস্ট ভার্সনের জন্য সঠিক
+    // ১.৮.৩+ ভার্সনের জন্য লেটেস্ট কনফিগারেশন
     _appKitModal = ReownAppKitModal(
       context: context,
-      projectId: 'de4fd9cc5d44e0e8a830b232232a38184da',
+      projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
       metadata: const PairingMetadata(
-        name: 'Web3 Mine Matrix',
+        name: 'Mine Matrix',
         description: 'Decentralized Mining Platform',
-        url: 'https://yourwebsite.com',
-        icons: ['https://yourwebsite.com/logo.png'],
+        url: 'https://minematrix.com',
+        icons: ['https://minematrix.com/logo.png'],
         redirect: Redirect(
-          native: 'web3minematrix://',
-          universal: 'https://yourwebsite.com',
+          // এটি AndroidManifest-এর স্কিমের সাথে হুবহু মিলতে হবে
+          native: 'minematrix://', 
+          universal: 'https://minematrix.com',
         ),
       ),
     );
 
     await _appKitModal!.init();
-    
+
+    // সেশন আপডেট শোনার জন্য লিসেনার
     _appKitModal!.addListener(_onUpdate);
 
     if (mounted) {
@@ -70,20 +72,20 @@ class _TopBarState extends State<TopBar> {
     }
 
     bool isConnected = _appKitModal!.isConnected;
-    
-    // ডাইনামিক কাস্টিং ব্যবহার করা হয়েছে যাতে বিল্ড এরর না আসে
+
+    // অ্যাড্রেস পাওয়ার সঠিক এবং নিরাপদ উপায়
     String? address;
     try {
-      final session = _appKitModal?.session;
-      if (session != null) {
-        address = (session as dynamic).address;
+      if (isConnected && _appKitModal?.session != null) {
+        // ডাইনামিক কাস্টিং ব্যবহার করা হয়েছে যাতে বিল্ড এরর না আসে
+        address = (_appKitModal?.session as dynamic).address;
       }
     } catch (e) {
       address = null;
     }
 
     String displayAddress = (isConnected && address != null)
-        ? '${address.substring(0, 4)}...${address.substring(address.length - 4)}'
+        ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
         : 'Connect';
 
     return Container(
@@ -127,16 +129,20 @@ class _TopBarState extends State<TopBar> {
     return GestureDetector(
       onTap: () => _appKitModal!.openModalView(),
       child: GlassmorphicContainer(
-        width: connected ? 140.w : 110.w,
+        width: connected ? 140.w : 120.w,
         height: 45.h,
         borderRadius: 15.r,
         blur: 15,
         alignment: Alignment.center,
-        border: 1,
+        border: 1.5,
         linearGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]
         ),
         borderGradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [connected ? accentGreen : accentPurple, Colors.transparent]
         ),
         child: Row(
@@ -145,7 +151,7 @@ class _TopBarState extends State<TopBar> {
             Icon(
               connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
               color: connected ? accentGreen : Colors.white,
-              size: 20.sp
+              size: 18.sp
             ),
             SizedBox(width: 8.w),
             Text(
