@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'auth_provider.dart'; // ফাইলটির সঠিক লোকেশন ইমপোর্ট করে নেবেন
+// এটি পেস্ট করুন:
+import 'package:mine_matrix/providers/auth_provider.dart';
 
 class TopBar extends StatefulWidget {
   const TopBar({super.key});
