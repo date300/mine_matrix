@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-// এটি পেস্ট করুন:
+
+// এই নিচের দুটি লাইন খুব গুরুত্বপূর্ণ, এগুলো চেক করুন:
+import 'package:provider/provider.dart'; 
 import 'package:mine_matrix/providers/auth_provider.dart';
 
 class TopBar extends StatefulWidget {
@@ -75,7 +77,8 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
     return GestureDetector(
-      onTap: () => auth.openWalletModal(context), // প্রোভাইডার থেকে কল হচ্ছে
+      // এখানে openWalletModal এর বদলে openModal হবে
+      onTap: () => auth.openModal(context), 
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15.r),
         child: BackdropFilter(
