@@ -5,9 +5,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
 
-// আপনার অ্যাপের মেইন ফাইল বা কালার ক্লাস যেখানে আছে
-import '../main.dart'; 
-import 'mining_screen.dart'; // লোডিং শেষে যেখানে যাবে
+// আপনার প্রোজেক্ট স্ট্রাকচার অনুযায়ী সঠিক ইমপোর্ট
+import '../layout/layout.dart'; 
+import '../main.dart'; // AppColors পাওয়ার জন্য
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,117 +17,101 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // ডায়নামিক লোডিং টেক্সট দেখানোর জন্য GetX এর RxString
-  final RxString _loadingText = "INITIALIZING CORE...".obs;
+  final RxString _loadingStatus = "INITIALIZING MATRIX...".obs;
 
   @override
   void initState() {
     super.initState();
-    _startLoadingProcess();
+    _handleNavigation();
   }
 
-  // প্রফেশনাল লোডিং লজিক (Simulated)
-  void _startLoadingProcess() async {
+  void _handleNavigation() async {
+    // ১. একটু অপেক্ষা করুন (সিস্টেম লোড হওয়ার জন্য)
     await Future.delayed(const Duration(seconds: 1));
-    
-    // মনে হবে যেন সার্ভারের সাথে কানেক্ট হচ্ছে
-    _loadingText.value = "CONNECTING TO SECURE SERVER...";
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    // ইউজারের ডেটা ফেচ করার সিমুলেশন
-    _loadingText.value = "SYNCING MATRIX DATA...";
-    await Future.delayed(const Duration(milliseconds: 1500));
+    _loadingStatus.value = "CONNECTING TO NODES...";
 
-    // লোডিং শেষে মেইন স্ক্রিনে নিয়ে যাওয়া
+    // ২. আরও কিছু সময় লোডিং এনিমেশন দেখান
+    await Future.delayed(const Duration(seconds: 2));
+    _loadingStatus.value = "SYNCING YOUR WALLET...";
+    
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    // ৩. এখন মেইন লেআউটে (AppLayout) পাঠিয়ে দিন
+    // Get.off ব্যবহার করলে ইউজার ব্যাক বাটন টিপলে আর লোডিং স্ক্রিনে ফিরবে না
     Get.off(
-      () => const MiningScreen(),
-      transition: Transition.fadeIn,
-      duration: const Duration(milliseconds: 800),
+      () => const AppLayout(), 
+      transition: Transition.fadeIn, 
+      duration: const Duration(milliseconds: 800)
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
+      backgroundColor: const Color(0xFF0D0D12), // আপনার AppColors.background
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // লোগো উইথ গ্লোয়িং ইফেক্ট
+            // লোগো
             Container(
-              width: 120.w,
-              height: 120.w,
+              width: 130.w,
+              height: 130.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentGreen.withOpacity(0.15),
-                    blurRadius: 30,
+                    color: const Color(0xFF14F195).withOpacity(0.2),
+                    blurRadius: 40,
                     spreadRadius: 10,
-                  ),
-                ],
+                  )
+                ]
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(60.w),
-                child: Image.asset(
-                  'assets/icon/icon.png',
-                  fit: BoxFit.cover,
-                  // যদি কোনো কারণে ছবি না পায়, তাহলে একটি আইকন দেখাবে (Crash রোধ করার জন্য)
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.token, size: 60.sp, color: AppColors.accentGreen);
-                  },
-                ),
+              child: Image.asset(
+                'assets/icon/icon.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stack) => const Icon(Icons.auto_awesome, size: 80, color: Color(0xFF14F195)),
               ),
-            ).animate()
-             .scale(duration: 800.ms, curve: Curves.easeOutBack)
-             .shimmer(delay: 1000.ms, duration: 2000.ms),
+            ).animate().scale(duration: 800.ms, curve: Curves.elasticOut),
 
             SizedBox(height: 30.h),
 
-            // অ্যাপের নতুন নাম
+            // নাম
             Text(
               "MINE MATRIX",
               style: GoogleFonts.inter(
-                fontSize: 26.sp,
+                fontSize: 28.sp,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
-                letterSpacing: 5,
+                letterSpacing: 6,
               ),
-            ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3),
 
-            SizedBox(height: 12.h),
+            SizedBox(height: 40.h),
 
-            // ডায়নামিক লোডিং টেক্সট (GetX Obx)
+            // ডায়নামিক স্ট্যাটাস টেক্সট
             Obx(() => Text(
-              _loadingText.value,
+              _loadingStatus.value,
               style: GoogleFonts.inter(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.accentGreen,
-                letterSpacing: 1.5,
+                fontSize: 11.sp,
+                color: const Color(0xFF14F195).withOpacity(0.8),
+                letterSpacing: 2,
               ),
-            ).animate(key: ValueKey(_loadingText.value)) // টেক্সট চেঞ্জ হলে এনিমেশন হবে
-             .fadeIn(duration: 400.ms)),
-            
-            SizedBox(height: 50.h),
-            
-            // প্রফেশনাল স্লিম লোডিং বার
-            Container(
-              width: 180.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(2.h),
+            )),
+
+            SizedBox(height: 20.h),
+
+            // একটি ছোট প্রগ্রেস ইন্ডিকেটর
+            SizedBox(
+              width: 40.w,
+              height: 2.h,
+              child: const LinearProgressIndicator(
+                backgroundColor: Colors.white10,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14F195)),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2.h),
-                child: const LinearProgressIndicator(
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
-                ),
-              ),
-            ).animate().fadeIn(delay: 800.ms),
+            ).animate().fadeIn(delay: 600.ms),
           ],
         ),
       ),
