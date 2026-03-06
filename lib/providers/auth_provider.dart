@@ -50,7 +50,7 @@ class AuthProvider extends ChangeNotifier {
 
       _appKitModal!.addListener(_onUpdate);
       _isInitialized = true;
-      notifyListeners(); // UI-কে আপডেট করার জন্য
+      notifyListeners(); 
     } catch (e) {
       debugPrint("Wallet Init Error: $e");
     }
@@ -60,8 +60,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ওয়ালেট মোডাল ওপেন করার ফাংশন (যে কোনো পেজ থেকে কল করা যাবে)
-  void openWalletModal(BuildContext context) {
+  // এখানে নাম পরিবর্তন করে 'openModal' করা হলো যাতে TopBar-এর সাথে মিলে যায়
+  void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
     } else {
