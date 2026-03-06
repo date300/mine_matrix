@@ -4,7 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:provider/provider.dart';
+// এই নিচের দুটি লাইন খুব গুরুত্বপূর্ণ, এগুলো চেক করুন:
+import 'package:provider/provider.dart'; 
 import 'package:mine_matrix/providers/auth_provider.dart';
 
 class TopBar extends StatefulWidget {
@@ -36,8 +37,7 @@ class _TopBarState extends State<TopBar> {
             : 'Connect';
 
         return Container(
-          // প্যাডিং কিছুটা কমিয়েছি যেন সব স্ক্রিনে সুন্দর ফিট হয়
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -51,41 +51,25 @@ class _TopBarState extends State<TopBar> {
   }
 
   Widget _buildLogo() {
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // বাম সাইডের লোগো
-        Image.asset(
-          'assets/icon/icon.png',
-          height: 28.h, // লোগোর সাইজ ছোট করা হয়েছে
-          width: 28.h,
-          fit: BoxFit.contain,
+        Text(
+          "WEB3",
+          style: GoogleFonts.inter(
+            color: Colors.white60,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        SizedBox(width: 6.w), // লোগো এবং টেক্সটের মাঝের গ্যাপ
-        
-        // টেক্সট অংশ
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "WEB3",
-              style: GoogleFonts.inter(
-                color: Colors.white60,
-                fontSize: 8.sp, // ফন্ট সাইজ ছোট করা হয়েছে
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              "MINE MATRIX",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 16.sp, // ফন্ট সাইজ ছোট করা হয়েছে
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
+        Text(
+          "MINE MATRIX",
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ],
     );
@@ -93,21 +77,22 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
     return GestureDetector(
-      onTap: () => auth.openModal(context),
+      // এখানে openWalletModal এর বদলে openModal হবে
+      onTap: () => auth.openModal(context), 
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.r), // বর্ডার রেডিয়াস একটু কমানো হয়েছে
+        borderRadius: BorderRadius.circular(15.r),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w), // প্যাডিং কমানো হয়েছে
-            height: 38.h, // বাটনের হাইট কমানো হয়েছে
-            constraints: BoxConstraints(minWidth: 90.w),
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            height: 45.h,
+            constraints: BoxConstraints(minWidth: 110.w),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(15.r),
               border: Border.all(
                 color: auth.isConnected ? accentGreen.withOpacity(0.5) : Colors.white24,
-                width: 1.2, // বর্ডারের পুরুত্ব কমানো হয়েছে
+                width: 1.5,
               ),
               gradient: LinearGradient(
                 colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
@@ -115,8 +100,8 @@ class _TopBarState extends State<TopBar> {
             ),
             child: !auth.isInitialized
                 ? SizedBox(
-                    height: 16.h,
-                    width: 16.h,
+                    height: 18.h,
+                    width: 18.h,
                     child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                   )
                 : Row(
@@ -125,12 +110,12 @@ class _TopBarState extends State<TopBar> {
                       Icon(
                         auth.isConnected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
                         color: auth.isConnected ? accentGreen : Colors.white,
-                        size: 14.sp, // আইকনের সাইজ কমানো হয়েছে
+                        size: 16.sp,
                       ),
-                      SizedBox(width: 6.w),
+                      SizedBox(width: 8.w),
                       Text(
                         addr,
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 11.sp, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
