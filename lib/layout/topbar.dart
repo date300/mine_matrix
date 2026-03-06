@@ -1,9 +1,10 @@
-import 'dart:ui'; 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:reown_appkit/reown_appkit.dart';
+import 'package:provider/provider.dart';
+import 'auth_provider.dart'; // ফাইলটির সঠিক লোকেশন ইমপোর্ট করে নেবেন
 
 class TopBar extends StatefulWidget {
   const TopBar({super.key});
@@ -13,93 +14,37 @@ class TopBar extends StatefulWidget {
 }
 
 class _TopBarState extends State<TopBar> {
-  ReownAppKitModal? _appKitModal;
-  bool _isInitialized = false;
-
   final Color accentGreen = const Color(0xFF14F195);
-  final Color accentPurple = const Color(0xFF9945FF);
 
   @override
   void initState() {
     super.initState();
-    _initializeReown();
-  }
-
-  void _initializeReown() async {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        _appKitModal = ReownAppKitModal(
-          context: context,
-          projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-          metadata: const PairingMetadata(
-            name: 'Mine Matrix',
-            description: 'Decentralized Mining Platform',
-            url: 'https://minematrix.com',
-            icons: ['https://minematrix.com/logo.png'],
-            redirect: Redirect(
-              native: 'minematrix://',
-              universal: 'https://minematrix.com',
-            ),
-          ),
-        );
-
-        await _appKitModal!.init().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            debugPrint("Reown Initialization Timeout");
-          },
-        );
-
-        _appKitModal!.addListener(_onUpdate);
-      } catch (e) {
-        debugPrint("Wallet Init Error: $e");
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isInitialized = true;
-          });
-        }
-      }
+    // অ্যাপ চালু হলেই ওয়ালেট ইনিশিয়ালাইজ হবে
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).initWallet(context);
     });
-  }
-
-  void _onUpdate() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _appKitModal?.removeListener(_onUpdate);
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isConnected = _appKitModal?.isConnected ?? false;
-    String? address;
+    // Consumer ব্যবহার করে Provider থেকে ডেটা নিচ্ছি
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        String displayAddress = (auth.isConnected && auth.address != null && auth.address!.length > 10)
+            ? '${auth.address!.substring(0, 6)}...${auth.address!.substring(auth.address!.length - 4)}'
+            : 'Connect';
 
-    // এরর সমাধান: dynamic কাস্টিং ব্যবহার করে অ্যাড্রেস নেওয়া হয়েছে
-    if (isConnected && _appKitModal?.session != null) {
-      try {
-        address = (_appKitModal?.session as dynamic).address;
-      } catch (e) {
-        address = null;
-      }
-    }
-
-    String displayAddress = (isConnected && address != null && address.length > 10)
-        ? '${address.substring(0, 6)}...${address.substring(address.length - 4)}'
-        : 'Connect';
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildLogo(),
-          _buildWalletBtn(isConnected, displayAddress),
-        ],
-      ),
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildLogo(),
+              _buildWalletBtn(auth, displayAddress, context),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -128,17 +73,9 @@ class _TopBarState extends State<TopBar> {
     );
   }
 
-  Widget _buildWalletBtn(bool connected, String addr) {
+  Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        if (_isInitialized && _appKitModal != null) {
-          _appKitModal!.openModalView();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Initializing Wallet, please wait...")),
-          );
-        }
-      },
+      onTap: () => auth.openWalletModal(context), // প্রোভাইডার থেকে কল হচ্ছে
       child: ClipRRect(
         borderRadius: BorderRadius.circular(15.r),
         child: BackdropFilter(
@@ -151,14 +88,14 @@ class _TopBarState extends State<TopBar> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15.r),
               border: Border.all(
-                color: connected ? accentGreen.withOpacity(0.5) : Colors.white24,
+                color: auth.isConnected ? accentGreen.withOpacity(0.5) : Colors.white24,
                 width: 1.5,
               ),
               gradient: LinearGradient(
                 colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
               ),
             ),
-            child: !_isInitialized
+            child: !auth.isInitialized
                 ? SizedBox(
                     height: 18.h,
                     width: 18.h,
@@ -168,8 +105,8 @@ class _TopBarState extends State<TopBar> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        connected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
-                        color: connected ? accentGreen : Colors.white,
+                        auth.isConnected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
+                        color: auth.isConnected ? accentGreen : Colors.white,
                         size: 16.sp,
                       ),
                       SizedBox(width: 8.w),
@@ -185,4 +122,3 @@ class _TopBarState extends State<TopBar> {
     );
   }
 }
-
