@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:async';
 
-// আপনার প্রোজেক্ট স্ট্রাকচার অনুযায়ী সঠিক ইমপোর্ট
+// ইমপোর্ট পাথগুলো আপনার প্রোজেক্ট অনুযায়ী
+import '../main.dart'; 
 import '../layout/layout.dart'; 
-import '../main.dart'; // AppColors পাওয়ার জন্য
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,101 +17,93 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final RxString _loadingStatus = "INITIALIZING MATRIX...".obs;
-
   @override
   void initState() {
     super.initState();
-    _handleNavigation();
-  }
-
-  void _handleNavigation() async {
-    // ১. একটু অপেক্ষা করুন (সিস্টেম লোড হওয়ার জন্য)
-    await Future.delayed(const Duration(seconds: 1));
-    _loadingStatus.value = "CONNECTING TO NODES...";
-
-    // ২. আরও কিছু সময় লোডিং এনিমেশন দেখান
-    await Future.delayed(const Duration(seconds: 2));
-    _loadingStatus.value = "SYNCING YOUR WALLET...";
-    
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    // ৩. এখন মেইন লেআউটে (AppLayout) পাঠিয়ে দিন
-    // Get.off ব্যবহার করলে ইউজার ব্যাক বাটন টিপলে আর লোডিং স্ক্রিনে ফিরবে না
-    Get.off(
-      () => const AppLayout(), 
+    // ৪ সেকেন্ড পর AppLayout-এ চলে যাবে (আগের টাইমার স্টাইল)
+    Timer(const Duration(seconds: 4), () {
+      Get.off(() => const AppLayout(), 
       transition: Transition.fadeIn, 
-      duration: const Duration(milliseconds: 800)
-    );
+      duration: const Duration(milliseconds: 800));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12), // আপনার AppColors.background
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
+      backgroundColor: AppColors.background,
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // লোগো
+            // আপনার নিজস্ব লোগো assets/icon/icon.png
             Container(
-              width: 130.w,
-              height: 130.w,
+              width: 110.w,
+              height: 110.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.accentGreen, AppColors.accentPurple],
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF14F195).withOpacity(0.2),
-                    blurRadius: 40,
-                    spreadRadius: 10,
+                    color: AppColors.accentGreen.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
                   )
-                ]
+                ],
               ),
-              child: Image.asset(
-                'assets/icon/icon.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stack) => const Icon(Icons.auto_awesome, size: 80, color: Color(0xFF14F195)),
+              child: Padding(
+                padding: EdgeInsets.all(20.w), // লোগোটি গোল বৃত্তের মাঝে সুন্দর দেখানোর জন্য
+                child: Image.asset(
+                  'assets/icon/icon.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => 
+                    const Icon(Icons.auto_awesome, color: Colors.white, size: 40),
+                ),
               ),
-            ).animate().scale(duration: 800.ms, curve: Curves.elasticOut),
+            ).animate()
+             .scale(duration: 1000.ms, curve: Curves.bounceOut) // আপনার পছন্দের বাউন্স ইফেক্ট
+             .shimmer(delay: 1200.ms, duration: 1500.ms),
 
-            SizedBox(height: 30.h),
+            SizedBox(height: 24.h),
 
-            // নাম
+            // নতুন নাম: MINE MATRIX
             Text(
               "MINE MATRIX",
               style: GoogleFonts.inter(
                 fontSize: 28.sp,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.bold,
                 color: Colors.white,
-                letterSpacing: 6,
+                letterSpacing: 4,
               ),
-            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.3),
+            ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
 
-            SizedBox(height: 40.h),
+            SizedBox(height: 8.h),
 
-            // ডায়নামিক স্ট্যাটাস টেক্সট
-            Obx(() => Text(
-              _loadingStatus.value,
+            // লোডিং টেক্সট (এনিমেটেড)
+            Text(
+              "Initializing Core Matrix...",
               style: GoogleFonts.inter(
-                fontSize: 11.sp,
-                color: const Color(0xFF14F195).withOpacity(0.8),
-                letterSpacing: 2,
+                fontSize: 12.sp,
+                color: Colors.white54,
               ),
-            )),
-
-            SizedBox(height: 20.h),
-
-            // একটি ছোট প্রগ্রেস ইন্ডিকেটর
+            ).animate(onPlay: (c) => c.repeat())
+             .fadeIn(duration: 1000.ms)
+             .then()
+             .fadeOut(duration: 1000.ms),
+            
+            SizedBox(height: 50.h),
+            
+            // নিচের ছোট লোডিং বার
             SizedBox(
-              width: 40.w,
-              height: 2.h,
-              child: const LinearProgressIndicator(
+              width: 150.w,
+              child: LinearProgressIndicator(
                 backgroundColor: Colors.white10,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF14F195)),
+                color: AppColors.accentGreen,
+                minHeight: 2,
               ),
-            ).animate().fadeIn(delay: 600.ms),
+            ).animate().fadeIn(delay: 1000.ms),
           ],
         ),
       ),
