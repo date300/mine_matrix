@@ -4,13 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-// ক্লাসের নাম পরিবর্তন করে ReferScreen করা হলো যাতে layout.dart এর সাথে মিলে যায়
 class ReferScreen extends StatelessWidget {
   const ReferScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    String referCode = "MINER786"; 
+    String referCode = "MINER786";
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D12),
@@ -32,7 +31,7 @@ class ReferScreen extends StatelessWidget {
                   ),
                 ),
                 child: Icon(Icons.people_alt_rounded, size: 80.sp, color: const Color(0xFF14F195)),
-              ).animate().scale(duration: 600.ms, curve: Curves.backOut),
+              ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack), // <-- এখানে ঠিক করা হয়েছে
 
               SizedBox(height: 30.h),
 
@@ -129,7 +128,7 @@ class ReferScreen extends StatelessWidget {
                 ],
               ),
 
-              SizedBox(height: 120.h), 
+              SizedBox(height: 120.h),
             ],
           ),
         ),
