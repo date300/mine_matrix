@@ -2,25 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart'; // Provider প্যাকেজ ইমপোর্ট
+import 'package:provider/provider.dart';
 
-// আপনার লেআউট এবং প্রোভাইডার ইমপোর্ট
+// আপনার লেআউট, প্রোভাইডার এবং নতুন স্প্ল্যাশ স্ক্রিন ইমপোর্ট
 import 'layout/layout.dart';
-import 'providers/auth_provider.dart'; // আপনার AuthProvider এর সঠিক পাথ দিন
+import 'providers/auth_provider.dart';
+import 'pages/splash_screen.dart'; // <-- এটি নতুন যোগ করুন
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ওয়েব এবং অ্যাপ দুই জায়গাতেই স্ক্রিন সাইজ ঠিক রাখার জন্য এটি অত্যন্ত জরুরি
   await ScreenUtil.ensureScreenSize();
 
-  // Get.put(MiningController()); // এটি পরে ব্যবহার করতে পারবেন
-
-  // অ্যাপটি রান করার সময় MultiProvider দিয়ে র‍্যাপ করা হলো
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()), // AuthProvider যুক্ত করা হলো
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: const MiningApp(),
     ),
@@ -46,7 +42,8 @@ class MiningApp extends StatelessWidget {
             scaffoldBackgroundColor: const Color(0xFF0D0D12),
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           ),
-          home: const AppLayout(), // আপনার মূল লেআউট
+          // অ্যাপ শুরুতে SplashScreen-এ যাবে
+          home: const SplashScreen(), 
         );
       },
     );
