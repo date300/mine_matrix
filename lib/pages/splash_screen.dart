@@ -5,9 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
 
-// আপনার প্রোজেক্ট স্ট্রাকচার অনুযায়ী সঠিক ইমপোর্ট
 import '../layout/layout.dart'; 
-import '../main.dart'; // AppColors পাওয়ার জন্য
+import '../main.dart'; 
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -26,17 +25,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _handleNavigation() async {
-    // ১. একটু অপেক্ষা করুন (সিস্টেম লোড হওয়ার জন্য)
     await Future.delayed(const Duration(seconds: 1));
     _loadingStatus.value = "CONNECTING TO NODES...";
 
-    // ২. আরও কিছু সময় লোডিং এনিমেশন দেখান
     await Future.delayed(const Duration(seconds: 1, milliseconds: 500));
     _loadingStatus.value = "SYNCING YOUR WALLET...";
     
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // ৩. এখন মেইন লেআউটে (AppLayout) পাঠিয়ে দিন
     Get.off(
       () => const AppLayout(), 
       transition: Transition.fadeIn, 
@@ -47,18 +43,19 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12), // আপনার ব্যাকগ্রাউন্ড কালার
-      body: SizedBox( // Container এর বদলে SizedBox ব্যবহার করা ভালো প্র্যাকটিস
+      backgroundColor: const Color(0xFF0D0D12), 
+      body: SizedBox(
         width: double.infinity,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // লোগো - সাইজ ছোট করে প্রফেশনাল গ্লো ও শিমার ইফেক্ট দেওয়া হয়েছে
+            // লোগো - এখানে ClipOval যোগ করা হয়েছে ছবিকে গোল করার জন্য
             Container(
-              width: 85.w, // সাইজ ১৩০ থেকে ছোট করা হয়েছে
+              width: 85.w, 
               height: 85.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                color: Colors.white10, // ছবির ব্যাকগ্রাউন্ড হিসেবে হালকা কালার (অপশনাল)
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF14F195).withOpacity(0.15),
@@ -67,13 +64,16 @@ class _SplashScreenState extends State<SplashScreen> {
                   )
                 ]
               ),
-              child: Image.asset(
-                'assets/icon/icon.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stack) => Icon(
-                  Icons.auto_awesome, 
-                  size: 45.sp, // আইকন সাইজও কমানো হয়েছে
-                  color: const Color(0xFF14F195)
+              // ClipOval ইমেজটিকে একদম গোল করে ফেলবে
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/icon/icon.png',
+                  fit: BoxFit.cover, // cover দিলে গোল বক্সের পুরোটা জুড়ে ছবি বসবে
+                  errorBuilder: (context, error, stack) => Icon(
+                    Icons.auto_awesome, 
+                    size: 45.sp, 
+                    color: const Color(0xFF14F195)
+                  ),
                 ),
               ),
             ).animate()
@@ -86,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Text(
               "MINE MATRIX",
               style: GoogleFonts.inter(
-                fontSize: 22.sp, // সাইজ ২৮ থেকে কমানো হয়েছে
+                fontSize: 22.sp,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
                 letterSpacing: 5,
@@ -95,11 +95,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
             SizedBox(height: 35.h),
 
-            // ডায়নামিক স্ট্যাটাস টেক্সট (ফেড ইন-আউট বা পালস ইফেক্ট সহ)
+            // ডায়নামিক স্ট্যাটাস টেক্সট
             Obx(() => Text(
               _loadingStatus.value,
               style: GoogleFonts.inter(
-                fontSize: 10.sp, // সাইজ ছোট করা হয়েছে
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF14F195).withOpacity(0.7),
                 letterSpacing: 1.5,
@@ -109,9 +109,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
             SizedBox(height: 16.h),
 
-            // প্রগ্রেস ইন্ডিকেটর - আরেকটু স্মার্ট ও চিকন করা হয়েছে
+            // প্রগ্রেস ইন্ডিকেটর
             SizedBox(
-              width: 100.w, // একটু চওড়া কিন্তু চিকন
+              width: 100.w,
               height: 1.5.h,
               child: const LinearProgressIndicator(
                 backgroundColor: Colors.white10,
