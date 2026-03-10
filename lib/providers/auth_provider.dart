@@ -2,33 +2,46 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider extends ChangeNotifier {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
-  bool _isLoading = false; 
-  String? _lastLoggedAddress; 
+  bool _isLoading = false;
+  bool _isLoggedIn = false;
+  String? _sessionId;
+  String? _referralCode; 
+  String? _lastLoggedAddress;
 
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
-  bool get isConnected => _appKitModal?.isConnected ?? false;
-  ReownAppKitModal? get appKitModal => _appKitModal;
+  bool get isLoggedIn => _isLoggedIn;
+  String? get address => _appKitModal?.session?.address;
 
-  // অ্যাড্রেস পাওয়ার নিরাপদ লজিক
-  String? get address {
-    if (isConnected && _appKitModal?.session != null) {
-      try {
-        return (_appKitModal?.session as dynamic).address;
-      } catch (e) {
-        debugPrint("Address Parse Error: $e");
-        return null;
-      }
+  // ১. অ্যাপ ওপেন হলে সেশন চেক করা
+  Future<void> initAuth(BuildContext context) async {
+    _setLoading(true);
+    final prefs = await SharedPreferences.getInstance();
+    _sessionId = prefs.getString('session_id');
+
+    if (_sessionId != null) {
+      _isLoggedIn = true;
+      debugPrint("Session found. User is already logged in.");
     }
-    return null;
+    _setLoading(false);
+
+    // এরপর ওয়ালেট ইনিশিয়ালাইজ করুন
+    await _initWallet(context);
   }
 
-  // ১. ওয়ালেট ইনিশিয়ালাইজেশন
-  Future<void> initWallet(BuildContext context) async {
+  // ২. রেফারেল কোড সেভ করা (Deep Link থেকে আসবে)
+  void setReferralCode(String code) {
+    _referralCode = code;
+    debugPrint("Referral Code Set: $_referralCode");
+  }
+
+  // ৩. ওয়ালেট সেটআপ
+  Future<void> _initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
     try {
@@ -40,21 +53,12 @@ class AuthProvider extends ChangeNotifier {
           description: 'Decentralized Mining Platform',
           url: 'https://minematrix.com',
           icons: ['https://minematrix.com/logo.png'],
-          redirect: Redirect(
-            native: 'minematrix://',
-            universal: 'https://minematrix.com',
-          ),
+          redirect: Redirect(native: 'minematrix://', universal: 'https://minematrix.com'),
         ),
       );
 
-      await _appKitModal!.init().timeout(
-        const Duration(seconds: 15), // রিয়েল নেটওয়ার্কের জন্য টাইমআউট একটু বাড়ানো হলো
-        onTimeout: () {
-          debugPrint("Reown Initialization Timeout");
-        },
-      );
-
-      _appKitModal!.addListener(_onUpdate);
+      await _appKitModal!.init();
+      _appKitModal!.addListener(_onWalletUpdate);
       _isInitialized = true;
       notifyListeners();
     } catch (e) {
@@ -62,90 +66,89 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ২. স্টেট আপডেট লিসেনার
-  void _onUpdate() {
-    notifyListeners();
-    _checkAndLoginToBackend();
-  }
-
-  // ৩. ব্যাকএন্ডে লগইন চেক করার লজিক
-  Future<void> _checkAndLoginToBackend() async {
+  // ৪. ওয়ালেট কানেক্ট হলে ব্যাকএন্ডে রিকোয়েস্ট
+  void _onWalletUpdate() {
     final currentAddress = address;
-
-    // যদি কানেক্টেড থাকে এবং নতুন অ্যাড্রেস হয়
-    if (isConnected && currentAddress != null && currentAddress != _lastLoggedAddress) {
+    
+    // যদি কানেক্ট হয়, লগইন না থাকে এবং নতুন অ্যাড্রেস হয়
+    if (_appKitModal!.isConnected && !_isLoggedIn && currentAddress != null && currentAddress != _lastLoggedAddress) {
       _lastLoggedAddress = currentAddress;
-      await _sendLoginRequest(currentAddress);
+      _loginToBackend(currentAddress);
     } 
-    // যদি ডিসকানেক্ট হয়ে যায়
-    else if (!isConnected) {
+    else if (!_appKitModal!.isConnected) {
       _lastLoggedAddress = null;
     }
   }
 
-  // ৪. রিয়েল API কল (আপনার লোকাল সার্ভারের সাথে)
-  Future<void> _sendLoginRequest(String walletAddress) async {
-    // আপনার ফিজিক্যাল ডিভাইসের জন্য রিয়েল লিংক
+  // ৫. ব্যাকএন্ড এপিআই কল (সেশন এবং রেফারেল সহ)
+  Future<void> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
-
     _setLoading(true);
 
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'wallet_address': walletAddress}),
-      ).timeout(const Duration(seconds: 10)); // API কলের জন্য টাইমআউট
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'wallet_address': walletAddress,
+          'referred_by': _referralCode // যদি লিংকে রেফারেল থাকে, তবে সেটি যাবে
+        }),
+      );
 
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        debugPrint("Backend Login Success: $responseData");
-        // এখানে আপনি ইউজার ডেটা SharedPreferences বা অন্য কোথাও সেভ করতে পারেন
-      } else {
-        debugPrint("Backend Error: Status Code ${response.statusCode}");
-        debugPrint("Error Body: ${response.body}");
-        _lastLoggedAddress = null; // ফেইল করলে রিসেট করে দিলাম
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          // সেশন সেভ করা
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('session_id', data['session_id']);
+          
+          _sessionId = data['session_id'];
+          _isLoggedIn = true;
+          debugPrint("Backend Login Success! Session: $_sessionId");
+        } else {
+          _lastLoggedAddress = null;
+        }
       }
     } catch (e) {
-      debugPrint("API Request Failed: $e");
-      _lastLoggedAddress = null; 
+      debugPrint("Login Request Failed: $e");
+      _lastLoggedAddress = null;
     } finally {
       _setLoading(false);
     }
   }
 
-  // ৫. লোডিং স্টেট ম্যানেজমেন্ট
+  void openModal(BuildContext context) {
+    if (_isInitialized && _appKitModal != null) {
+      _appKitModal!.openModalView();
+    }
+  }
+
+  // ৬. লগআউট ফাংশন
+  Future<void> logout() async {
+    _setLoading(true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_id'); // সেশন রিমুভ
+    
+    if (_appKitModal != null && _appKitModal!.isConnected) {
+      await _appKitModal!.disconnect(); // ওয়ালেট ডিসকানেক্ট
+    }
+    
+    _isLoggedIn = false;
+    _sessionId = null;
+    _lastLoggedAddress = null;
+    _referralCode = null;
+    
+    _setLoading(false);
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
-  // ৬. মোডাল ওপেন করার ফাংশন
-  void openModal(BuildContext context) {
-    if (_isInitialized && _appKitModal != null) {
-      _appKitModal!.openModalView();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Initializing Wallet, please wait...")),
-      );
-    }
-  }
-
-  // ৭. ওয়ালেট ডিসকানেক্ট ফাংশন
-  Future<void> disconnectWallet() async {
-    if (_appKitModal != null && isConnected) {
-      await _appKitModal!.disconnect();
-      _lastLoggedAddress = null;
-      notifyListeners();
-    }
-  }
-
   @override
   void dispose() {
-    _appKitModal?.removeListener(_onUpdate);
+    _appKitModal?.removeListener(_onWalletUpdate);
     super.dispose();
   }
 }

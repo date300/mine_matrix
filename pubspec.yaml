@@ -22,9 +22,11 @@ dependencies:
   get: ^4.7.3
   flutter_svg: ^2.0.10+1
   url_launcher: ^6.3.0
-  reown_appkit: ^1.1.0
+  reown_appkit: ^1.8.3
   provider: ^6.1.5+1
   http: ^1.6.0
+  shared_preferences: ^2.5.4
+  app_links: ^7.0.0
 
 dev_dependencies:
   flutter_test:
