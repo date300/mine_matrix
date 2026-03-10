@@ -6,25 +6,28 @@ import 'package:reown_appkit/reown_appkit.dart';
 class AuthProvider extends ChangeNotifier {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
-  String? _lastLoggedAddress; // বারবার API কল ঠেকানোর জন্য
+  bool _isLoading = false; 
+  String? _lastLoggedAddress; 
 
   bool get isInitialized => _isInitialized;
+  bool get isLoading => _isLoading;
   bool get isConnected => _appKitModal?.isConnected ?? false;
   ReownAppKitModal? get appKitModal => _appKitModal;
 
-  // অ্যাড্রেস পাওয়ার লজিক
+  // অ্যাড্রেস পাওয়ার নিরাপদ লজিক
   String? get address {
     if (isConnected && _appKitModal?.session != null) {
       try {
         return (_appKitModal?.session as dynamic).address;
       } catch (e) {
+        debugPrint("Address Parse Error: $e");
         return null;
       }
     }
     return null;
   }
 
-  // ওয়ালেট ইনিশিয়ালাইজ করার ফাংশন
+  // ১. ওয়ালেট ইনিশিয়ালাইজেশন
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -45,7 +48,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       await _appKitModal!.init().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 15), // রিয়েল নেটওয়ার্কের জন্য টাইমআউট একটু বাড়ানো হলো
         onTimeout: () {
           debugPrint("Reown Initialization Timeout");
         },
@@ -59,52 +62,68 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ২. স্টেট আপডেট লিসেনার
   void _onUpdate() {
     notifyListeners();
     _checkAndLoginToBackend();
   }
 
-  // ওয়ালেট কানেক্ট হওয়ার পর ব্যাকএন্ডে রিকোয়েস্ট পাঠানোর লজিক
+  // ৩. ব্যাকএন্ডে লগইন চেক করার লজিক
   Future<void> _checkAndLoginToBackend() async {
     final currentAddress = address;
 
-    // যদি কানেক্টেড থাকে, অ্যাড্রেস পাওয়া যায় এবং এই অ্যাড্রেস দিয়ে আগে লগইন না হয়ে থাকে
+    // যদি কানেক্টেড থাকে এবং নতুন অ্যাড্রেস হয়
     if (isConnected && currentAddress != null && currentAddress != _lastLoggedAddress) {
       _lastLoggedAddress = currentAddress;
       await _sendLoginRequest(currentAddress);
     } 
-    // যদি ডিসকানেক্ট হয়ে যায়, তাহলে স্টেট রিসেট করা
+    // যদি ডিসকানেক্ট হয়ে যায়
     else if (!isConnected) {
       _lastLoggedAddress = null;
     }
   }
 
-  // এপিআই কল করার মূল ফাংশন
+  // ৪. রিয়েল API কল (আপনার লোকাল সার্ভারের সাথে)
   Future<void> _sendLoginRequest(String walletAddress) async {
-    // লক্ষ্য করুন: ফিজিক্যাল ডিভাইস বা এমুলেটরে টেস্টিংয়ের সময় localhost কাজ নাও করতে পারে।
-    final url = Uri.parse('http://localhost:8000/auth/login.php');
+    // আপনার ফিজিক্যাল ডিভাইসের জন্য রিয়েল লিংক
+    final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
+
+    _setLoading(true);
 
     try {
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: jsonEncode({'wallet_address': walletAddress}),
-      );
+      ).timeout(const Duration(seconds: 10)); // API কলের জন্য টাইমআউট
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         debugPrint("Backend Login Success: $responseData");
-        // এখানে চাইলে ব্যাকএন্ড থেকে আসা ইউজারের ব্যালেন্স বা অন্যান্য ডাটা সেভ করে রাখতে পারেন
+        // এখানে আপনি ইউজার ডেটা SharedPreferences বা অন্য কোথাও সেভ করতে পারেন
       } else {
-        debugPrint("Backend Error: ${response.statusCode}");
+        debugPrint("Backend Error: Status Code ${response.statusCode}");
+        debugPrint("Error Body: ${response.body}");
+        _lastLoggedAddress = null; // ফেইল করলে রিসেট করে দিলাম
       }
     } catch (e) {
       debugPrint("API Request Failed: $e");
-      // API ফেইল করলে অ্যাড্রেস ক্লিয়ার করে দিচ্ছি যাতে পরে আবার ট্রাই করতে পারে
       _lastLoggedAddress = null; 
+    } finally {
+      _setLoading(false);
     }
   }
 
+  // ৫. লোডিং স্টেট ম্যানেজমেন্ট
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  // ৬. মোডাল ওপেন করার ফাংশন
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
@@ -115,7 +134,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ডিসকানেক্ট করার ফাংশন (যেকোনো পেজ থেকে কল করা যাবে)
+  // ৭. ওয়ালেট ডিসকানেক্ট ফাংশন
   Future<void> disconnectWallet() async {
     if (_appKitModal != null && isConnected) {
       await _appKitModal!.disconnect();
