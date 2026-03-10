@@ -13,17 +13,16 @@ class AuthProvider extends ChangeNotifier {
   String? _referralCode;
   String? _lastLoggedAddress;
 
-  // গেটারস (Getters)
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   
-  // এই লাইনটি আপনার এরর ফিক্স করবে (Topbar.dart এ এটিই খুঁজছিল)
+  // ১ নম্বর ফিক্স: isConnected গেটার
   bool get isConnected => _appKitModal?.isConnected ?? false;
   
-  String? get address => _appKitModal?.session?.address;
+  // ২ নম্বর ফিক্স: address পাওয়ার নতুন নিয়ম
+  String? get address => _appKitModal?.address;
 
-  // ১. অ্যাপ ওপেন হলে সেশন চেক করা
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -31,22 +30,19 @@ class AuthProvider extends ChangeNotifier {
 
     if (_sessionId != null) {
       _isLoggedIn = true;
-      debugPrint("Session found. User is already logged in.");
     }
     _setLoading(false);
 
-    // এরপর ওয়ালেট ইনিশিয়ালাইজ করুন
-    await _initWallet(context);
+    // ৩ নম্বর ফিক্স: ফাংশনটি এখন পাবলিক যাতে Topbar থেকে কল করা যায়
+    await initWallet(context); 
   }
 
-  // ২. রেফারেল কোড সেভ করা
   void setReferralCode(String code) {
     _referralCode = code;
-    debugPrint("Referral Code Set: $_referralCode");
   }
 
-  // ৩. ওয়ালেট সেটআপ
-  Future<void> _initWallet(BuildContext context) async {
+  // এই ফাংশনটি এখন 'initWallet' (আগে ছিল _initWallet)
+  Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
     try {
@@ -71,11 +67,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ৪. ওয়ালেট স্ট্যাটাস আপডেট লজিক
   void _onWalletUpdate() {
     final currentAddress = address;
 
-    // যদি কানেক্ট হয় এবং (লগইন না থাকে অথবা নতুন অ্যাড্রেস হয়)
     if (isConnected && currentAddress != null) {
       if (!_isLoggedIn || currentAddress != _lastLoggedAddress) {
         _lastLoggedAddress = currentAddress;
@@ -83,12 +77,10 @@ class AuthProvider extends ChangeNotifier {
       }
     } else if (!isConnected) {
       _lastLoggedAddress = null;
-      // যদি চান ওয়ালেট ডিসকানেক্ট হলে লগআউট হয়ে যাবে, তবে এখানে logout() কল করতে পারেন।
     }
-    notifyListeners(); // UI আপডেট করার জন্য
+    notifyListeners();
   }
 
-  // ৫. ব্যাকএন্ড এপিআই কল
   Future<void> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
     _setLoading(true);
@@ -108,18 +100,12 @@ class AuthProvider extends ChangeNotifier {
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('session_id', data['session_id']);
-
           _sessionId = data['session_id'];
           _isLoggedIn = true;
-          debugPrint("Backend Login Success!");
-        } else {
-          _lastLoggedAddress = null;
-          _isLoggedIn = false;
         }
       }
     } catch (e) {
-      debugPrint("Login Request Failed: $e");
-      _lastLoggedAddress = null;
+      debugPrint("Login Failed: $e");
     } finally {
       _setLoading(false);
     }
@@ -131,7 +117,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ৬. লগআউট
   Future<void> logout() async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -145,7 +130,6 @@ class AuthProvider extends ChangeNotifier {
     _sessionId = null;
     _lastLoggedAddress = null;
     _referralCode = null;
-
     _setLoading(false);
   }
 
