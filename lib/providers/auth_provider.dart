@@ -17,11 +17,17 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   
-  // ১ নম্বর ফিক্স: isConnected গেটার
+  // ১. isConnected গেটার
   bool get isConnected => _appKitModal?.isConnected ?? false;
   
-  // ২ নম্বর ফিক্স: address পাওয়ার নতুন নিয়ম
-  String? get address => _appKitModal?.address;
+  // ২. Reown 1.8.3 তে address পাওয়ার সঠিক নিয়ম
+  String? get address {
+    final session = _appKitModal?.session;
+    if (session == null) return null;
+    
+    // প্রথমে Solana এর অ্যাড্রেস খুঁজবে, না পেলে EVM 
+    return session.getAddress('solana') ?? session.getAddress('eip155');
+  }
 
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
@@ -33,7 +39,6 @@ class AuthProvider extends ChangeNotifier {
     }
     _setLoading(false);
 
-    // ৩ নম্বর ফিক্স: ফাংশনটি এখন পাবলিক যাতে Topbar থেকে কল করা যায়
     await initWallet(context); 
   }
 
@@ -41,7 +46,6 @@ class AuthProvider extends ChangeNotifier {
     _referralCode = code;
   }
 
-  // এই ফাংশনটি এখন 'initWallet' (আগে ছিল _initWallet)
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -144,3 +148,4 @@ class AuthProvider extends ChangeNotifier {
     super.dispose();
   }
 }
+
