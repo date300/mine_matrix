@@ -18,7 +18,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   
   // ১. isConnected গেটার
-  bool get isConnected => _appKitModal?.isConnected ?? false;
+  bool get isConnected => _appKitModal?.isConnected ?? false; 
+  bool get isAuthenticated => isConnected && _isLoggedIn;
   
   // ২. Reown 1.8.3 তে address পাওয়ার সঠিক নিয়ম
   String? get address {
@@ -75,7 +76,7 @@ class AuthProvider extends ChangeNotifier {
     final currentAddress = address;
 
     if (isConnected && currentAddress != null) {
-      if (!_isLoggedIn || currentAddress != _lastLoggedAddress) {
+      if (currentAddress != _lastLoggedAddress) {
         _lastLoggedAddress = currentAddress;
         _loginToBackend(currentAddress);
       }
