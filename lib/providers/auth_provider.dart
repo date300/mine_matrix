@@ -13,23 +13,23 @@ class AuthProvider extends ChangeNotifier {
   String? _referralCode;
   String? _lastLoggedAddress;
 
+  // Getters
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   
-  // ?. isConnected à¦à§à¦
+  // Wallet Connection Check
   bool get isConnected => _appKitModal?.isConnected ?? false; 
   bool get isAuthenticated => isConnected && _isLoggedIn;
   
-  // ?. Reown 1.8.3 à¦¤à§ address à¦ªà¦¾à¦à§à¦¾à¦° à¦à¦¨à§à¦¯
+  // Get Wallet Address (Supporting both Solana and EVM)
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
-    
-    // à¦ªà§à¦°à¦¥à¦®à§ Solana à¦à¦° à¦à§à¦¯à¦¾à¦¡à§à¦°à§à¦¸ à¦à§à¦à¦à¦¬à§, à¦¨à¦¾ à¦ªà§à¦²à§ EVM 
     return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
+  // Initializing Auth State from Local Storage
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +40,7 @@ class AuthProvider extends ChangeNotifier {
     }
     _setLoading(false);
 
+    // Initialize Reown Wallet
     await initWallet(context); 
   }
 
@@ -47,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
     _referralCode = code;
   }
 
+  // Initialize Reown AppKit Modal
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -72,27 +74,29 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // à¦à¦ function à¦à¦¬à¦¶à§à¦¯à¦ class-à¦à¦° à¦­à¦¿à¦¤à¦°à§ à¦à¦¿à¦¨à§à¦¤à§ initWallet-à¦à¦° à¦¬à¦¾à¦à¦°à§
+  // Listening to Wallet Changes (Connect/Disconnect/Switch)
   void _onWalletUpdate() {
     final currentAddress = address;
 
     if (isConnected && currentAddress != null) {
+      // If address changes or new connection, login to backend
       if (currentAddress != _lastLoggedAddress) {
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
 
         _loginToBackend(currentAddress).then((success) {
           if (success) {
-            _isLoggedIn = true; // API success â wallet active
+            _isLoggedIn = true;
           } else {
-            _lastLoggedAddress = null; // API fail â wallet connect inactive
+            _lastLoggedAddress = null;
+            _isLoggedIn = false;
           }
           _setLoading(false);
           notifyListeners();
         });
       }
     } else if (!isConnected) {
-      // (à¦¤à§à¦°à§à¦à¦¿ à¦¸à¦à¦¶à§à¦§à¦¨ à¦à¦°à¦¾ à¦¹à§à§à¦à§) à¦¯à¦¦à¦¿ à¦¡à¦¿à¦¸à¦à¦¾à¦¨à§à¦à§à¦à§à¦¡ à¦¹à§à§ à¦¯à¦¾à§, à¦¤à¦¾à¦¹à¦²à§ à¦¡à§à¦à¦¾ à¦à§à¦²à¦¿à§à¦¾à¦° à¦à¦°à¦¤à§ à¦¹à¦¬à§
+      // Handle Disconnection
       if (_lastLoggedAddress != null || _isLoggedIn) {
         _lastLoggedAddress = null;
         _isLoggedIn = false;
@@ -101,6 +105,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Backend API Integration
   Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
 
@@ -120,22 +125,23 @@ class AuthProvider extends ChangeNotifier {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('session_id', data['session_id']);
           _sessionId = data['session_id'];
-          return true; // API success
+          return true;
         }
       }
     } catch (e) {
       debugPrint("Login Failed: $e");
     }
-
-    return false; // API fail
+    return false;
   }
 
+  // UI Trigger to Open Wallet Selection Modal
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
     }
   }
 
+  // Logout Functionality
   Future<void> logout() async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -148,4 +154,19 @@ class AuthProvider extends ChangeNotifier {
     _isLoggedIn = false;
     _sessionId = null;
     _lastLoggedAddress = null;
-  
+    _referralCode = null;
+    _setLoading(false);
+  }
+
+  // Loading State Helper
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _appKitModal?.removeListener(_onWalletUpdate);
+    super.dispose();
+  }
+}
