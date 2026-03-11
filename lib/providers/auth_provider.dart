@@ -17,16 +17,16 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   
-  // ১. isConnected গেটার
+  // ?. isConnected à¦à§à¦
   bool get isConnected => _appKitModal?.isConnected ?? false; 
   bool get isAuthenticated => isConnected && _isLoggedIn;
   
-  // ২. Reown 1.8.3 তে address পাওয়ার সঠিক নিয়ম
+  // ?. Reown 1.8.3 à¦¤à§ address à¦ªà¦¾à¦à§à¦¾à¦° à¦à¦¨à§à¦¯
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
     
-    // প্রথমে Solana এর অ্যাড্রেস খুঁজবে, না পেলে EVM 
+    // à¦ªà§à¦°à¦¥à¦®à§ Solana à¦à¦° à¦à§à¦¯à¦¾à¦¡à§à¦°à§à¦¸ à¦à§à¦à¦à¦¬à§, à¦¨à¦¾ à¦ªà§à¦²à§ EVM 
     return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
@@ -72,23 +72,37 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // à¦à¦ function à¦à¦¬à¦¶à§à¦¯à¦ class-à¦à¦° à¦­à¦¿à¦¤à¦°à§ à¦à¦¿à¦¨à§à¦¤à§ initWallet-à¦à¦° à¦¬à¦¾à¦à¦°à§
   void _onWalletUpdate() {
     final currentAddress = address;
 
     if (isConnected && currentAddress != null) {
       if (currentAddress != _lastLoggedAddress) {
         _lastLoggedAddress = currentAddress;
-        _loginToBackend(currentAddress);
+        _setLoading(true);
+
+        _loginToBackend(currentAddress).then((success) {
+          if (success) {
+            _isLoggedIn = true; // API success â wallet active
+          } else {
+            _lastLoggedAddress = null; // API fail â wallet connect inactive
+          }
+          _setLoading(false);
+          notifyListeners();
+        });
       }
     } else if (!isConnected) {
-      _lastLoggedAddress = null;
+      // (à¦¤à§à¦°à§à¦à¦¿ à¦¸à¦à¦¶à§à¦§à¦¨ à¦à¦°à¦¾ à¦¹à§à§à¦à§) à¦¯à¦¦à¦¿ à¦¡à¦¿à¦¸à¦à¦¾à¦¨à§à¦à§à¦à§à¦¡ à¦¹à§à§ à¦¯à¦¾à§, à¦¤à¦¾à¦¹à¦²à§ à¦¡à§à¦à¦¾ à¦à§à¦²à¦¿à§à¦¾à¦° à¦à¦°à¦¤à§ à¦¹à¦¬à§
+      if (_lastLoggedAddress != null || _isLoggedIn) {
+        _lastLoggedAddress = null;
+        _isLoggedIn = false;
+        notifyListeners();
+      }
     }
-    notifyListeners();
   }
 
-  Future<void> _loginToBackend(String walletAddress) async {
+  Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
-    _setLoading(true);
 
     try {
       final response = await http.post(
@@ -106,14 +120,14 @@ class AuthProvider extends ChangeNotifier {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('session_id', data['session_id']);
           _sessionId = data['session_id'];
-          _isLoggedIn = true;
+          return true; // API success
         }
       }
     } catch (e) {
       debugPrint("Login Failed: $e");
-    } finally {
-      _setLoading(false);
     }
+
+    return false; // API fail
   }
 
   void openModal(BuildContext context) {
@@ -134,19 +148,4 @@ class AuthProvider extends ChangeNotifier {
     _isLoggedIn = false;
     _sessionId = null;
     _lastLoggedAddress = null;
-    _referralCode = null;
-    _setLoading(false);
-  }
-
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _appKitModal?.removeListener(_onWalletUpdate);
-    super.dispose();
-  }
-}
-
+  
