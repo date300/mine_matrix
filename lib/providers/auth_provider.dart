@@ -13,23 +13,22 @@ class AuthProvider extends ChangeNotifier {
   String? _referralCode;
   String? _lastLoggedAddress;
 
-  // Getters
+  // --- Getters ---
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   
-  // Wallet Connection Check
   bool get isConnected => _appKitModal?.isConnected ?? false; 
   bool get isAuthenticated => isConnected && _isLoggedIn;
   
-  // Get Wallet Address (Supporting both Solana and EVM)
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
     return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
-  // Initializing Auth State from Local Storage
+  // --- Logic Methods ---
+
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -40,7 +39,6 @@ class AuthProvider extends ChangeNotifier {
     }
     _setLoading(false);
 
-    // Initialize Reown Wallet
     await initWallet(context); 
   }
 
@@ -48,7 +46,6 @@ class AuthProvider extends ChangeNotifier {
     _referralCode = code;
   }
 
-  // Initialize Reown AppKit Modal
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -74,12 +71,10 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Listening to Wallet Changes (Connect/Disconnect/Switch)
   void _onWalletUpdate() {
     final currentAddress = address;
 
     if (isConnected && currentAddress != null) {
-      // If address changes or new connection, login to backend
       if (currentAddress != _lastLoggedAddress) {
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
@@ -96,7 +91,6 @@ class AuthProvider extends ChangeNotifier {
         });
       }
     } else if (!isConnected) {
-      // Handle Disconnection
       if (_lastLoggedAddress != null || _isLoggedIn) {
         _lastLoggedAddress = null;
         _isLoggedIn = false;
@@ -105,7 +99,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Backend API Integration
   Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
 
@@ -134,14 +127,12 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
-  // UI Trigger to Open Wallet Selection Modal
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
     }
   }
 
-  // Logout Functionality
   Future<void> logout() async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
@@ -158,7 +149,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(false);
   }
 
-  // Loading State Helper
+  // এই সেই মেথড যেটা মিসিং দেখাচ্ছিল। এটা এখন ক্লাসের ভেতরেই আছে।
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
