@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '11'
+          java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -52,7 +52,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web release
-        run: flutter build web --release
+        run: flutter build web --release --base-href=/mine_matrix/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -65,4 +65,3 @@ jobs:
         with:
           name: release-web
           path: build/web/
-          
