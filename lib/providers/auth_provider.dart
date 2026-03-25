@@ -58,7 +58,7 @@ class AuthProvider extends ChangeNotifier {
           description: 'Decentralized Mining Platform',
           url: 'https://ltcminematrix.com',
           icons: ['https://ltcminematrix.com/logo.png'],
-          redirect: Redirect(native: 'minematrix://', universal: 'https://ltcminematrix.com'),
+          redirect: Redirect(native: 'ltcminematrix://', universal: 'https://ltcminematrix.com'),
         ),
       );
 
@@ -100,7 +100,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> _loginToBackend(String walletAddress) async {
-    final url = Uri.parse('https://ltcminematrix.com/auth/login');
+    final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
 
     try {
       final response = await http.post(
