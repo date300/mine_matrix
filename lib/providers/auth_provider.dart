@@ -56,9 +56,9 @@ class AuthProvider extends ChangeNotifier {
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
-          url: 'https://minematrix.com',
-          icons: ['https://minematrix.com/logo.png'],
-          redirect: Redirect(native: 'minematrix://', universal: 'https://minematrix.com'),
+          url: 'https://ltcminematrix.com',
+          icons: ['https://ltcminematrix.com/logo.png'],
+          redirect: Redirect(native: 'minematrix://', universal: 'https://ltcminematrix.com'),
         ),
       );
 
@@ -100,7 +100,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> _loginToBackend(String walletAddress) async {
-    final url = Uri.parse('http://192.168.0.113:8000/auth/login.php');
+    final url = Uri.parse('https://ltcminematrix.com/auth/login');
 
     try {
       final response = await http.post(
