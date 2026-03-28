@@ -26,8 +26,9 @@ dependencies:
   provider: ^6.1.5+1
   http: ^1.6.0
   shared_preferences: ^2.5.4
-  app_links: ^7.0.0
-share_plus: ^6.3.0 
+  app_links: ^7.0.0 
+share_plus: ^10.0.0
+
 
 dev_dependencies:
   flutter_test:
