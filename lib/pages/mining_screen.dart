@@ -627,14 +627,24 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                 height: 160.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5), width: 2),
+                  border: Border.all(
+                    color: AppColors.accentGreen.withOpacity(0.5),
+                    width: 2,
+                  ),
                 ),
               )
                   .animate(onPlay: (c) => c.repeat())
                   .rotate(duration: const Duration(seconds: 3))
-                  .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), curve: Curves.easeInOutSine)
+                  .scale(
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.1, 1.1),
+                    curve: Curves.easeInOutSine,
+                  )
                   .then()
-                  .scale(begin: const Offset(1.1, 1.1), end: const Offset(1, 1)),
+                  .scale(
+                    begin: const Offset(1.1, 1.1),
+                    end: const Offset(1, 1),
+                  ),
             GlassmorphicContainer(
               width: 140.w,
               height: 140.w,
@@ -643,10 +653,15 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
               alignment: Alignment.center,
               border: 1,
               linearGradient: LinearGradient(
-                colors: [Colors.black.withOpacity(0.6), Colors.black.withOpacity(0.3)],
+                colors: [
+                  Colors.black.withOpacity(0.6),
+                  Colors.black.withOpacity(0.3),
+                ],
               ),
               borderGradient: LinearGradient(
-                colors: active ? [AppColors.accentGreen, AppColors.accentPurple] : [Colors.white24, Colors.white10],
+                colors: active
+                    ? [AppColors.accentGreen, AppColors.accentPurple]
+                    : [Colors.white24, Colors.white10],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -658,7 +673,9 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
                   ),
                   SizedBox(height: 6.h),
                   Text(
-                    !controller.joined.value ? "JOIN FIRST" : (active ? "MINING" : "START"),
+                    !controller.joined.value
+                        ? "JOIN FIRST"
+                        : (active ? "MINING" : "START"),
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 12.sp,
@@ -696,7 +713,9 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
               lineHeight: 8.h,
               percent: p,
               backgroundColor: Colors.white10,
-              linearGradient: const LinearGradient(colors: [AppColors.accentPurple, AppColors.accentGreen]),
+              linearGradient: const LinearGradient(
+                colors: [AppColors.accentPurple, AppColors.accentGreen],
+              ),
               barRadius: const Radius.circular(10),
               padding: EdgeInsets.zero,
             ),
@@ -833,13 +852,21 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     return Opacity(
       opacity: onTap == null ? 0.5 : 1,
       child: GlassmorphicContainer(
+        width: double.infinity, // ✅ FIX: required named parameter width added
         height: 60.h,
         borderRadius: 16.r,
         blur: 10,
         alignment: Alignment.center,
         border: 0.5,
-        linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.05), Colors.transparent]),
-        borderGradient: LinearGradient(colors: [Colors.white24, Colors.transparent]),
+        linearGradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.05),
+            Colors.transparent,
+          ],
+        ),
+        borderGradient: LinearGradient(
+          colors: [Colors.white24, Colors.transparent],
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16.r),
           onTap: onTap,
@@ -957,13 +984,18 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
               onPressed: () => Navigator.of(ctx).pop(),
               child: Text(
                 "CANCEL",
-                style: GoogleFonts.inter(color: Colors.white54, fontWeight: FontWeight.w900),
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
               onPressed: () {
                 controller.boost(amount: temp);
@@ -971,7 +1003,10 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
               },
               child: Text(
                 "BOOST",
-                style: GoogleFonts.inter(color: Colors.black, fontWeight: FontWeight.w900),
+                style: GoogleFonts.inter(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
