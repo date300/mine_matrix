@@ -987,4 +987,3 @@ class _MiningScreenState extends State<MiningScreen> with TickerProviderStateMix
     super.dispose();
   }
 }
-
