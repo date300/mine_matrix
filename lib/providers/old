@@ -1,27 +1,71 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart'; // Share package
 
 class AuthProvider extends ChangeNotifier {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
+  bool _isLoading = false;
+  bool _isLoggedIn = false;
+  String? _sessionId;
+  String? _referralCode;
+  String? _lastLoggedAddress;
 
+  // --- Getters ---
   bool get isInitialized => _isInitialized;
-  bool get isConnected => _appKitModal?.isConnected ?? false;
-  ReownAppKitModal? get appKitModal => _appKitModal;
+  bool get isLoading => _isLoading;
+  bool get isLoggedIn => _isLoggedIn;
 
-  // অ্যাড্রেস পাওয়ার লজিক
+  bool get isConnected => _appKitModal?.isConnected ?? false;
+  bool get isAuthenticated => isConnected && _isLoggedIn;
+
   String? get address {
-    if (isConnected && _appKitModal?.session != null) {
-      try {
-        return (_appKitModal?.session as dynamic).address;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
+    final session = _appKitModal?.session;
+    if (session == null) return null;
+    return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
-  // ওয়ালেট ইনিশিয়ালাইজ করার ফাংশন
+  String? get referralCode => _referralCode;
+
+  // Automatically generate your referral link
+  String get myReferralLink {
+    if (_referralCode == null) return "";
+    return "https://ltcminematrix.com?ref=$_referralCode";
+  }
+
+  // --- Logic Methods ---
+  Future<void> initAuth(BuildContext context) async {
+    _setLoading(true);
+    final prefs = await SharedPreferences.getInstance();
+    _sessionId = prefs.getString('session_id');
+
+    if (_sessionId != null) {
+      _isLoggedIn = true;
+    }
+    _setLoading(false);
+
+    await initWallet(context);
+  }
+
+  void setReferralCode(String code) {
+    _referralCode = code;
+    notifyListeners();
+  }
+
+  // Generate random referral code if none exists
+  void generateReferralCode() {
+    if (_referralCode != null) return; // Already exists
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    Random rnd = Random();
+    _referralCode = String.fromCharCodes(Iterable.generate(
+        6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+    notifyListeners();
+  }
+
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -32,48 +76,117 @@ class AuthProvider extends ChangeNotifier {
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
-          url: 'https://minematrix.com',
-          icons: ['https://minematrix.com/logo.png'],
-          redirect: Redirect(
-            native: 'minematrix://',
-            universal: 'https://minematrix.com',
-          ),
+          url: 'https://ltcminematrix.com',
+          icons: ['https://ltcminematrix.com/logo.png'],
+          redirect: Redirect(native: 'ltcminematrix://', universal: 'https://ltcminematrix.com'),
         ),
       );
 
-      await _appKitModal!.init().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint("Reown Initialization Timeout");
-        },
-      );
-
-      _appKitModal!.addListener(_onUpdate);
+      await _appKitModal!.init();
+      _appKitModal!.addListener(_onWalletUpdate);
       _isInitialized = true;
-      notifyListeners(); 
+      notifyListeners();
     } catch (e) {
       debugPrint("Wallet Init Error: $e");
     }
   }
 
-  void _onUpdate() {
-    notifyListeners();
+  void _onWalletUpdate() {
+    final currentAddress = address;
+
+    if (isConnected && currentAddress != null) {
+      if (currentAddress != _lastLoggedAddress) {
+        _lastLoggedAddress = currentAddress;
+        _setLoading(true);
+
+        _loginToBackend(currentAddress).then((success) {
+          if (success) {
+            _isLoggedIn = true;
+          } else {
+            _lastLoggedAddress = null;
+            _isLoggedIn = false;
+          }
+          _setLoading(false);
+          notifyListeners();
+        });
+      }
+    } else if (!isConnected) {
+      if (_lastLoggedAddress != null || _isLoggedIn) {
+        _lastLoggedAddress = null;
+        _isLoggedIn = false;
+        notifyListeners();
+      }
+    }
   }
 
-  // এখানে নাম পরিবর্তন করে 'openModal' করা হলো যাতে TopBar-এর সাথে মিলে যায়
+  Future<bool> _loginToBackend(String walletAddress) async {
+    final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'wallet_address': walletAddress,
+          'referred_by': _referralCode ?? ""
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('session_id', data['session_id']);
+          _sessionId = data['session_id'];
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint("Login Failed: $e");
+    }
+    return false;
+  }
+
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Initializing Wallet, please wait...")),
+    }
+  }
+
+  // Share referral link
+  void shareReferralLink() {
+    if (_referralCode != null && myReferralLink.isNotEmpty) {
+      Share.share(
+        "Join Mine Matrix with my referral link: $myReferralLink",
+        subject: "Mine Matrix Referral",
       );
     }
   }
 
+  Future<void> logout() async {
+    _setLoading(true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_id');
+
+    if (_appKitModal != null && isConnected) {
+      await _appKitModal!.disconnect();
+    }
+
+    _isLoggedIn = false;
+    _sessionId = null;
+    _lastLoggedAddress = null;
+    _referralCode = null;
+    _setLoading(false);
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
-    _appKitModal?.removeListener(_onUpdate);
+    _appKitModal?.removeListener(_onWalletUpdate);
     super.dispose();
   }
 }

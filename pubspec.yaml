@@ -27,6 +27,7 @@ dependencies:
   http: ^1.6.0
   shared_preferences: ^2.5.4
   app_links: ^7.0.0
+share_plus: ^6.3.0 
 
 dev_dependencies:
   flutter_test:
