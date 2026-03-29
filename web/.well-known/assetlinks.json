@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.mine_matrix",
+    "sha256_cert_fingerprints": ["B9:87:4C:2A:9B:51:F7:01:22:06:B1:E8:55:5F:25:F6:37:F2:1A:C7:29:39:B4:0D:8B:34:E9:F0:FA:65:7F:FC"]
+  }
+}]
