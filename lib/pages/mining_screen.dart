@@ -981,7 +981,7 @@ class _MiningScreenState extends State<MiningScreen>
                 ),
               )
                   .animate(onPlay: (ctrl) => ctrl.repeat())
-                  .rotate(duration: 3.seconds)
+                  .rotate(duration: const Duration(seconds: 3))
                   .scale(
                       begin: const Offset(1, 1),
                       end: const Offset(1.08, 1.08),
