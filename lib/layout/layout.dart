@@ -65,9 +65,9 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
               children: [
                 const TopBar(),
                 Expanded(
-                  child: Obx(() => AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    child: pages[controller.selectedIndex.value],
+                  child: Obx(() => IndexedStack(
+                    index: controller.selectedIndex.value,
+                    children: pages,
                   )),
                 ),
               ],
