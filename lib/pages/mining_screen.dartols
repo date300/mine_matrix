@@ -15,7 +15,7 @@ class AppColors {
   static const Color accentPurple = Color(0xFF9945FF);
   static const Color glassWhite   = Color(0xAAFFFFFF);
   static const Color accentLeaf   = Color(0xFF76C442);
-  static const Color accentOrange = Color(0xFFFF9500); // Auto Start color
+  static const Color accentOrange = Color(0xFFFF9500);
 }
 
 void main() => runApp(const VexylonApp());
@@ -27,6 +27,7 @@ class VexylonApp extends StatelessWidget {
     return ScreenUtilInit(
       designSize: const Size(360, 690),
       minTextAdapt: true,
+      splitScreenMode: true,
       builder: (context, child) {
         return GetMaterialApp(
           debugShowCheckedModeBanner: false,
@@ -43,22 +44,19 @@ class VexylonApp extends StatelessWidget {
 
 // ===================== CONTROLLER =====================
 class MiningController extends GetxController {
-  // ── Main Plan ──────────────────────────────────────────
-  static const double entryFee        = 18.0;
-  static const int    planDays        = 365;          // 360 → 365
-  static const double targetVXL       = 10000.0;
-  static const double dailyVXL        = targetVXL / planDays;
-  static const int    ticksPerDay     = 864000;       // 100ms × 864000 = 24h
-  static const double perTickEarning  = dailyVXL / ticksPerDay;
+  static const double entryFee          = 18.0;
+  static const int    planDays          = 365;
+  static const double targetSOL         = 10000.0;   // 10,000 SOL = $100
+  static const double solToUsd          = 0.01;      // 1 SOL = $0.01
+  static const double claimThreshold    = 10000.0;   // = $100
+  static const double dailySOL          = targetSOL / planDays;
+  static const int    ticksPerDay       = 864000;
+  static const double perTickEarning    = dailySOL / ticksPerDay;
 
-  // ── Boost Plan ─────────────────────────────────────────
-  static const int    boostDays       = 80;
-  static const int    totalBoostTicks = boostDays * ticksPerDay;
+  static const int    boostDays         = 80;
+  static const int    totalBoostTicks   = boostDays * ticksPerDay;
+  static const double autoStartFee      = 10.0;
 
-  // ── Auto Start ─────────────────────────────────────────
-  static const double autoStartFee    = 10.0;
-
-  // ── Observables ────────────────────────────────────────
   var isMining         = false.obs;
   var hasPaid          = false.obs;
   var isComplete       = false.obs;
@@ -68,32 +66,34 @@ class MiningController extends GetxController {
   var remainingDays    = planDays.obs;
   var totalEarned      = 0.0.obs;
 
-  // Daily mining state
   var completedDays    = 0.obs;
   var currentDayNum    = 1.obs;
   var dayProgress      = 0.0.obs;
-  var dayStarted       = false.obs;   // আজকের সেশন শুরু হয়েছে কিনা
-  var canStartNewDay   = true.obs;    // নতুন দিনের উইন্ডো খোলা আছে কিনা
+  var dayStarted       = false.obs;
+  var canStartNewDay   = true.obs;
   var todayEarned      = 0.0.obs;
 
-  // Auto Start
   var hasAutoStart     = false.obs;
 
-  // Boost
   var boostPaid           = false.obs;
   var boostIsComplete     = false.obs;
   var boostAmount         = 0.0.obs;
   var boostProgress       = 0.0.obs;
   var boostRemainingDays  = boostDays.obs;
   var boostEarned         = 0.0.obs;
-  var boostTotalVXL       = 0.0.obs;
+  var boostTotalSOL       = 0.0.obs;
+
+  // Claim
+  var totalClaimedSOL  = 0.0.obs;
+  var claimCount       = 0.obs;
+
+  bool get canClaim => balance.value >= claimThreshold && hasPaid.value;
 
   Timer? _timer;
-  int    _dayElapsedTicks    = 0;
-  int    _boostElapsedTicks  = 0;
-  double _boostPerTick       = 0.0;
+  int    _dayElapsedTicks   = 0;
+  int    _boostElapsedTicks = 0;
+  double _boostPerTick      = 0.0;
 
-  // ── Plan Activation ────────────────────────────────────
   void activatePlan() {
     hasPaid.value         = true;
     isComplete.value      = false;
@@ -110,37 +110,29 @@ class MiningController extends GetxController {
     todayEarned.value     = 0;
   }
 
-  // ── Auto Start Activation ──────────────────────────────
   void activateAutoStart() {
     hasAutoStart.value = true;
-    // প্ল্যান চালু থাকলে এবং আজকের উইন্ডো খোলা থাকলে অটো শুরু
     if (hasPaid.value && !isComplete.value &&
         !isMining.value && canStartNewDay.value && !dayStarted.value) {
       _startNewDay();
     }
   }
 
-  // ── Orb Tap Handler ────────────────────────────────────
   void toggleMining() {
     if (!hasPaid.value || isComplete.value) return;
-
     if (isMining.value) {
-      // Pause
       _timer?.cancel();
       isMining.value = false;
     } else if (dayStarted.value) {
-      // Resume (একই দিনে থামানো ছিল)
       _resumeMining();
     } else if (canStartNewDay.value) {
-      // নতুন দিন শুরু
       _startNewDay();
     }
-    // !canStartNewDay && !dayStarted → দিন শেষ, পরের দিনের অপেক্ষা
   }
 
   void _startNewDay() {
     dayStarted.value     = true;
-    canStartNewDay.value = false; // এই দিন আর নতুন করে শুরু করা যাবে না
+    canStartNewDay.value = false;
     isMining.value       = true;
     _runTimer();
   }
@@ -152,7 +144,6 @@ class MiningController extends GetxController {
 
   void _runTimer() {
     _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
-      // ── দিন সম্পন্ন ───────────────────────────────
       if (_dayElapsedTicks >= ticksPerDay) {
         t.cancel();
         isMining.value     = false;
@@ -174,7 +165,6 @@ class MiningController extends GetxController {
         planProgress.value   = completedDays.value / planDays;
         remainingDays.value  = planDays - completedDays.value;
 
-        // Real app: 24h অপেক্ষা | Demo: 2s পরে পরের দিন
         Future.delayed(const Duration(seconds: 2), () {
           if (!isComplete.value) {
             canStartNewDay.value = true;
@@ -184,7 +174,6 @@ class MiningController extends GetxController {
         return;
       }
 
-      // ── Per-tick Earnings ─────────────────────────
       balance.value       += perTickEarning;
       totalEarned.value   += perTickEarning;
       todayEarned.value   += perTickEarning;
@@ -199,7 +188,6 @@ class MiningController extends GetxController {
               .ceil()
               .clamp(0, planDays);
 
-      // ── Boost ─────────────────────────────────────
       if (boostPaid.value && !boostIsComplete.value) {
         if (_boostElapsedTicks < totalBoostTicks) {
           balance.value          += _boostPerTick;
@@ -217,7 +205,6 @@ class MiningController extends GetxController {
     });
   }
 
-  // ── Boost Activation ───────────────────────────────────
   void activateBoost(double amount) {
     boostPaid.value          = true;
     boostIsComplete.value    = false;
@@ -227,8 +214,17 @@ class MiningController extends GetxController {
     boostEarned.value        = 0;
     boostRemainingDays.value = boostDays;
     final total              = amount * 2.0 * (10000.0 / 18.0);
-    boostTotalVXL.value      = total;
+    boostTotalSOL.value      = total;
     _boostPerTick            = total / totalBoostTicks;
+  }
+
+  /// Claim করলে balance 0 হয়ে যাবে, totalClaimedSOL তে যোগ হবে
+  double claimReward() {
+    final claimed        = balance.value;
+    totalClaimedSOL.value += claimed;
+    balance.value        = 0.0;
+    claimCount.value++;
+    return claimed;
   }
 
   @override
@@ -268,7 +264,9 @@ class _MiningScreenState extends State<MiningScreen>
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              child: _buildMiningContent(),
+              child: LayoutBuilder(
+                builder: (context, constraints) => _buildMiningContent(),
+              ),
             ),
           ),
         ],
@@ -286,7 +284,6 @@ class _MiningScreenState extends State<MiningScreen>
           SizedBox(height: 10.h),
           _buildPlanProgressSection(),
           SizedBox(height: 8.h),
-          // Daily Section — শুধু প্ল্যান কেনার পর দেখাবে
           Obx(() => controller.hasPaid.value
               ? _buildDailySection()
               : const SizedBox.shrink()),
@@ -310,9 +307,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 🗓 Daily Mining Section (নতুন)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Daily Section ───────────────────────────────────
   Widget _buildDailySection() {
     return Obx(() {
       final dayNum   = controller.currentDayNum.value;
@@ -324,7 +319,6 @@ class _MiningScreenState extends State<MiningScreen>
       final hasAuto  = controller.hasAutoStart.value;
       final complete = controller.isComplete.value;
 
-      // Status text determination
       String statusText;
       Color  statusColor;
       if (complete) {
@@ -337,10 +331,10 @@ class _MiningScreenState extends State<MiningScreen>
         statusText  = "Mining in progress...";
         statusColor = AppColors.accentGreen;
       } else if (started && !mining) {
-        statusText  = "Paused — tap ORB to resume";
+        statusText  = "Paused • tap ORB to resume";
         statusColor = Colors.orange;
       } else if (!canStart && !started) {
-        statusText  = "Today done — next day soon";
+        statusText  = "Today done • next day soon";
         statusColor = Colors.white38;
       } else {
         statusText  = "Tap ORB to start today";
@@ -372,31 +366,26 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        hasAuto
-                            ? CupertinoIcons.bolt_fill
-                            : CupertinoIcons.calendar,
-                        color: barColor,
-                        size: 10.sp,
+                  Row(children: [
+                    Icon(
+                      hasAuto ? CupertinoIcons.bolt_fill : CupertinoIcons.calendar,
+                      color: barColor, size: 10.sp,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      "DAY $dayNum / 365${hasAuto ? '   ⚡ AUTO' : ''}",
+                      style: GoogleFonts.inter(
+                        color: barColor, fontSize: 9.sp,
+                        fontWeight: FontWeight.w800, letterSpacing: 0.8,
                       ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        "DAY $dayNum / 365${hasAuto ? '   ⚡ AUTO' : ''}",
-                        style: GoogleFonts.inter(
-                          color: barColor,
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    "${earned.toStringAsFixed(3)} / ${MiningController.dailyVXL.toStringAsFixed(2)} VXL",
-                    style: GoogleFonts.inter(
-                        color: Colors.white54, fontSize: 9.sp),
+                    ),
+                  ]),
+                  Flexible(
+                    child: Text(
+                      "${earned.toStringAsFixed(3)} / ${MiningController.dailySOL.toStringAsFixed(2)} SOL",
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -419,15 +408,15 @@ class _MiningScreenState extends State<MiningScreen>
                 children: [
                   Text(
                     "${(prog * 100).toStringAsFixed(2)}% of today",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 9.sp),
+                    style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
                   ),
-                  Text(
-                    statusText,
-                    style: GoogleFonts.inter(
-                      color: statusColor,
-                      fontSize: 9.sp,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      statusText,
+                      style: GoogleFonts.inter(
+                        color: statusColor, fontSize: 9.sp, fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -439,13 +428,11 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 💰 Balance Section
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Balance Section ─────────────────────────────────
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
-      height: 95.h,
+      height: 115.h,
       borderRadius: 20.r,
       blur: 20,
       alignment: Alignment.center,
@@ -462,39 +449,46 @@ class _MiningScreenState extends State<MiningScreen>
           Text(
             "MINED BALANCE",
             style: GoogleFonts.inter(
-                color: Colors.white54,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2),
+                color: Colors.white54, fontSize: 10.sp,
+                fontWeight: FontWeight.w600, letterSpacing: 1.2),
           ),
+          SizedBox(height: 4.h),
           Obx(() => Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     controller.balance.value.toStringAsFixed(4),
                     style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 30.sp,
-                        fontWeight: FontWeight.bold),
+                        color: Colors.white, fontSize: 28.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(width: 5.w),
-                  Text(
-                    "VXL",
-                    style: GoogleFonts.inter(
-                        color: AppColors.accentGreen,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w800),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 3.h),
+                    child: Text(
+                      "SOL",
+                      style: GoogleFonts.inter(
+                          color: AppColors.accentGreen, fontSize: 14.sp, fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ],
               )),
+          SizedBox(height: 5.h),
+          Obx(() {
+            final usd = controller.balance.value * MiningController.solToUsd;
+            final pct = (controller.balance.value / MiningController.claimThreshold * 100)
+                .clamp(0.0, 100.0);
+            return Text(
+              "≈ \$${usd.toStringAsFixed(2)} USD  •  ${pct.toStringAsFixed(1)}% to \$100 Claim",
+              style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+            );
+          }),
         ],
       ),
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 📊 Plan Progress (365 দিন)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Plan Progress ────────────────────────────────────
   Widget _buildPlanProgressSection() {
     return Obx(() {
       final prog   = controller.planProgress.value;
@@ -513,8 +507,7 @@ class _MiningScreenState extends State<MiningScreen>
           Colors.white.withOpacity(0.02),
         ]),
         borderGradient: LinearGradient(colors: [
-          AppColors.accentLeaf.withOpacity(0.35),
-          Colors.transparent,
+          AppColors.accentLeaf.withOpacity(0.35), Colors.transparent,
         ]),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
@@ -527,15 +520,15 @@ class _MiningScreenState extends State<MiningScreen>
                   Text(
                     "365-DAY PLAN  •  \$18 → \$100",
                     style: GoogleFonts.inter(
-                        color: AppColors.accentLeaf,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8),
+                        color: AppColors.accentLeaf, fontSize: 9.sp,
+                        fontWeight: FontWeight.w800, letterSpacing: 0.8),
                   ),
-                  Text(
-                    "${earned.toStringAsFixed(1)} / 10,000 VXL",
-                    style: GoogleFonts.inter(
-                        color: Colors.white54, fontSize: 9.sp),
+                  Flexible(
+                    child: Text(
+                      "${earned.toStringAsFixed(1)} / 10,000 SOL",
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -544,8 +537,8 @@ class _MiningScreenState extends State<MiningScreen>
                 lineHeight: 5.h,
                 percent: prog.clamp(0.0, 1.0),
                 backgroundColor: Colors.white10,
-                linearGradient: LinearGradient(
-                    colors: [AppColors.accentLeaf, const Color(0xFF2E8B00)]),
+                linearGradient: const LinearGradient(
+                    colors: [AppColors.accentLeaf, Color(0xFF2E8B00)]),
                 barRadius: const Radius.circular(10),
                 padding: EdgeInsets.zero,
               ),
@@ -553,16 +546,10 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "$done / 365 days mined",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 9.sp),
-                  ),
-                  Text(
-                    "$left days left",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 9.sp),
-                  ),
+                  Text("$done / 365 days mined",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
+                  Text("$left days left",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
                 ],
               ),
             ],
@@ -572,15 +559,13 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 🚀 Boost Progress
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Boost Progress ───────────────────────────────────
   Widget _buildBoostProgressSection() {
     return Obx(() {
       final prog     = controller.boostProgress.value;
       final left     = controller.boostRemainingDays.value;
       final earned   = controller.boostEarned.value;
-      final total    = controller.boostTotalVXL.value;
+      final total    = controller.boostTotalSOL.value;
       final complete = controller.boostIsComplete.value;
       return GlassmorphicContainer(
         width: double.infinity,
@@ -594,8 +579,7 @@ class _MiningScreenState extends State<MiningScreen>
           Colors.white.withOpacity(0.02),
         ]),
         borderGradient: LinearGradient(colors: [
-          AppColors.accentPurple.withOpacity(0.4),
-          Colors.transparent,
+          AppColors.accentPurple.withOpacity(0.4), Colors.transparent,
         ]),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
@@ -605,41 +589,37 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(CupertinoIcons.rocket_fill,
-                          color: AppColors.accentPurple, size: 10.sp),
-                      SizedBox(width: 4.w),
-                      Text(
-                        "BOOST  •  \$${controller.boostAmount.value.toStringAsFixed(0)} → \$${(controller.boostAmount.value * 2).toStringAsFixed(0)}",
-                        style: GoogleFonts.inter(
-                            color: AppColors.accentPurple,
-                            fontSize: 9.sp,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8),
-                      ),
-                      if (complete) ...[
-                        SizedBox(width: 6.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 6.w, vertical: 2.h),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentGreen.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                          child: Text("DONE",
-                              style: GoogleFonts.inter(
-                                  color: AppColors.accentGreen,
-                                  fontSize: 7.sp,
-                                  fontWeight: FontWeight.bold)),
+                  Row(children: [
+                    Icon(CupertinoIcons.rocket_fill,
+                        color: AppColors.accentPurple, size: 10.sp),
+                    SizedBox(width: 4.w),
+                    Text(
+                      "BOOST  •  \$${controller.boostAmount.value.toStringAsFixed(0)} → \$${(controller.boostAmount.value * 2).toStringAsFixed(0)}",
+                      style: GoogleFonts.inter(
+                          color: AppColors.accentPurple, fontSize: 9.sp,
+                          fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                    ),
+                    if (complete) ...[
+                      SizedBox(width: 6.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentGreen.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(4.r),
                         ),
-                      ],
+                        child: Text("DONE",
+                            style: GoogleFonts.inter(
+                                color: AppColors.accentGreen,
+                                fontSize: 7.sp, fontWeight: FontWeight.bold)),
+                      ),
                     ],
-                  ),
-                  Text(
-                    "${earned.toStringAsFixed(1)} / ${total.toStringAsFixed(0)} VXL",
-                    style: GoogleFonts.inter(
-                        color: Colors.white54, fontSize: 9.sp),
+                  ]),
+                  Flexible(
+                    child: Text(
+                      "${earned.toStringAsFixed(1)} / ${total.toStringAsFixed(0)} SOL",
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -657,16 +637,10 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "${(prog * 100).toStringAsFixed(2)}% complete",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 9.sp),
-                  ),
-                  Text(
-                    complete ? "Boost Complete!" : "$left days left",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 9.sp),
-                  ),
+                  Text("${(prog * 100).toStringAsFixed(2)}% complete",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
+                  Text(complete ? "Boost Complete!" : "$left days left",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
                 ],
               ),
             ],
@@ -676,9 +650,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // 🔮 Mining Orb (নতুন স্টেট: PAUSED, NEXT DAY, AUTO)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Mining Orb ───────────────────────────────────────
   Widget _buildMiningOrb() {
     return Obx(() {
       final active   = controller.isMining.value;
@@ -688,8 +660,8 @@ class _MiningScreenState extends State<MiningScreen>
       final canStart = controller.canStartNewDay.value;
       final hasAuto  = controller.hasAutoStart.value;
 
-      final isPaused   = paid && started && !active && !complete;
-      final isWaiting  = paid && !started && !canStart && !active && !complete;
+      final isPaused  = paid && started && !active && !complete;
+      final isWaiting = paid && !started && !canStart && !active && !complete;
 
       IconData    orbIcon;
       String      orbLabel;
@@ -751,9 +723,7 @@ class _MiningScreenState extends State<MiningScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (hasAuto
-                            ? AppColors.accentOrange
-                            : AppColors.accentGreen)
+                    color: (hasAuto ? AppColors.accentOrange : AppColors.accentGreen)
                         .withOpacity(0.5),
                     width: 2,
                   ),
@@ -766,9 +736,7 @@ class _MiningScreenState extends State<MiningScreen>
                       end: const Offset(1.1, 1.1),
                       curve: Curves.easeInOutSine)
                   .then()
-                  .scale(
-                      begin: const Offset(1.1, 1.1),
-                      end: const Offset(1, 1)),
+                  .scale(begin: const Offset(1.1, 1.1), end: const Offset(1, 1)),
             GlassmorphicContainer(
               width: 140.w,
               height: 140.w,
@@ -789,18 +757,12 @@ class _MiningScreenState extends State<MiningScreen>
                   Text(
                     orbLabel,
                     style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w900,
-                    ),
+                        color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.w900),
                   ),
                   if (orbSubLabel.isNotEmpty) ...[
                     SizedBox(height: 2.h),
-                    Text(
-                      orbSubLabel,
-                      style: GoogleFonts.inter(
-                          color: Colors.white38, fontSize: 8.sp),
-                    ),
+                    Text(orbSubLabel,
+                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 8.sp)),
                   ],
                 ],
               ),
@@ -813,9 +775,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Cycle Bar
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Cycle Bar ────────────────────────────────────────
   Widget _buildCycleProgressBar() {
     return Obx(() => LinearPercentIndicator(
           lineHeight: 6.h,
@@ -828,30 +788,65 @@ class _MiningScreenState extends State<MiningScreen>
         ));
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Action Buttons (CLAIM | BOOST | AUTO)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Action Buttons ───────────────────────────────────
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: _smallButton(
-              "CLAIM", CupertinoIcons.drop_fill, AppColors.accentGreen, null),
+    return Obx(() {
+      final claimable = controller.canClaim;
+      return Row(
+        children: [
+          Expanded(child: _claimButton(claimable)),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: _smallButton("BOOST", CupertinoIcons.rocket_fill,
+                AppColors.accentPurple, _showBoostDialog),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: controller.hasAutoStart.value
+                ? _activeAutoButton()
+                : _smallButton("AUTO", CupertinoIcons.bolt_fill,
+                    AppColors.accentOrange, _showAutoStartDialog),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _claimButton(bool active) {
+    return GestureDetector(
+      onTap: active ? _showClaimDialog : _showClaimNotReadyDialog,
+      child: GlassmorphicContainer(
+        width: double.infinity,
+        height: 60.h,
+        borderRadius: 15.r,
+        blur: 10,
+        alignment: Alignment.center,
+        border: active ? 1.0 : 0.5,
+        linearGradient: LinearGradient(colors: [
+          active
+              ? AppColors.accentGreen.withOpacity(0.18)
+              : Colors.white.withOpacity(0.05),
+          Colors.transparent,
+        ]),
+        borderGradient: LinearGradient(colors: [
+          active ? AppColors.accentGreen : Colors.white24,
+          Colors.transparent,
+        ]),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.drop_fill,
+                color: active ? AppColors.accentGreen : Colors.white38,
+                size: 16.sp),
+            SizedBox(width: 5.w),
+            Text("CLAIM",
+                style: GoogleFonts.inter(
+                    color: active ? AppColors.accentGreen : Colors.white38,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold)),
+          ],
         ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: _smallButton("BOOST", CupertinoIcons.rocket_fill,
-              AppColors.accentPurple, _showBoostDialog),
-        ),
-        SizedBox(width: 8.w),
-        // AUTO button — কেনা থাকলে active style
-        Expanded(
-          child: Obx(() => controller.hasAutoStart.value
-              ? _activeAutoButton()
-              : _smallButton("AUTO", CupertinoIcons.bolt_fill,
-                  AppColors.accentOrange, _showAutoStartDialog)),
-        ),
-      ],
+      ),
     );
   }
 
@@ -891,28 +886,25 @@ class _MiningScreenState extends State<MiningScreen>
                     color: AppColors.accentLeaf, size: 17.sp),
               ),
               SizedBox(width: 12.w),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "\$18 ENTRY FEE",
-                    style: GoogleFonts.inter(
-                      color: AppColors.accentLeaf,
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "\$18 ENTRY FEE",
+                      style: GoogleFonts.inter(
+                          color: AppColors.accentLeaf, fontSize: 13.sp,
+                          fontWeight: FontWeight.w800, letterSpacing: 0.8),
                     ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    "Tap to unlock 365-day mining plan",
-                    style: GoogleFonts.inter(
-                        color: Colors.white38, fontSize: 10.sp),
-                  ),
-                ],
+                    SizedBox(height: 2.h),
+                    Text(
+                      "Tap to unlock 365-day mining plan",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.sp),
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
               Icon(CupertinoIcons.chevron_right,
                   color: AppColors.accentLeaf.withOpacity(0.6), size: 15.sp),
             ],
@@ -921,14 +913,10 @@ class _MiningScreenState extends State<MiningScreen>
       ),
     )
         .animate(onPlay: (c) => c.repeat(reverse: true))
-        .shimmer(
-          duration: 2200.ms,
-          color: AppColors.accentLeaf.withOpacity(0.18),
-        );
+        .shimmer(duration: 2200.ms, color: AppColors.accentLeaf.withOpacity(0.18));
   }
 
-  Widget _smallButton(
-      String label, IconData icon, Color color, VoidCallback? onTap) {
+  Widget _smallButton(String label, IconData icon, Color color, VoidCallback? onTap) {
     return GestureDetector(
       onTap: onTap,
       child: GlassmorphicContainer(
@@ -949,9 +937,7 @@ class _MiningScreenState extends State<MiningScreen>
             SizedBox(width: 5.w),
             Text(label,
                 style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold)),
+                    color: Colors.white, fontSize: 11.sp, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -967,48 +953,33 @@ class _MiningScreenState extends State<MiningScreen>
       alignment: Alignment.center,
       border: 0.5,
       linearGradient: LinearGradient(colors: [
-        AppColors.accentOrange.withOpacity(0.15),
-        Colors.transparent,
+        AppColors.accentOrange.withOpacity(0.15), Colors.transparent,
       ]),
       borderGradient: LinearGradient(colors: [
-        AppColors.accentOrange.withOpacity(0.6),
-        Colors.transparent,
+        AppColors.accentOrange.withOpacity(0.6), Colors.transparent,
       ]),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(CupertinoIcons.bolt_fill,
-              color: AppColors.accentOrange, size: 16.sp),
+          Icon(CupertinoIcons.bolt_fill, color: AppColors.accentOrange, size: 16.sp),
           SizedBox(width: 5.w),
           Text("AUTO ON",
               style: GoogleFonts.inter(
-                  color: AppColors.accentOrange,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold)),
+                  color: AppColors.accentOrange, fontSize: 11.sp, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // Stats Grid
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─── Stats Grid ───────────────────────────────────────
   Widget _buildStatsGrid() {
     return Obx(() => Row(
           children: [
-            Expanded(
-                child:
-                    _statBox("SPEED", "450 TH/S", AppColors.accentGreen)),
+            Expanded(child: _statBox("SPEED", "450 TH/S", AppColors.accentGreen)),
             SizedBox(width: 8.w),
-            Expanded(
-                child: _statBox(
-                    "MINED DAYS",
-                    "${controller.completedDays.value}",
-                    Colors.orangeAccent)),
+            Expanded(child: _statBox("MINED DAYS", "${controller.completedDays.value}", Colors.orangeAccent)),
             SizedBox(width: 8.w),
-            Expanded(
-                child: _statBox("DAYS LEFT",
-                    "${controller.remainingDays.value}", AppColors.accentLeaf)),
+            Expanded(child: _statBox("DAYS LEFT", "${controller.remainingDays.value}", AppColors.accentLeaf)),
           ],
         ));
   }
@@ -1025,37 +996,36 @@ class _MiningScreenState extends State<MiningScreen>
         children: [
           Text(label,
               style: GoogleFonts.inter(
-                  color: Colors.white38,
-                  fontSize: 9.sp,
-                  fontWeight: FontWeight.bold)),
-          Text(value,
-              style: GoogleFonts.inter(
-                  color: color,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold)),
+                  color: Colors.white38, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                style: GoogleFonts.inter(
+                    color: color, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─────────────────────────────────────────────────────
   // Dialogs
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ─────────────────────────────────────────────────────
+
   void _showConfirmDialog() {
     showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: Text(
-          "Confirm Payment",
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16.sp),
-        ),
+        title: Text("Confirm Payment",
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16.sp)),
         content: Padding(
           padding: EdgeInsets.only(top: 6.h),
           child: Text(
-            "\$18.00 পেমেন্ট নিশ্চিত করুন\n\n"
-            "পরিকল্পনা: ৩৬৫ দিনে ১০,০০০ VXL অর্জন\n\n"
-            "⚠️ প্রতিদিন নিজে ORB ট্যাপ করে মাইনিং শুরু করতে হবে। না করলে সেদিনের VXL মিস হবে।\n\n"
-            "💡 \$10-এ Auto Start কিনলে আর প্রতিদিন ট্যাপ করতে হবে না।",
+            "\$18.00 পেমেন্ট করুন\n\n"
+            "পরিকল্পনা: ৩৬৫ দিনে ১০,০০০ Solana মাইন করুন\n\n"
+            "প্রতিদিন ORB ট্যাপ করে মাইনিং শুরু করুন এবং দৈনিক SOL আয় করুন\n\n"
+            "• \$10-এ Auto Start যোগ করুন যা স্বয়ংক্রিয়ভাবে মাইনিং শুরু করবে",
             style: GoogleFonts.inter(fontSize: 12.sp),
           ),
         ),
@@ -1063,8 +1033,7 @@ class _MiningScreenState extends State<MiningScreen>
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel",
-                style: GoogleFonts.inter(fontSize: 14.sp)),
+            child: Text("Cancel", style: GoogleFonts.inter(fontSize: 14.sp)),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
@@ -1073,15 +1042,310 @@ class _MiningScreenState extends State<MiningScreen>
               controller.activatePlan();
             },
             child: Text("Pay \$18",
-                style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.sp)),
           ),
         ],
       ),
     );
   }
 
-  // ── Auto Start Dialog (নতুন) ───────────────────────────
+  // ── Claim Dialog (balance >= $100) ────────────────────
+  void _showClaimDialog() {
+    final solAmount = controller.balance.value;
+    final usdAmount = solAmount * MiningController.solToUsd;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.75),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 300.w,
+            height: 285.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accentGreen.withOpacity(0.12),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(colors: [
+              AppColors.accentGreen.withOpacity(0.7),
+              AppColors.accentPurple.withOpacity(0.3),
+            ]),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.drop_fill,
+                      color: AppColors.accentGreen, size: 36.sp),
+                  SizedBox(height: 10.h),
+                  Text("CLAIM REWARD",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  SizedBox(height: 6.h),
+                  Text("আপনার মাইন করা Solana উইথড্র করুন",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp)),
+                  SizedBox(height: 16.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentGreen.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.accentGreen.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text("${solAmount.toStringAsFixed(2)} SOL",
+                            style: GoogleFonts.inter(
+                                color: AppColors.accentGreen, fontSize: 26.sp,
+                                fontWeight: FontWeight.w900)),
+                        SizedBox(height: 4.h),
+                        Text("≈ \$${usdAmount.toStringAsFixed(2)} USD",
+                            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 18.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(13.r),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text("Cancel",
+                                style: GoogleFonts.inter(
+                                    color: Colors.white60, fontSize: 13.sp)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            controller.claimReward();
+                            _showClaimSuccessDialog(solAmount, usdAmount);
+                          },
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                AppColors.accentGreen,
+                                AppColors.accentGreen.withOpacity(0.75),
+                              ]),
+                              borderRadius: BorderRadius.circular(13.r),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CupertinoIcons.drop_fill,
+                                    color: Colors.black, size: 14.sp),
+                                SizedBox(width: 6.w),
+                                Text("Claim Now",
+                                    style: GoogleFonts.inter(
+                                        color: Colors.black, fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Claim Success Dialog ──────────────────────────────
+  void _showClaimSuccessDialog(double sol, double usd) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.75),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 280.w,
+            height: 245.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accentLeaf.withOpacity(0.12),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(colors: [
+              AppColors.accentLeaf.withOpacity(0.7), Colors.transparent,
+            ]),
+            child: Padding(
+              padding: EdgeInsets.all(22.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.checkmark_seal_fill,
+                      color: AppColors.accentLeaf, size: 44.sp),
+                  SizedBox(height: 12.h),
+                  Text("Claim Successful!",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "${sol.toStringAsFixed(2)} SOL\n≈ \$${usd.toStringAsFixed(2)} USD",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: AppColors.accentLeaf, fontSize: 15.sp,
+                        fontWeight: FontWeight.bold, height: 1.4),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text("আপনার Solana উইথড্র সম্পন্ন হয়েছে",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp)),
+                  SizedBox(height: 18.h),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: double.infinity,
+                      height: 44.h,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [AppColors.accentLeaf, Color(0xFF2E8B00)]),
+                        borderRadius: BorderRadius.circular(13.r),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text("OK",
+                          style: GoogleFonts.inter(
+                              color: Colors.white, fontSize: 14.sp,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Claim Not Ready Dialog ────────────────────────────
+  void _showClaimNotReadyDialog() {
+    final bal  = controller.balance.value;
+    final need = MiningController.claimThreshold - bal;
+    final pct  = (bal / MiningController.claimThreshold * 100).clamp(0.0, 100.0);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 280.w,
+            height: 240.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.06),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(
+                colors: [Colors.white24, Colors.transparent]),
+            child: Padding(
+              padding: EdgeInsets.all(22.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.lock_fill,
+                      color: Colors.white38, size: 36.sp),
+                  SizedBox(height: 10.h),
+                  Text("Claim Locked",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "Claim করতে ১০,০০০ SOL\n(= \$100) জমা করতে হবে",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: Colors.white54, fontSize: 11.sp, height: 1.4),
+                  ),
+                  SizedBox(height: 14.h),
+                  LinearPercentIndicator(
+                    lineHeight: 8.h,
+                    percent: pct / 100,
+                    backgroundColor: Colors.white10,
+                    linearGradient: const LinearGradient(
+                        colors: [AppColors.accentPurple, AppColors.accentGreen]),
+                    barRadius: const Radius.circular(10),
+                    padding: EdgeInsets.zero,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "${pct.toStringAsFixed(1)}%  •  ${need.toStringAsFixed(0)} SOL remaining",
+                    style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+                  ),
+                  SizedBox(height: 16.h),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: double.infinity,
+                      height: 44.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(13.r),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text("OK",
+                          style: GoogleFonts.inter(
+                              color: Colors.white60, fontSize: 14.sp,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Auto Start Dialog ─────────────────────────────────
   void _showAutoStartDialog() {
     showDialog(
       context: context,
@@ -1116,22 +1380,16 @@ class _MiningScreenState extends State<MiningScreen>
                   Icon(CupertinoIcons.bolt_fill,
                       color: AppColors.accentOrange, size: 32.sp),
                   SizedBox(height: 10.h),
-                  Text(
-                    "AUTO START MINING",
-                    style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1),
-                  ),
+                  Text("AUTO START MINING",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 15.sp,
+                          fontWeight: FontWeight.w900, letterSpacing: 1)),
                   SizedBox(height: 8.h),
                   Text(
-                    "প্রতিদিন নিজে ORB ট্যাপ করার\nঝামেলা থেকে মুক্তি!\nমাইনিং স্বয়ংক্রিয়ভাবে চালু হবে।",
+                    "প্রতিদিন ORB ট্যাপ ছাড়াই\nস্বয়ংক্রিয়ভাবে মাইনিং শুরু হবে!\nএকবার পেমেন্ট করুন, সবসময় চলবে",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
-                        color: Colors.white60,
-                        fontSize: 11.sp,
-                        height: 1.5),
+                        color: Colors.white60, fontSize: 11.sp, height: 1.5),
                   ),
                   SizedBox(height: 16.h),
                   Container(
@@ -1145,18 +1403,13 @@ class _MiningScreenState extends State<MiningScreen>
                     ),
                     child: Column(
                       children: [
-                        Text(
-                          "\$10.00",
-                          style: GoogleFonts.inter(
-                              color: AppColors.accentOrange,
-                              fontSize: 26.sp,
-                              fontWeight: FontWeight.w900),
-                        ),
-                        Text(
-                          "এককালীন পেমেন্ট — পুরো ৩৬৫ দিন",
-                          style: GoogleFonts.inter(
-                              color: Colors.white38, fontSize: 9.sp),
-                        ),
+                        Text("\$10.00",
+                            style: GoogleFonts.inter(
+                                color: AppColors.accentOrange, fontSize: 26.sp,
+                                fontWeight: FontWeight.w900)),
+                        Text("একবার পেমেন্ট • সারাজীবন চলবে",
+                            style: GoogleFonts.inter(
+                                color: Colors.white38, fontSize: 9.sp)),
                       ],
                     ),
                   ),
@@ -1171,8 +1424,7 @@ class _MiningScreenState extends State<MiningScreen>
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.07),
                               borderRadius: BorderRadius.circular(13.r),
-                              border:
-                                  Border.all(color: Colors.white12, width: 1),
+                              border: Border.all(color: Colors.white12, width: 1),
                             ),
                             alignment: Alignment.center,
                             child: Text("Cancel",
@@ -1206,8 +1458,7 @@ class _MiningScreenState extends State<MiningScreen>
                                 SizedBox(width: 6.w),
                                 Text("Pay \$10",
                                     style: GoogleFonts.inter(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
+                                        color: Colors.white, fontSize: 13.sp,
                                         fontWeight: FontWeight.bold)),
                               ],
                             ),
@@ -1228,7 +1479,7 @@ class _MiningScreenState extends State<MiningScreen>
   // ── Boost Dialog ──────────────────────────────────────
   void _showBoostDialog() {
     final TextEditingController amountCtrl = TextEditingController();
-    double? previewVXL;
+    double? previewSOL;
 
     showDialog(
       context: context,
@@ -1264,20 +1515,14 @@ class _MiningScreenState extends State<MiningScreen>
                     Icon(CupertinoIcons.rocket_fill,
                         color: AppColors.accentPurple, size: 28.sp),
                     SizedBox(height: 8.h),
-                    Text(
-                      "BOOST MINING",
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1),
-                    ),
+                    Text("BOOST MINING",
+                        style: GoogleFonts.inter(
+                            color: Colors.white, fontSize: 16.sp,
+                            fontWeight: FontWeight.w900, letterSpacing: 1)),
                     SizedBox(height: 4.h),
-                    Text(
-                      "Max \$50  •  Earn 2x in 80 days",
-                      style: GoogleFonts.inter(
-                          color: Colors.white54, fontSize: 10.sp),
-                    ),
+                    Text("Max \$50  •  Earn 2x in 80 days",
+                        style: GoogleFonts.inter(
+                            color: Colors.white54, fontSize: 10.sp)),
                     SizedBox(height: 18.h),
                     Container(
                       decoration: BoxDecoration(
@@ -1289,8 +1534,8 @@ class _MiningScreenState extends State<MiningScreen>
                       ),
                       child: TextField(
                         controller: amountCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
                         style: GoogleFonts.inter(
                             color: Colors.white, fontSize: 16.sp),
                         decoration: InputDecoration(
@@ -1300,13 +1545,11 @@ class _MiningScreenState extends State<MiningScreen>
                           prefixIcon: Padding(
                             padding: EdgeInsets.symmetric(
                                 horizontal: 12.w, vertical: 13.h),
-                            child: Text(
-                              "\$",
-                              style: GoogleFonts.inter(
-                                  color: AppColors.accentPurple,
-                                  fontSize: 17.sp,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            child: Text("\$",
+                                style: GoogleFonts.inter(
+                                    color: AppColors.accentPurple,
+                                    fontSize: 17.sp,
+                                    fontWeight: FontWeight.bold)),
                           ),
                           prefixIconConstraints:
                               BoxConstraints(minWidth: 0.w, minHeight: 0.h),
@@ -1317,7 +1560,7 @@ class _MiningScreenState extends State<MiningScreen>
                         onChanged: (val) {
                           final v = double.tryParse(val);
                           setState(() {
-                            previewVXL = (v != null && v >= 1 && v <= 50)
+                            previewSOL = (v != null && v >= 1 && v <= 50)
                                 ? v * 2.0 * (10000.0 / 18.0)
                                 : null;
                           });
@@ -1327,7 +1570,7 @@ class _MiningScreenState extends State<MiningScreen>
                     SizedBox(height: 12.h),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: previewVXL != null
+                      child: previewSOL != null
                           ? Container(
                               key: const ValueKey('preview'),
                               width: double.infinity,
@@ -1337,8 +1580,7 @@ class _MiningScreenState extends State<MiningScreen>
                                 color: AppColors.accentGreen.withOpacity(0.07),
                                 borderRadius: BorderRadius.circular(10.r),
                                 border: Border.all(
-                                    color: AppColors.accentGreen
-                                        .withOpacity(0.2)),
+                                    color: AppColors.accentGreen.withOpacity(0.2)),
                               ),
                               child: Column(
                                 children: [
@@ -1346,11 +1588,10 @@ class _MiningScreenState extends State<MiningScreen>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(CupertinoIcons.arrow_up_right,
-                                          color: AppColors.accentGreen,
-                                          size: 12.sp),
+                                          color: AppColors.accentGreen, size: 12.sp),
                                       SizedBox(width: 5.w),
                                       Text(
-                                        "You'll earn: ${previewVXL!.toStringAsFixed(2)} VXL",
+                                        "You'll earn: ${previewSOL!.toStringAsFixed(2)} SOL",
                                         style: GoogleFonts.inter(
                                             color: AppColors.accentGreen,
                                             fontSize: 11.sp,
@@ -1361,13 +1602,11 @@ class _MiningScreenState extends State<MiningScreen>
                                   SizedBox(height: 3.h),
                                   Text("in 80 days",
                                       style: GoogleFonts.inter(
-                                          color: Colors.white38,
-                                          fontSize: 9.sp)),
+                                          color: Colors.white38, fontSize: 9.sp)),
                                 ],
                               ),
                             )
-                          : SizedBox(
-                              key: const ValueKey('empty'), height: 44.h),
+                          : SizedBox(key: const ValueKey('empty'), height: 44.h),
                     ),
                     SizedBox(height: 16.h),
                     Row(
@@ -1380,8 +1619,7 @@ class _MiningScreenState extends State<MiningScreen>
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.07),
                                 borderRadius: BorderRadius.circular(13.r),
-                                border: Border.all(
-                                    color: Colors.white12, width: 1),
+                                border: Border.all(color: Colors.white12, width: 1),
                               ),
                               alignment: Alignment.center,
                               child: Text("Cancel",
@@ -1417,8 +1655,7 @@ class _MiningScreenState extends State<MiningScreen>
                                   SizedBox(width: 6.w),
                                   Text("BOOST",
                                       style: GoogleFonts.inter(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
+                                          color: Colors.white, fontSize: 13.sp,
                                           fontWeight: FontWeight.bold)),
                                 ],
                               ),
