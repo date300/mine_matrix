@@ -206,7 +206,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         children: [
           Row(
             children: [
-              Icon(CupertinoIcons.wallet_pass_fill,
+              Icon(CupertinoIcons.creditcard_fill,
                   color: const Color(0xFF14F195), size: 18.sp),
               SizedBox(width: 8.w),
               Text(
@@ -325,7 +325,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           hintStyle: GoogleFonts.inter(color: Colors.white24, fontSize: 16.sp),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          suffixWidget: GestureDetector(
+          suffix: GestureDetector(
             onTap: _setMax,
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
@@ -371,7 +371,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
             color: Colors.white38,
             size: 18.sp,
           ),
-          suffixWidget: GestureDetector(
+          suffix: GestureDetector(
             onTap: () async {
               final data = await Clipboard.getData('text/plain');
               if (data?.text != null) {
