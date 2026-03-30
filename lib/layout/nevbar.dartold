@@ -25,12 +25,12 @@ class FloatingBottomNav extends StatelessWidget {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          // নিচের মেইন বার
+          // ????? ???? ???
           Container(
             width: double.infinity,
             height: 65.h,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D0D12), 
+              color: const Color(0xFF0D0D12),
               borderRadius: BorderRadius.circular(30.r),
               border: Border.all(color: Colors.white10, width: 1),
             ),
@@ -39,24 +39,24 @@ class FloatingBottomNav extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _navItem(0, CupertinoIcons.square_grid_2x2_fill, "Home"),
-                _navItem(2, CupertinoIcons.person_2_fill, "Refer"), 
+                _navItem(2, CupertinoIcons.person_2_fill, "Refer"),
 
-                SizedBox(width: 60.w), // মাঝখানের মাইনিং বাটনের জন্য গ্যাপ
+                SizedBox(width: 60.w), // ???????? ?????? ?????? ???? ?????
 
                 _navItem(3, CupertinoIcons.briefcase_fill, "Wallet"),
-                // এখানে settings_fill এর বদলে settings ব্যবহার করা হয়েছে
-                _navItem(4, CupertinoIcons.settings, "More"), 
+                // ????? settings_fill ?? ???? settings ??????? ??? ?????
+                _navItem(4, CupertinoIcons.arrow_down_circle_fill, "Withdraw"),
               ],
             ),
           ),
 
-          // মাঝখানের ফ্লোটিং মাইনিং বাটন
+          // ???????? ??????? ?????? ????
           Positioned(
             bottom: 20.h,
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.mediumImpact();
-                onTap(1); 
+                onTap(1);
               },
               child: _miningBtn(currentIndex == 1),
             ),
@@ -134,3 +134,4 @@ class FloatingBottomNav extends StatelessWidget {
      .shake(hz: 2, curve: Curves.easeInOut);
   }
 }
+

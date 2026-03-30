@@ -6,8 +6,7 @@ import 'nevbar.dart';
 import '../pages/home_screen.dart';
 import '../pages/mining_screen.dart';
 import '../pages/wallet_screen.dart';
-import '../pages/refer_screen.dart';
-import '../pages/Withdraw_scren.dart';
+import '../pages/refer_screen.dart'; // নিশ্চিত করো ফাইলের নাম refer_screen.dart (সব ছোট হাতের)
 
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
@@ -18,7 +17,7 @@ class AppColors {
 }
 
 class AppLayoutController extends GetxController {
-  var selectedIndex = 1.obs;
+  var selectedIndex = 1.obs; 
 }
 
 class AppLayout extends StatefulWidget {
@@ -30,12 +29,13 @@ class AppLayout extends StatefulWidget {
 class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
   final controller = Get.put(AppLayoutController());
 
+  // পেজ লিস্ট (নেভবারের ইনডেক্স অনুযায়ী)
   final List<Widget> pages = [
     const HomeScreen(),      // Index 0
     const MiningScreen(),    // Index 1
-    const ReferScreen(),     // Index 2
+    const ReferScreen(),     // Index 2 (ক্লাস নাম ReferScreen হতে হবে)
     const WalletScreen(),    // Index 3
-    const WithdrawScreen(),  // Index 4
+    const Center(child: Text("Settings", style: TextStyle(color: Colors.white))), // Index 4
   ];
 
   @override

@@ -12,7 +12,7 @@ class FloatingBottomNav extends StatelessWidget {
   const FloatingBottomNav({
     super.key,
     required this.currentIndex,
-    required this.onTap
+    required this.onTap,
   });
 
   @override
@@ -25,7 +25,7 @@ class FloatingBottomNav extends StatelessWidget {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          // ????? ???? ???
+          // Bottom nav bar
           Container(
             width: double.infinity,
             height: 65.h,
@@ -40,17 +40,14 @@ class FloatingBottomNav extends StatelessWidget {
               children: [
                 _navItem(0, CupertinoIcons.square_grid_2x2_fill, "Home"),
                 _navItem(2, CupertinoIcons.person_2_fill, "Refer"),
-
-                SizedBox(width: 60.w), // ???????? ?????? ?????? ???? ?????
-
+                SizedBox(width: 60.w), // Mining button gap
                 _navItem(3, CupertinoIcons.briefcase_fill, "Wallet"),
-                // ????? settings_fill ?? ???? settings ??????? ??? ?????
                 _navItem(4, CupertinoIcons.arrow_down_circle_fill, "Withdraw"),
               ],
             ),
           ),
 
-          // ???????? ??????? ?????? ????
+          // Mining center button
           Positioned(
             bottom: 20.h,
             child: GestureDetector(
@@ -60,7 +57,7 @@ class FloatingBottomNav extends StatelessWidget {
               },
               child: _miningBtn(currentIndex == 1),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -76,8 +73,10 @@ class FloatingBottomNav extends StatelessWidget {
         children: [
           Icon(
             icon,
-            color: active ? const Color(0xFF14F195) : Colors.white.withOpacity(0.5),
-            size: 22.sp
+            color: active
+                ? const Color(0xFF14F195)
+                : Colors.white.withOpacity(0.5),
+            size: 22.sp,
           ),
           SizedBox(height: 4.h),
           Text(
@@ -85,15 +84,15 @@ class FloatingBottomNav extends StatelessWidget {
             style: GoogleFonts.inter(
               color: active ? Colors.white : Colors.white.withOpacity(0.5),
               fontSize: 10.sp,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal
-            )
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ],
       ).animate(target: active ? 1 : 0).scale(
-        begin: const Offset(1, 1),
-        end: const Offset(1.1, 1.1),
-        duration: 200.ms
-      ),
+            begin: const Offset(1, 1),
+            end: const Offset(1.1, 1.1),
+            duration: 200.ms,
+          ),
     );
   }
 
@@ -102,7 +101,7 @@ class FloatingBottomNav extends StatelessWidget {
       padding: EdgeInsets.all(4.w),
       decoration: const BoxDecoration(
         color: Color(0xFF1B1B22),
-        shape: BoxShape.circle
+        shape: BoxShape.circle,
       ),
       child: Container(
         padding: EdgeInsets.all(15.w),
@@ -113,25 +112,26 @@ class FloatingBottomNav extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: isActive
                 ? [Colors.white, Colors.grey.shade400]
-                : [const Color(0xFF14F195), const Color(0xFF9945FF)]
+                : [const Color(0xFF14F195), const Color(0xFF9945FF)],
           ),
           boxShadow: [
             BoxShadow(
-              color: (isActive ? Colors.white : const Color(0xFF14F195)).withOpacity(0.3),
+              color: (isActive ? Colors.white : const Color(0xFF14F195))
+                  .withOpacity(0.3),
               blurRadius: 15,
-              spreadRadius: 2
-            )
+              spreadRadius: 2,
+            ),
           ],
         ),
         child: Icon(
           CupertinoIcons.bolt_fill,
           color: isActive ? const Color(0xFF0D0D12) : Colors.white,
-          size: 28.sp
+          size: 28.sp,
         ),
       ),
-    ).animate(target: isActive ? 1 : 0)
-     .shimmer(duration: 1500.ms, color: Colors.white24)
-     .shake(hz: 2, curve: Curves.easeInOut);
+    )
+        .animate(target: isActive ? 1 : 0)
+        .shimmer(duration: 1500.ms, color: Colors.white24)
+        .shake(hz: 2, curve: Curves.easeInOut);
   }
 }
-
