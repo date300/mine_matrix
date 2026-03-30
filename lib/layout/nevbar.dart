@@ -30,7 +30,7 @@ class FloatingBottomNav extends StatelessWidget {
             width: double.infinity,
             height: 65.h,
             decoration: BoxDecoration(
-              color: const Color(0xFF0D0D12), 
+              color: const Color(0xFF0D0D12),
               borderRadius: BorderRadius.circular(30.r),
               border: Border.all(color: Colors.white10, width: 1),
             ),
@@ -39,13 +39,13 @@ class FloatingBottomNav extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _navItem(0, CupertinoIcons.square_grid_2x2_fill, "Home"),
-                _navItem(2, CupertinoIcons.person_2_fill, "Refer"), 
+                _navItem(2, CupertinoIcons.person_2_fill, "Refer"),
 
                 SizedBox(width: 60.w), // ???????? ?????? ?????? ???? ?????
 
                 _navItem(3, CupertinoIcons.briefcase_fill, "Wallet"),
                 // ????? settings_fill ?? ???? settings ??????? ??? ?????
-                _navItem(4, CupertinoIcons.arrow_down_circle_fill, "Withdraw"), 
+                _navItem(4, CupertinoIcons.arrow_down_circle_fill, "Withdraw"),
               ],
             ),
           ),
@@ -56,7 +56,7 @@ class FloatingBottomNav extends StatelessWidget {
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.mediumImpact();
-                onTap(1); 
+                onTap(1);
               },
               child: _miningBtn(currentIndex == 1),
             ),
@@ -135,4 +135,3 @@ class FloatingBottomNav extends StatelessWidget {
   }
 }
 
-10
