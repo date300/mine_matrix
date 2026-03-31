@@ -1,6 +1,18 @@
+// mining_screen.dart
+// pubspec.yaml এ যোগ করো:
+//   http: ^1.2.1
+//
+// ✅ শুধু এই একটা লাইন পরিবর্তন করো তোমার server URL দিয়ে:
+//   static const String _baseUrl = 'https://yourdomain.com/mining';
+//
+// ✅ লগইনের পর token সেট করো:
+//   MiningApi.token = 'তোমার_jwt_token';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
@@ -16,6 +28,100 @@ class AppColors {
   static const Color glassWhite   = Color(0xAAFFFFFF);
   static const Color accentLeaf   = Color(0xFF76C442);
   static const Color accentOrange = Color(0xFFFF9500);
+}
+
+// ===================== API SERVICE =====================
+class MiningApi {
+  // ✅ তোমার server URL এখানে বসাও
+  static const String _baseUrl = 'https://ltcminematrix.com/api/mining';
+
+  // ✅ লগইনের পর এখানে JWT token সেট করো: MiningApi.token = '...';
+  static String token = '';
+
+  static Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  // GET /mining/status
+  static Future<Map<String, dynamic>?> getStatus() async {
+    try {
+      final res = await http.get(Uri.parse('$_baseUrl/status'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) return jsonDecode(res.body);
+    } catch (_) {}
+    return null;
+  }
+
+  // POST /mining/activate-plan
+  static Future<bool> activatePlan() async {
+    try {
+      final res = await http.post(Uri.parse('$_baseUrl/activate-plan'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // POST /mining/start-day
+  static Future<bool> startDay() async {
+    try {
+      final res = await http.post(Uri.parse('$_baseUrl/start-day'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // POST /mining/sync
+  static Future<bool> sync({
+    required double balance,
+    required double totalEarned,
+    required int completedDays,
+    required bool isMining,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/sync'),
+        headers: _headers,
+        body: jsonEncode({
+          'balance': balance,
+          'total_earned': totalEarned,
+          'completed_days': completedDays,
+          'is_mining': isMining,
+        }),
+      ).timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // POST /mining/buy-boost
+  static Future<bool> buyBoost(double amount) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/buy-boost'),
+        headers: _headers,
+        body: jsonEncode({'amount': amount}),
+      ).timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // POST /mining/buy-autostart
+  static Future<bool> buyAutoStart() async {
+    try {
+      final res = await http.post(Uri.parse('$_baseUrl/buy-autostart'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // POST /mining/claim
+  static Future<bool> claim() async {
+    try {
+      final res = await http.post(Uri.parse('$_baseUrl/claim'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
 }
 
 void main() => runApp(const VexylonApp());
@@ -86,42 +192,112 @@ class MiningController extends GetxController {
   var totalClaimedSOL = 0.0.obs;
   var claimCount      = 0.obs;
 
+  // Loading state for API calls
+  var isLoading = false.obs;
+
   bool get canClaim => balance.value >= claimThreshold && hasPaid.value;
 
   Timer? _timer;
+  Timer? _syncTimer;
   int    _dayElapsedTicks   = 0;
   int    _boostElapsedTicks = 0;
   double _boostPerTick      = 0.0;
 
-  void activatePlan() {
-    hasPaid.value        = true;
-    isComplete.value     = false;
-    _dayElapsedTicks     = 0;
-    completedDays.value  = 0;
-    currentDayNum.value  = 1;
-    balance.value        = 0;
-    totalEarned.value    = 0;
-    planProgress.value   = 0;
-    remainingDays.value  = planDays;
-    dayProgress.value    = 0;
-    dayStarted.value     = false;
-    canStartNewDay.value = true;
-    todayEarned.value    = 0;
+  @override
+  void onInit() {
+    super.onInit();
+    _loadFromServer();
   }
 
-  void activateAutoStart() {
-    hasAutoStart.value = true;
-    if (hasPaid.value && !isComplete.value &&
-        !isMining.value && canStartNewDay.value && !dayStarted.value) {
-      _startNewDay();
+  // ✅ App খুললেই server থেকে data লোড
+  Future<void> _loadFromServer() async {
+    isLoading.value = true;
+    final data = await MiningApi.getStatus();
+    if (data != null && data['success'] == true) {
+      final u = data['data'];
+      hasPaid.value       = _toBool(u['has_paid']);
+      balance.value       = _toDouble(u['balance']);
+      totalEarned.value   = _toDouble(u['total_earned']);
+      completedDays.value = _toInt(u['completed_days']);
+      hasAutoStart.value  = _toBool(u['has_auto_start']);
+      isMining.value      = _toBool(u['is_mining']);
+      boostPaid.value     = _toBool(u['boost_paid']);
+      boostAmount.value   = _toDouble(u['boost_amount']);
+      claimCount.value    = _toInt(u['claim_count']);
+
+      // Derived values
+      currentDayNum.value = completedDays.value + 1;
+      planProgress.value  = completedDays.value / planDays;
+      remainingDays.value = planDays - completedDays.value;
+
+      if (boostPaid.value && boostAmount.value > 0) {
+        final total = boostAmount.value * 2.0 * (targetSOL / entryFee);
+        boostTotalSOL.value = total;
+        _boostPerTick = total / totalBoostTicks;
+      }
     }
+    isLoading.value = false;
+  }
+
+  // ✅ প্ল্যান অ্যাক্টিভেট — API call করে
+  Future<void> activatePlan() async {
+    isLoading.value = true;
+    final ok = await MiningApi.activatePlan();
+    if (ok) {
+      hasPaid.value        = true;
+      isComplete.value     = false;
+      _dayElapsedTicks     = 0;
+      completedDays.value  = 0;
+      currentDayNum.value  = 1;
+      balance.value        = 0;
+      totalEarned.value    = 0;
+      planProgress.value   = 0;
+      remainingDays.value  = planDays;
+      dayProgress.value    = 0;
+      dayStarted.value     = false;
+      canStartNewDay.value = true;
+      todayEarned.value    = 0;
+      Get.snackbar('✅ সফল', 'প্ল্যান অ্যাক্টিভেট হয়েছে!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.accentLeaf.withOpacity(0.9),
+          colorText: Colors.black);
+    } else {
+      Get.snackbar('❌ Error', 'প্ল্যান অ্যাক্টিভেট হয়নি, আবার চেষ্টা করো',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8));
+    }
+    isLoading.value = false;
+  }
+
+  // ✅ অটো-স্টার্ট — API call করে
+  Future<void> activateAutoStart() async {
+    isLoading.value = true;
+    final ok = await MiningApi.buyAutoStart();
+    if (ok) {
+      hasAutoStart.value = true;
+      if (hasPaid.value && !isComplete.value &&
+          !isMining.value && canStartNewDay.value && !dayStarted.value) {
+        _startNewDay();
+      }
+      Get.snackbar('✅ সফল', 'Auto-Start চালু হয়েছে!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.accentOrange.withOpacity(0.9),
+          colorText: Colors.black);
+    } else {
+      Get.snackbar('❌ Error', 'Auto-Start হয়নি',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8));
+    }
+    isLoading.value = false;
   }
 
   void toggleMining() {
     if (!hasPaid.value || isComplete.value) return;
     if (isMining.value) {
       _timer?.cancel();
+      _syncTimer?.cancel();
       isMining.value = false;
+      _syncToServer(); // pause হলে sync
     } else if (dayStarted.value) {
       _resumeMining();
     } else if (canStartNewDay.value) {
@@ -129,28 +305,58 @@ class MiningController extends GetxController {
     }
   }
 
-  void _startNewDay() {
+  Future<void> _startNewDay() async {
+    // ✅ API: start-day
+    final ok = await MiningApi.startDay();
+    if (!ok) {
+      Get.snackbar('❌ Error', 'Day start হয়নি',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8));
+      return;
+    }
     dayStarted.value     = true;
     canStartNewDay.value = false;
     isMining.value       = true;
     _runTimer();
+    _startAutoSync();
   }
 
   void _resumeMining() {
     isMining.value = true;
     _runTimer();
+    _startAutoSync();
+  }
+
+  // ✅ প্রতি ৩০ সেকেন্ডে auto sync
+  void _startAutoSync() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (isMining.value) _syncToServer();
+    });
+  }
+
+  Future<void> _syncToServer() async {
+    await MiningApi.sync(
+      balance: balance.value,
+      totalEarned: totalEarned.value,
+      completedDays: completedDays.value,
+      isMining: isMining.value,
+    );
   }
 
   void _runTimer() {
     _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       if (_dayElapsedTicks >= ticksPerDay) {
         t.cancel();
+        _syncTimer?.cancel();
         isMining.value    = false;
         dayStarted.value  = false;
         completedDays.value++;
         _dayElapsedTicks  = 0;
         dayProgress.value = 0;
         todayEarned.value = 0;
+
+        _syncToServer(); // day complete হলে sync
 
         if (completedDays.value >= planDays) {
           isComplete.value    = true;
@@ -204,31 +410,61 @@ class MiningController extends GetxController {
     });
   }
 
-  void activateBoost(double amount) {
-    boostPaid.value          = true;
-    boostIsComplete.value    = false;
-    boostAmount.value        = amount;
-    _boostElapsedTicks       = 0;
-    boostProgress.value      = 0;
-    boostEarned.value        = 0;
-    boostRemainingDays.value = boostDays;
-    final total              = amount * 2.0 * (10000.0 / 18.0);
-    boostTotalSOL.value      = total;
-    _boostPerTick            = total / totalBoostTicks;
+  // ✅ বুস্ট — API call করে
+  Future<void> activateBoost(double amount) async {
+    isLoading.value = true;
+    final ok = await MiningApi.buyBoost(amount);
+    if (ok) {
+      boostPaid.value          = true;
+      boostIsComplete.value    = false;
+      boostAmount.value        = amount;
+      _boostElapsedTicks       = 0;
+      boostProgress.value      = 0;
+      boostEarned.value        = 0;
+      boostRemainingDays.value = boostDays;
+      final total              = amount * 2.0 * (targetSOL / entryFee);
+      boostTotalSOL.value      = total;
+      _boostPerTick            = total / totalBoostTicks;
+      Get.snackbar('✅ সফল', 'Boost চালু হয়েছে!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.accentPurple.withOpacity(0.9));
+    } else {
+      Get.snackbar('❌ Error', 'Boost হয়নি',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8));
+    }
+    isLoading.value = false;
   }
 
-  /// Resets balance to 0 after claim and accumulates totalClaimedSOL
-  double claimReward() {
-    final claimed         = balance.value;
-    totalClaimedSOL.value += claimed;
-    balance.value         = 0.0;
-    claimCount.value++;
-    return claimed;
+  // ✅ ক্লেইম — API call করে, return করে claimed amount (0 = failed)
+  Future<double> claimReward() async {
+    isLoading.value = true;
+    final ok = await MiningApi.claim();
+    if (ok) {
+      final claimed         = balance.value;
+      totalClaimedSOL.value += claimed;
+      balance.value         = 0.0;
+      claimCount.value++;
+      isLoading.value = false;
+      return claimed;
+    } else {
+      Get.snackbar('❌ Error', 'ক্লেইম হয়নি — Balance বা Plan চেক করো',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8));
+      isLoading.value = false;
+      return 0.0;
+    }
   }
+
+  // Helper converters
+  bool   _toBool(dynamic v)   => v == 1 || v == true;
+  double _toDouble(dynamic v) => double.tryParse(v?.toString() ?? '0') ?? 0.0;
+  int    _toInt(dynamic v)    => int.tryParse(v?.toString() ?? '0') ?? 0;
 
   @override
   void onClose() {
     _timer?.cancel();
+    _syncTimer?.cancel();
     super.onClose();
   }
 }
@@ -244,13 +480,10 @@ class _MiningScreenState extends State<MiningScreen>
     with TickerProviderStateMixin {
   final MiningController controller = Get.put(MiningController());
 
-  // Helper: responsive dialog width/height
-  double _dw(BuildContext ctx, {double pct = 0.84, double min = 260, double max = 340}) {
-    return (MediaQuery.of(ctx).size.width * pct).clamp(min, max);
-  }
-  double _dh(BuildContext ctx, {double pct = 0.45, double min = 240, double max = 360}) {
-    return (MediaQuery.of(ctx).size.height * pct).clamp(min, max);
-  }
+  double _dw(BuildContext ctx, {double pct = 0.84, double min = 260, double max = 340}) =>
+      (MediaQuery.of(ctx).size.width * pct).clamp(min, max);
+  double _dh(BuildContext ctx, {double pct = 0.45, double min = 240, double max = 360}) =>
+      (MediaQuery.of(ctx).size.height * pct).clamp(min, max);
 
   @override
   Widget build(BuildContext context) {
@@ -276,6 +509,15 @@ class _MiningScreenState extends State<MiningScreen>
               ),
             ),
           ),
+          // ✅ Loading overlay
+          Obx(() => controller.isLoading.value
+              ? Container(
+                  color: Colors.black45,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: AppColors.accentGreen),
+                  ),
+                )
+              : const SizedBox.shrink()),
         ],
       ),
     );
@@ -314,7 +556,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Daily Section ────────────────────────────────
   Widget _buildDailySection() {
     return Obx(() {
       final dayNum   = controller.currentDayNum.value;
@@ -435,7 +676,6 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Balance Section ──────────────────────────────
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -496,7 +736,6 @@ class _MiningScreenState extends State<MiningScreen>
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  // ─── Plan Progress ────────────────────────────────
   Widget _buildPlanProgressSection() {
     return Obx(() {
       final prog   = controller.planProgress.value;
@@ -569,7 +808,6 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Boost Progress ───────────────────────────────
   Widget _buildBoostProgressSection() {
     return Obx(() {
       final prog     = controller.boostProgress.value;
@@ -660,7 +898,6 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Mining Orb ───────────────────────────────────
   Widget _buildMiningOrb() {
     return Obx(() {
       final active   = controller.isMining.value;
@@ -785,7 +1022,6 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Cycle Bar ────────────────────────────────────
   Widget _buildCycleProgressBar() {
     return Obx(() => LinearPercentIndicator(
           lineHeight: 6.h,
@@ -798,7 +1034,6 @@ class _MiningScreenState extends State<MiningScreen>
         ));
   }
 
-  // ─── Action Buttons ───────────────────────────────
   Widget _buildActionButtons() {
     return Obx(() {
       final claimable = controller.canClaim;
@@ -982,7 +1217,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Stats Grid ───────────────────────────────────
   Widget _buildStatsGrid() {
     return Obx(() => Row(
           children: [
@@ -1020,11 +1254,8 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════
-  // Dialogs
-  // ══════════════════════════════════════════════════
+  // ===================== DIALOGS =====================
 
-  // ─── Confirm Payment Dialog ───────────────────────
   void _showConfirmDialog() {
     showCupertinoDialog(
       context: context,
@@ -1051,7 +1282,7 @@ class _MiningScreenState extends State<MiningScreen>
             isDefaultAction: true,
             onPressed: () {
               Navigator.pop(ctx);
-              controller.activatePlan();
+              controller.activatePlan(); // ✅ API call
             },
             child: Text("Pay \$18",
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.sp)),
@@ -1061,7 +1292,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Claim Dialog ─────────────────────────────────
   void _showClaimDialog() {
     final solAmount = controller.balance.value;
     final usdAmount = solAmount * MiningController.solToUsd;
@@ -1159,10 +1389,12 @@ class _MiningScreenState extends State<MiningScreen>
                         SizedBox(width: 10.w),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () {
+                            onTap: () async {
                               Navigator.pop(ctx);
-                              controller.claimReward();
-                              _showClaimSuccessDialog(solAmount, usdAmount);
+                              final claimed = await controller.claimReward(); // ✅ API call
+                              if (claimed > 0) {
+                                _showClaimSuccessDialog(claimed, claimed * MiningController.solToUsd);
+                              }
                             },
                             child: Container(
                               height: 46.h,
@@ -1201,7 +1433,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Claim Success Dialog ─────────────────────────
   void _showClaimSuccessDialog(double sol, double usd) {
     showDialog(
       context: context,
@@ -1287,17 +1518,16 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Claim Not Ready Dialog ───────────────────────
   void _showClaimNotReadyDialog() {
     final bal  = controller.balance.value;
     final need = MiningController.claimThreshold - bal;
     final pct  = (bal / MiningController.claimThreshold * 100).clamp(0.0, 100.0);
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.6),
+      barrierColor: Colors.black.withOpacity(0.75),
       builder: (ctx) {
-        final dw = _dw(ctx, pct: 0.78, min: 250, max: 310);
-        final dh = _dh(ctx, pct: 0.40, min: 230, max: 270);
+        final dw = _dw(ctx, pct: 0.82, min: 250, max: 330);
+        final dh = _dh(ctx, pct: 0.42, min: 250, max: 300);
         return Center(
           child: Material(
             color: Colors.transparent,
@@ -1312,48 +1542,44 @@ class _MiningScreenState extends State<MiningScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.06),
+                  Colors.orange.withOpacity(0.10),
                   Colors.black.withOpacity(0.8),
                 ],
               ),
-              borderGradient: LinearGradient(
-                  colors: [Colors.white24, Colors.transparent]),
+              borderGradient: LinearGradient(colors: [
+                Colors.orange.withOpacity(0.6), Colors.transparent,
+              ]),
               child: Padding(
                 padding: EdgeInsets.all(22.w),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(CupertinoIcons.lock_fill,
-                        color: Colors.white38, size: 36.sp),
-                    SizedBox(height: 10.h),
-                    Text("Claim Locked",
+                    Icon(CupertinoIcons.lock_fill, color: Colors.orange, size: 38.sp),
+                    SizedBox(height: 12.h),
+                    Text("Not Ready Yet",
                         style: GoogleFonts.inter(
                             color: Colors.white, fontSize: 16.sp,
                             fontWeight: FontWeight.w900)),
                     SizedBox(height: 8.h),
                     Text(
-                      "You need 10,000 SOL (= \$100) to unlock your claim.",
+                      "You need 10,000 SOL and an active plan to claim.",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                          color: Colors.white54, fontSize: 11.sp, height: 1.4),
+                      style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp),
                     ),
                     SizedBox(height: 14.h),
                     LinearPercentIndicator(
-                      lineHeight: 8.h,
+                      lineHeight: 7.h,
                       percent: pct / 100,
                       backgroundColor: Colors.white10,
                       linearGradient: const LinearGradient(
-                          colors: [AppColors.accentPurple, AppColors.accentGreen]),
+                          colors: [Colors.orange, Color(0xFFFFCC00)]),
                       barRadius: const Radius.circular(10),
                       padding: EdgeInsets.zero,
                     ),
-                    SizedBox(height: 8.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        "${pct.toStringAsFixed(1)}%  |  ${need.toStringAsFixed(0)} SOL remaining",
-                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
-                      ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      "${pct.toStringAsFixed(1)}%  |  ${need.toStringAsFixed(0)} SOL remaining",
+                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
                     ),
                     SizedBox(height: 16.h),
                     GestureDetector(
@@ -1383,7 +1609,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Auto Start Dialog ────────────────────────────
   void _showAutoStartDialog() {
     showDialog(
       context: context,
@@ -1479,7 +1704,7 @@ class _MiningScreenState extends State<MiningScreen>
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pop(ctx);
-                              controller.activateAutoStart();
+                              controller.activateAutoStart(); // ✅ API call
                             },
                             child: Container(
                               height: 46.h,
@@ -1518,7 +1743,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Boost Dialog ─────────────────────────────────
   void _showBoostDialog() {
     final TextEditingController amountCtrl = TextEditingController();
     double? previewSOL;
@@ -1683,7 +1907,7 @@ class _MiningScreenState extends State<MiningScreen>
                                 final v = double.tryParse(amountCtrl.text);
                                 if (v == null || v < 1 || v > 50) return;
                                 Navigator.pop(ctx);
-                                controller.activateBoost(v);
+                                controller.activateBoost(v); // ✅ API call
                               },
                               child: Container(
                                 height: 46.h,

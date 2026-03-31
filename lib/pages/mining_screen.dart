@@ -1,12 +1,12 @@
 // mining_screen.dart
-// pubspec.yaml এ যোগ করো:
+// pubspec.yaml ? ??? ???:
 //   http: ^1.2.1
 //
-// ✅ শুধু এই একটা লাইন পরিবর্তন করো তোমার server URL দিয়ে:
+// ? ???? ?? ???? ???? ???????? ??? ????? server URL ?????:
 //   static const String _baseUrl = 'https://yourdomain.com/mining';
 //
-// ✅ লগইনের পর token সেট করো:
-//   MiningApi.token = 'তোমার_jwt_token';
+// ? ?????? ?? token ??? ???:
+//   MiningApi.token = '?????_jwt_token';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -32,10 +32,10 @@ class AppColors {
 
 // ===================== API SERVICE =====================
 class MiningApi {
-  // ✅ তোমার server URL এখানে বসাও
+  // ? ????? server URL ????? ????
   static const String _baseUrl = 'https://ltcminematrix.com/api/mining';
 
-  // ✅ লগইনের পর এখানে JWT token সেট করো: MiningApi.token = '...';
+  // ? ?????? ?? ????? JWT token ??? ???: MiningApi.token = '...';
   static String token = '';
 
   static Map<String, String> get _headers => {
@@ -54,21 +54,30 @@ class MiningApi {
   }
 
   // POST /mining/activate-plan
-  static Future<bool> activatePlan() async {
+  static Future<Map<String, dynamic>> activatePlan(String paymentRef) async {
     try {
-      final res = await http.post(Uri.parse('$_baseUrl/activate-plan'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      return res.statusCode == 200;
-    } catch (_) { return false; }
+      final res = await http.post(
+        Uri.parse('$_baseUrl/activate-plan'),
+        headers: _headers,
+        body: jsonEncode({'payment_reference': paymentRef}),
+      ).timeout(const Duration(seconds: 10));
+      final body = jsonDecode(res.body);
+      return {'ok': res.statusCode == 200, 'message': body['message'] ?? ''};
+    } catch (_) {
+      return {'ok': false, 'message': 'Network error'};
+    }
   }
 
   // POST /mining/start-day
-  static Future<bool> startDay() async {
+  static Future<Map<String, dynamic>> startDay() async {
     try {
       final res = await http.post(Uri.parse('$_baseUrl/start-day'), headers: _headers)
           .timeout(const Duration(seconds: 10));
-      return res.statusCode == 200;
-    } catch (_) { return false; }
+      final body = jsonDecode(res.body);
+      return {'ok': res.statusCode == 200, 'message': body['message'] ?? ''};
+    } catch (_) {
+      return {'ok': false, 'message': 'Network error'};
+    }
   }
 
   // POST /mining/sync
@@ -99,7 +108,7 @@ class MiningApi {
       final res = await http.post(
         Uri.parse('$_baseUrl/buy-boost'),
         headers: _headers,
-        body: jsonEncode({'amount': amount}),
+        body: jsonEncode({'amount': amount.toInt()}), // backend int চাই
       ).timeout(const Duration(seconds: 10));
       return res.statusCode == 200;
     } catch (_) { return false; }
@@ -209,7 +218,7 @@ class MiningController extends GetxController {
     _loadFromServer();
   }
 
-  // ✅ App খুললেই server থেকে data লোড
+  // ✅ App খুললে server থেকে data নাও
   Future<void> _loadFromServer() async {
     isLoading.value = true;
     final data = await MiningApi.getStatus();
@@ -220,7 +229,6 @@ class MiningController extends GetxController {
       totalEarned.value   = _toDouble(u['total_earned']);
       completedDays.value = _toInt(u['completed_days']);
       hasAutoStart.value  = _toBool(u['has_auto_start']);
-      isMining.value      = _toBool(u['is_mining']);
       boostPaid.value     = _toBool(u['boost_paid']);
       boostAmount.value   = _toDouble(u['boost_amount']);
       claimCount.value    = _toInt(u['claim_count']);
@@ -235,15 +243,30 @@ class MiningController extends GetxController {
         boostTotalSOL.value = total;
         _boostPerTick = total / totalBoostTicks;
       }
+
+      // ✅ Server-এ is_mining=true থাকলে timer resume করো
+      final serverMining = _toBool(u['is_mining']);
+      if (serverMining && hasPaid.value) {
+        // elapsed time হিসাব করে ticks restore করো
+        final elapsedSec = _toInt(u['mining_elapsed_seconds']);
+        final elapsedTicks = (elapsedSec * 10).clamp(0, ticksPerDay - 1);
+        _dayElapsedTicks = elapsedTicks;
+        dayProgress.value = elapsedTicks / ticksPerDay;
+        dayStarted.value     = true;
+        canStartNewDay.value = false;
+        isMining.value       = true;
+        _runTimer();
+        _startAutoSync();
+      }
     }
     isLoading.value = false;
   }
 
-  // ✅ প্ল্যান অ্যাক্টিভেট — API call করে
-  Future<void> activatePlan() async {
+  // ✅ Plan activate — payment_reference সহ
+  Future<void> activatePlan(String paymentRef) async {
     isLoading.value = true;
-    final ok = await MiningApi.activatePlan();
-    if (ok) {
+    final result = await MiningApi.activatePlan(paymentRef);
+    if (result['ok'] == true) {
       hasPaid.value        = true;
       isComplete.value     = false;
       _dayElapsedTicks     = 0;
@@ -257,19 +280,19 @@ class MiningController extends GetxController {
       dayStarted.value     = false;
       canStartNewDay.value = true;
       todayEarned.value    = 0;
-      Get.snackbar('✅ সফল', 'প্ল্যান অ্যাক্টিভেট হয়েছে!',
+      Get.snackbar('✅ সফল', 'পেমেন্ট নিশ্চিত! মাইনিং শুরু করুন।',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentLeaf.withOpacity(0.9),
           colorText: Colors.black);
     } else {
-      Get.snackbar('❌ Error', 'প্ল্যান অ্যাক্টিভেট হয়নি, আবার চেষ্টা করো',
+      Get.snackbar('❌ Error', result['message'] ?? 'পেমেন্ট ব্যর্থ, আবার চেষ্টা করুন',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
     isLoading.value = false;
   }
 
-  // ✅ অটো-স্টার্ট — API call করে
+  // ✅ Auto-start activate
   Future<void> activateAutoStart() async {
     isLoading.value = true;
     final ok = await MiningApi.buyAutoStart();
@@ -284,7 +307,7 @@ class MiningController extends GetxController {
           backgroundColor: AppColors.accentOrange.withOpacity(0.9),
           colorText: Colors.black);
     } else {
-      Get.snackbar('❌ Error', 'Auto-Start হয়নি',
+      Get.snackbar('❌ Error', 'Auto-Start ব্যর্থ হয়েছে',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
@@ -297,7 +320,7 @@ class MiningController extends GetxController {
       _timer?.cancel();
       _syncTimer?.cancel();
       isMining.value = false;
-      _syncToServer(); // pause হলে sync
+      _syncToServer(); // pause ??? sync
     } else if (dayStarted.value) {
       _resumeMining();
     } else if (canStartNewDay.value) {
@@ -306,10 +329,10 @@ class MiningController extends GetxController {
   }
 
   Future<void> _startNewDay() async {
-    // ✅ API: start-day
-    final ok = await MiningApi.startDay();
-    if (!ok) {
-      Get.snackbar('❌ Error', 'Day start হয়নি',
+    // ✅ API: start-day — error message দেখাও
+    final result = await MiningApi.startDay();
+    if (result['ok'] != true) {
+      Get.snackbar('❌ Error', result['message'] ?? 'Day start ব্যর্থ হয়েছে',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
       return;
@@ -327,7 +350,7 @@ class MiningController extends GetxController {
     _startAutoSync();
   }
 
-  // ✅ প্রতি ৩০ সেকেন্ডে auto sync
+  // ? ????? ?? ???????? auto sync
   void _startAutoSync() {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -356,7 +379,7 @@ class MiningController extends GetxController {
         dayProgress.value = 0;
         todayEarned.value = 0;
 
-        _syncToServer(); // day complete হলে sync
+        _syncToServer(); // day complete ??? sync
 
         if (completedDays.value >= planDays) {
           isComplete.value    = true;
@@ -410,7 +433,7 @@ class MiningController extends GetxController {
     });
   }
 
-  // ✅ বুস্ট — API call করে
+  // ✅ Boost activate — API call করে
   Future<void> activateBoost(double amount) async {
     isLoading.value = true;
     final ok = await MiningApi.buyBoost(amount);
@@ -429,14 +452,14 @@ class MiningController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentPurple.withOpacity(0.9));
     } else {
-      Get.snackbar('❌ Error', 'Boost হয়নি',
+      Get.snackbar('❌ Error', 'Boost ব্যর্থ হয়েছে',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
     isLoading.value = false;
   }
 
-  // ✅ ক্লেইম — API call করে, return করে claimed amount (0 = failed)
+  // ✅ Claim — API call করে, claimed amount return করে
   Future<double> claimReward() async {
     isLoading.value = true;
     final ok = await MiningApi.claim();
@@ -448,7 +471,7 @@ class MiningController extends GetxController {
       isLoading.value = false;
       return claimed;
     } else {
-      Get.snackbar('❌ Error', 'ক্লেইম হয়নি — Balance বা Plan চেক করো',
+      Get.snackbar('❌ Error', 'Claim ব্যর্থ — Balance কম অথবা Plan নেই',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
       isLoading.value = false;
@@ -509,7 +532,7 @@ class _MiningScreenState extends State<MiningScreen>
               ),
             ),
           ),
-          // ✅ Loading overlay
+          // ? Loading overlay
           Obx(() => controller.isLoading.value
               ? Container(
                   color: Colors.black45,
@@ -1257,37 +1280,157 @@ class _MiningScreenState extends State<MiningScreen>
   // ===================== DIALOGS =====================
 
   void _showConfirmDialog() {
-    showCupertinoDialog(
+    final TextEditingController refCtrl = TextEditingController();
+
+    showDialog(
       context: context,
-      builder: (ctx) => CupertinoAlertDialog(
-        title: Text("Confirm Payment",
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16.sp)),
-        content: Padding(
-          padding: EdgeInsets.only(top: 6.h),
-          child: Text(
-            "Pay \$18.00 to activate your plan.\n\n"
-            "Plan: Mine 10,000 SOL over 365 days.\n\n"
-            "Tap the ORB each day to start mining and earn SOL daily.\n\n"
-            "Add Auto Start for \$10 to mine automatically every day.",
-            style: GoogleFonts.inter(fontSize: 12.sp),
-          ),
-        ),
-        actions: [
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel", style: GoogleFonts.inter(fontSize: 14.sp)),
-          ),
-          CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () {
-              Navigator.pop(ctx);
-              controller.activatePlan(); // ✅ API call
-            },
-            child: Text("Pay \$18",
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14.sp)),
-          ),
-        ],
+      barrierColor: Colors.black.withOpacity(0.75),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Center(
+            child: Material(
+              color: Colors.transparent,
+              child: GlassmorphicContainer(
+                width: _dw(ctx, pct: 0.88, min: 270, max: 360),
+                height: _dh(ctx, pct: 0.62, min: 340, max: 420),
+                borderRadius: 22.r,
+                blur: 22,
+                alignment: Alignment.center,
+                border: 1,
+                linearGradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.accentLeaf.withOpacity(0.12),
+                    Colors.black.withOpacity(0.85),
+                  ],
+                ),
+                borderGradient: LinearGradient(colors: [
+                  AppColors.accentLeaf.withOpacity(0.6),
+                  Colors.transparent,
+                ]),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(CupertinoIcons.lock_open_fill,
+                          color: AppColors.accentLeaf, size: 32.sp),
+                      SizedBox(height: 10.h),
+                      Text("\$18 ENTRY FEE",
+                          style: GoogleFonts.inter(
+                              color: Colors.white, fontSize: 16.sp,
+                              fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      SizedBox(height: 6.h),
+                      Text(
+                        "Plan: 365 দিনে 10,000 SOL mine করুন।\nপ্রতিদিন ORB tap করে mining শুরু করুন।\nAuto Start (\$10) দিয়ে hands-free mine করুন।",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                            color: Colors.white60, fontSize: 10.sp, height: 1.5),
+                      ),
+                      SizedBox(height: 16.h),
+                      // ✅ Payment Reference Input
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(13.r),
+                          border: Border.all(
+                              color: AppColors.accentLeaf.withOpacity(0.45)),
+                        ),
+                        child: TextField(
+                          controller: refCtrl,
+                          style: GoogleFonts.inter(
+                              color: Colors.white, fontSize: 14.sp),
+                          decoration: InputDecoration(
+                            hintText: "Payment Reference / TxID",
+                            hintStyle: GoogleFonts.inter(
+                                color: Colors.white30, fontSize: 11.sp),
+                            prefixIcon: Icon(CupertinoIcons.doc_text,
+                                color: AppColors.accentLeaf, size: 16.sp),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 14.h),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        "পেমেন্টের পর প্রাপ্ত Transaction ID বা Reference দিন",
+                        style: GoogleFonts.inter(
+                            color: Colors.white38, fontSize: 9.sp),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 18.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => Navigator.pop(ctx),
+                              child: Container(
+                                height: 46.h,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.07),
+                                  borderRadius: BorderRadius.circular(13.r),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text("Cancel",
+                                    style: GoogleFonts.inter(
+                                        color: Colors.white60, fontSize: 13.sp)),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                final ref = refCtrl.text.trim();
+                                if (ref.isEmpty) {
+                                  Get.snackbar(
+                                    '⚠️ প্রয়োজন',
+                                    'Payment Reference দিন',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: Colors.orange.withOpacity(0.8),
+                                  );
+                                  return;
+                                }
+                                Navigator.pop(ctx);
+                                controller.activatePlan(ref); // ✅ ref পাঠানো হচ্ছে
+                              },
+                              child: Container(
+                                height: 46.h,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [
+                                    AppColors.accentLeaf,
+                                    AppColors.accentLeaf.withOpacity(0.75),
+                                  ]),
+                                  borderRadius: BorderRadius.circular(13.r),
+                                ),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(CupertinoIcons.checkmark_alt,
+                                        color: Colors.white, size: 14.sp),
+                                    SizedBox(width: 6.w),
+                                    Text("Confirm \$18",
+                                        style: GoogleFonts.inter(
+                                            color: Colors.white, fontSize: 13.sp,
+                                            fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1391,7 +1534,7 @@ class _MiningScreenState extends State<MiningScreen>
                           child: GestureDetector(
                             onTap: () async {
                               Navigator.pop(ctx);
-                              final claimed = await controller.claimReward(); // ✅ API call
+                              final claimed = await controller.claimReward(); // ? API call
                               if (claimed > 0) {
                                 _showClaimSuccessDialog(claimed, claimed * MiningController.solToUsd);
                               }
@@ -1704,7 +1847,7 @@ class _MiningScreenState extends State<MiningScreen>
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pop(ctx);
-                              controller.activateAutoStart(); // ✅ API call
+                              controller.activateAutoStart(); // ? API call
                             },
                             child: Container(
                               height: 46.h,
@@ -1907,7 +2050,7 @@ class _MiningScreenState extends State<MiningScreen>
                                 final v = double.tryParse(amountCtrl.text);
                                 if (v == null || v < 1 || v > 50) return;
                                 Navigator.pop(ctx);
-                                controller.activateBoost(v); // ✅ API call
+                                controller.activateBoost(v); // ? API call
                               },
                               child: Container(
                                 height: 46.h,
