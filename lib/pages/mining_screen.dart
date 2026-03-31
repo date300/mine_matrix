@@ -1,5 +1,5 @@
 // mining_screen.dart
-// pubspec.yaml এ এই packages লাগবে:
+// pubspec.yaml ? ?? packages ?????:
 //   http: ^1.2.1
 //   get: ^4.6.6
 //   google_fonts: ^6.1.0
@@ -9,11 +9,11 @@
 //   animated_background: ^2.0.0
 //   flutter_screenutil: ^5.9.0
 //
-// ব্যবহারের আগে server URL ঠিক করো:
+// ????????? ??? server URL ??? ???:
 //   static const String _baseUrl = 'https://yourdomain.com/api/mining';
 //
-// Login করার পর token সেট করো:
-//   MiningApi.token = 'তোমার_jwt_token';
+// Login ???? ?? token ??? ???:
+//   MiningApi.token = '?????_jwt_token';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -42,7 +42,7 @@ class AppColors {
 class MiningApi {
   static const String _baseUrl = 'https://ltcminematrix.com/api/mining';
 
-  // Login করার পর: MiningApi.token = '...';
+  // Login ???? ??: MiningApi.token = '...';
   static String token = '';
 
   static Map<String, String> get _headers => {
@@ -61,7 +61,7 @@ class MiningApi {
     return null;
   }
 
-  // POST /mining/activate-plan  (main_balance থেকে entry fee কাটবে)
+  // POST /mining/activate-plan  (main_balance ???? entry fee ?????)
   static Future<Map<String, dynamic>> activatePlan() async {
     try {
       final res = await http
@@ -87,7 +87,7 @@ class MiningApi {
     }
   }
 
-  // POST /mining/sync  (mining_balance পাঠাবে, main_balance পাঠাবে না)
+  // POST /mining/sync  (mining_balance ??????, main_balance ?????? ??)
   static Future<bool> sync({
     required double miningBalance,
     required double totalEarned,
@@ -113,7 +113,7 @@ class MiningApi {
     }
   }
 
-  // POST /mining/buy-boost  (main_balance থেকে boost fee কাটবে)
+  // POST /mining/buy-boost  (main_balance ???? boost fee ?????)
   static Future<Map<String, dynamic>> buyBoost(double amount) async {
     try {
       final res = await http
@@ -130,7 +130,7 @@ class MiningApi {
     }
   }
 
-  // POST /mining/buy-autostart  (main_balance থেকে autostart fee কাটবে)
+  // POST /mining/buy-autostart  (main_balance ???? autostart fee ?????)
   static Future<Map<String, dynamic>> buyAutoStart() async {
     try {
       final res = await http
@@ -143,7 +143,7 @@ class MiningApi {
     }
   }
 
-  // POST /mining/claim  (mining_balance → main_balance এ যাবে)
+  // POST /mining/claim  (mining_balance ? main_balance ? ????)
   static Future<Map<String, dynamic>> claim() async {
     try {
       final res = await http
@@ -188,7 +188,7 @@ class VexylonApp extends StatelessWidget {
 // ===================== CONTROLLER =====================
 class MiningController extends GetxController {
   static const double entryFee       = 18.0;
-  static const double boostFee       = 50.0;   // server এ max 50
+  static const double boostFee       = 50.0;   // server ? max 50
   static const double autoStartFee   = 10.0;
   static const int    planDays       = 365;
   static const double targetSOL      = 10000.0;
@@ -201,10 +201,10 @@ class MiningController extends GetxController {
   static const int    boostDays       = 80;
   static const int    totalBoostTicks = boostDays * ticksPerDay;
 
-  // ── দুটো balance ──────────────────────────────────
-  var mainBalance    = 0.0.obs;   // admin add করে, fee কাটে এখান থেকে
-  var miningBalance  = 0.0.obs;   // mining করলে বাড়ে, claim করলে শূন্য হয়
-  // ─────────────────────────────────────────────────
+  // ?? ???? balance ??????????????????????????????????
+  var mainBalance    = 0.0.obs;   // admin add ???, fee ???? ???? ????
+  var miningBalance  = 0.0.obs;   // mining ???? ?????, claim ???? ????? ???
+  // ?????????????????????????????????????????????????
 
   var isMining        = false.obs;
   var hasPaid         = false.obs;
@@ -236,7 +236,7 @@ class MiningController extends GetxController {
 
   var isLoading = false.obs;
 
-  // claim করতে mining_balance >= threshold লাগবে
+  // claim ???? mining_balance >= threshold ?????
   bool get canClaim => miningBalance.value >= claimThreshold && hasPaid.value;
 
   Timer? _timer;
@@ -256,14 +256,14 @@ class MiningController extends GetxController {
     _loadFromServer();
   }
 
-  // ── Server থেকে ডেটা লোড ──────────────────────────
+  // ?? Server ???? ???? ??? ??????????????????????????
   Future<void> _loadFromServer() async {
     isLoading.value = true;
     final data = await MiningApi.getStatus();
     if (data != null && data['success'] == true) {
       final u = data['data'];
 
-      // দুটো balance আলাদাভাবে লোড
+      // ???? balance ????????? ???
       mainBalance.value   = _toDouble(u['main_balance']);
       miningBalance.value = _toDouble(u['mining_balance']);
 
@@ -287,7 +287,7 @@ class MiningController extends GetxController {
         _boostPerTick = total / totalBoostTicks;
       }
 
-      // Server বলছে mining চলছে, elapsed seconds দিয়ে resume করো
+      // Server ???? mining ????, elapsed seconds ????? resume ???
       if (isMining.value) {
         final elapsed = _toInt(u['mining_elapsed_seconds']);
         _dayElapsedTicks = (elapsed * 10).clamp(0, ticksPerDay);
@@ -300,7 +300,7 @@ class MiningController extends GetxController {
     isLoading.value = false;
   }
 
-  // ── Plan Activate (main_balance থেকে কাটবে) ────────
+  // ?? Plan Activate (main_balance ???? ?????) ????????
   Future<void> activatePlan() async {
     isLoading.value = true;
     final result = await MiningApi.activatePlan();
@@ -319,22 +319,22 @@ class MiningController extends GetxController {
       canStartNewDay.value = true;
       todayEarned.value    = 0;
 
-      // server থেকে latest main_balance নিয়ে আসো (fee কাটা হয়ে গেছে)
+      // server ???? latest main_balance ????? ??? (fee ???? ???? ????)
       await _refreshMainBalance();
 
-      Get.snackbar('✅ সফল', 'পরিকল্পনা সক্রিয় হয়েছে! \$${entryFee.toStringAsFixed(0)} কাটা হয়েছে।',
+      Get.snackbar('? ???', '????????? ??????? ??????! \$${entryFee.toStringAsFixed(0)} ???? ???????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentLeaf.withOpacity(0.9),
           colorText: Colors.black);
     } else {
-      Get.snackbar('❌ Error', result['message'] ?? 'পরিকল্পনা সক্রিয় করা যায়নি',
+      Get.snackbar('? Error', result['message'] ?? '????????? ??????? ??? ??????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
     isLoading.value = false;
   }
 
-  // ── Auto Start (main_balance থেকে কাটবে) ───────────
+  // ?? Auto Start (main_balance ???? ?????) ???????????
   Future<void> activateAutoStart() async {
     isLoading.value = true;
     final result = await MiningApi.buyAutoStart();
@@ -346,19 +346,19 @@ class MiningController extends GetxController {
           !isMining.value && canStartNewDay.value && !dayStarted.value) {
         _startNewDay();
       }
-      Get.snackbar('✅ সফল', 'Auto-Start চালু হয়েছে! \$${autoStartFee.toStringAsFixed(0)} কাটা হয়েছে।',
+      Get.snackbar('? ???', 'Auto-Start ???? ??????! \$${autoStartFee.toStringAsFixed(0)} ???? ???????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentOrange.withOpacity(0.9),
           colorText: Colors.black);
     } else {
-      Get.snackbar('❌ Error', result['message'] ?? 'Auto-Start চালু হয়নি',
+      Get.snackbar('? Error', result['message'] ?? 'Auto-Start ???? ?????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
     isLoading.value = false;
   }
 
-  // ── Boost (main_balance থেকে কাটবে) ────────────────
+  // ?? Boost (main_balance ???? ?????) ????????????????
   Future<void> activateBoost(double amount) async {
     isLoading.value = true;
     final result = await MiningApi.buyBoost(amount);
@@ -376,18 +376,18 @@ class MiningController extends GetxController {
 
       await _refreshMainBalance();
 
-      Get.snackbar('🚀 সফল', 'Boost চালু হয়েছে! \$${amount.toStringAsFixed(0)} কাটা হয়েছে।',
+      Get.snackbar('? ???', 'Boost ???? ??????! \$${amount.toStringAsFixed(0)} ???? ???????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentPurple.withOpacity(0.9));
     } else {
-      Get.snackbar('❌ Error', result['message'] ?? 'Boost চালু হয়নি',
+      Get.snackbar('? Error', result['message'] ?? 'Boost ???? ?????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
     isLoading.value = false;
   }
 
-  // ── Claim (mining_balance → main_balance) ──────────
+  // ?? Claim (mining_balance ? main_balance) ??????????
   Future<double> claimReward() async {
     isLoading.value = true;
     final result = await MiningApi.claim();
@@ -397,16 +397,16 @@ class MiningController extends GetxController {
       totalClaimedSOL.value += claimed;
       claimCount.value++;
 
-      // mining_balance শূন্য, main_balance বাড়ে
+      // mining_balance ?????, main_balance ?????
       miningBalance.value = 0;
       await _refreshMainBalance();
 
-      Get.snackbar('✅ Claimed!', '${claimed.toStringAsFixed(2)} SOL → Main Balance এ গেছে',
+      Get.snackbar('? Claimed!', '${claimed.toStringAsFixed(2)} SOL ? Main Balance ? ????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.accentGreen.withOpacity(0.9),
           colorText: Colors.black);
     } else {
-      Get.snackbar('❌ Error', result['message'] ?? 'Claim করা যায়নি',
+      Get.snackbar('? Error', result['message'] ?? 'Claim ??? ??????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
     }
@@ -414,7 +414,7 @@ class MiningController extends GetxController {
     return claimed;
   }
 
-  // ── Server থেকে শুধু main_balance refresh ──────────
+  // ?? Server ???? ???? main_balance refresh ??????????
   Future<void> _refreshMainBalance() async {
     final data = await MiningApi.getStatus();
     if (data != null && data['success'] == true) {
@@ -422,7 +422,7 @@ class MiningController extends GetxController {
     }
   }
 
-  // ── Mining Toggle ──────────────────────────────────
+  // ?? Mining Toggle ??????????????????????????????????
   void toggleMining() {
     if (!hasPaid.value || isComplete.value) return;
     if (isMining.value) {
@@ -440,7 +440,7 @@ class MiningController extends GetxController {
   Future<void> _startNewDay() async {
     final result = await MiningApi.startDay();
     if (result['ok'] != true) {
-      Get.snackbar('❌ Error', result['message'] ?? 'Day start হয়নি',
+      Get.snackbar('? Error', result['message'] ?? 'Day start ?????',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.8));
       return;
@@ -465,7 +465,7 @@ class MiningController extends GetxController {
     });
   }
 
-  // Sync: শুধু mining_balance পাঠাবে
+  // Sync: ???? mining_balance ??????
   Future<void> _syncToServer() async {
     await MiningApi.sync(
       miningBalance: miningBalance.value,
@@ -510,7 +510,7 @@ class MiningController extends GetxController {
         return;
       }
 
-      // mining_balance বাড়ছে
+      // mining_balance ??????
       miningBalance.value += perTickEarning;
       totalEarned.value   += perTickEarning;
       todayEarned.value   += perTickEarning;
@@ -610,9 +610,9 @@ class _MiningScreenState extends State<MiningScreen>
       child: Column(
         children: [
           SizedBox(height: 15.h),
-          _buildMainBalanceSection(),   // ← নতুন: Main Balance (wallet)
+          _buildMainBalanceSection(),   // ? ????: Main Balance (wallet)
           SizedBox(height: 8.h),
-          _buildMiningBalanceSection(), // ← নতুন: Mining Balance আলাদা
+          _buildMiningBalanceSection(), // ? ????: Mining Balance ?????
           SizedBox(height: 10.h),
           _buildPlanProgressSection(),
           SizedBox(height: 8.h),
@@ -639,7 +639,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ── Main Balance (Wallet) ──────────────────────────
+  // ?? Main Balance (Wallet) ??????????????????????????
   Widget _buildMainBalanceSection() {
     return Obx(() => GlassmorphicContainer(
       width: double.infinity,
@@ -662,7 +662,7 @@ class _MiningScreenState extends State<MiningScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(children: [
-              Icon(CupertinoIcons.wallet_pass_fill,
+              Icon(CupertinoIcons.creditcard_fill,
                   color: AppColors.accentBlue, size: 18.sp),
               SizedBox(width: 8.w),
               Column(
@@ -698,7 +698,7 @@ class _MiningScreenState extends State<MiningScreen>
     )).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  // ── Mining Balance ─────────────────────────────────
+  // ?? Mining Balance ?????????????????????????????????
   Widget _buildMiningBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -1292,7 +1292,7 @@ class _MiningScreenState extends State<MiningScreen>
                     ),
                     SizedBox(height: 2.h),
                     Obx(() => Text(
-                          "Your balance: \$${controller.mainBalance.value.toStringAsFixed(2)}  •  Tap to unlock",
+                          "Your balance: \$${controller.mainBalance.value.toStringAsFixed(2)}  ?  Tap to unlock",
                           style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
                         )),
                   ],
@@ -1500,7 +1500,7 @@ class _MiningScreenState extends State<MiningScreen>
                             fontWeight: FontWeight.w900, letterSpacing: 1)),
                     SizedBox(height: 6.h),
                     Text(
-                      "Mining balance → Main balance এ যাবে",
+                      "Mining balance ? Main balance ? ????",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp),
                     ),
@@ -1529,7 +1529,7 @@ class _MiningScreenState extends State<MiningScreen>
                                   color: Colors.white54, fontSize: 11.sp)),
                           SizedBox(height: 6.h),
                           Text(
-                            "Main Balance এ যোগ হবে: \$${(controller.mainBalance.value + usdAmount).toStringAsFixed(2)}",
+                            "Main Balance ? ??? ???: \$${(controller.mainBalance.value + usdAmount).toStringAsFixed(2)}",
                             style: GoogleFonts.inter(
                                 color: AppColors.accentBlue, fontSize: 9.sp),
                           ),
@@ -1610,7 +1610,7 @@ class _MiningScreenState extends State<MiningScreen>
       barrierColor: Colors.black.withOpacity(0.75),
       builder: (ctx) {
         final dw = _dw(ctx, pct: 0.78, min: 250, max: 310);
-        final dh = _dh(ctx, pct: 0.40, min: 240, max = 280);
+        final dh = _dh(ctx, pct: 0.40, min: 240, max: 280);
         return Center(
           child: Material(
             color: Colors.transparent,
@@ -1848,7 +1848,7 @@ class _MiningScreenState extends State<MiningScreen>
                               style: GoogleFonts.inter(
                                   color: AppColors.accentOrange, fontSize: 26.sp,
                                   fontWeight: FontWeight.w900)),
-                          Text("One-time fee  •  from Main Balance",
+                          Text("One-time fee  ?  from Main Balance",
                               style: GoogleFonts.inter(
                                   color: Colors.white38, fontSize: 9.sp)),
                           SizedBox(height: 4.h),
@@ -1983,7 +1983,7 @@ class _MiningScreenState extends State<MiningScreen>
                               fontWeight: FontWeight.w900, letterSpacing: 1)),
                       SizedBox(height: 4.h),
                       Text(
-                        "Max \$50  |  Earn 2x in 80 days  •  from Main Balance",
+                        "Max \$50  |  Earn 2x in 80 days  ?  from Main Balance",
                         style: GoogleFonts.inter(
                             color: Colors.white54, fontSize: 9.sp),
                       ),
