@@ -44,36 +44,36 @@ class VexylonApp extends StatelessWidget {
 
 // ===================== CONTROLLER =====================
 class MiningController extends GetxController {
-  static const double entryFee       = 18.0;
-  static const int    planDays       = 365;
-  static const double targetSOL      = 10000.0;
-  static const double solToUsd       = 0.01;
-  static const double claimThreshold = 10000.0;
-  static const double dailySOL       = targetSOL / planDays;
-  static const int    ticksPerDay    = 864000;
-  static const double perTickEarning = dailySOL / ticksPerDay;
+  static const double entryFee          = 18.0;
+  static const int    planDays          = 365;
+  static const double targetSOL         = 10000.0;   // 10,000 SOL = $100
+  static const double solToUsd          = 0.01;      // 1 SOL = $0.01
+  static const double claimThreshold    = 10000.0;   // = $100
+  static const double dailySOL          = targetSOL / planDays;
+  static const int    ticksPerDay       = 864000;
+  static const double perTickEarning    = dailySOL / ticksPerDay;
 
-  static const int    boostDays       = 80;
-  static const int    totalBoostTicks = boostDays * ticksPerDay;
-  static const double autoStartFee   = 10.0;
+  static const int    boostDays         = 80;
+  static const int    totalBoostTicks   = boostDays * ticksPerDay;
+  static const double autoStartFee      = 10.0;
 
-  var isMining        = false.obs;
-  var hasPaid         = false.obs;
-  var isComplete      = false.obs;
-  var balance         = 0.0.obs;
-  var cycleProgress   = 0.0.obs;
-  var planProgress    = 0.0.obs;
-  var remainingDays   = planDays.obs;
-  var totalEarned     = 0.0.obs;
+  var isMining         = false.obs;
+  var hasPaid          = false.obs;
+  var isComplete       = false.obs;
+  var balance          = 0.0.obs;
+  var cycleProgress    = 0.0.obs;
+  var planProgress     = 0.0.obs;
+  var remainingDays    = planDays.obs;
+  var totalEarned      = 0.0.obs;
 
-  var completedDays   = 0.obs;
-  var currentDayNum   = 1.obs;
-  var dayProgress     = 0.0.obs;
-  var dayStarted      = false.obs;
-  var canStartNewDay  = true.obs;
-  var todayEarned     = 0.0.obs;
+  var completedDays    = 0.obs;
+  var currentDayNum    = 1.obs;
+  var dayProgress      = 0.0.obs;
+  var dayStarted       = false.obs;
+  var canStartNewDay   = true.obs;
+  var todayEarned      = 0.0.obs;
 
-  var hasAutoStart    = false.obs;
+  var hasAutoStart     = false.obs;
 
   var boostPaid           = false.obs;
   var boostIsComplete     = false.obs;
@@ -83,8 +83,9 @@ class MiningController extends GetxController {
   var boostEarned         = 0.0.obs;
   var boostTotalSOL       = 0.0.obs;
 
-  var totalClaimedSOL = 0.0.obs;
-  var claimCount      = 0.obs;
+  // Claim
+  var totalClaimedSOL  = 0.0.obs;
+  var claimCount       = 0.obs;
 
   bool get canClaim => balance.value >= claimThreshold && hasPaid.value;
 
@@ -94,19 +95,19 @@ class MiningController extends GetxController {
   double _boostPerTick      = 0.0;
 
   void activatePlan() {
-    hasPaid.value        = true;
-    isComplete.value     = false;
-    _dayElapsedTicks     = 0;
-    completedDays.value  = 0;
-    currentDayNum.value  = 1;
-    balance.value        = 0;
-    totalEarned.value    = 0;
-    planProgress.value   = 0;
-    remainingDays.value  = planDays;
-    dayProgress.value    = 0;
-    dayStarted.value     = false;
-    canStartNewDay.value = true;
-    todayEarned.value    = 0;
+    hasPaid.value         = true;
+    isComplete.value      = false;
+    _dayElapsedTicks      = 0;
+    completedDays.value   = 0;
+    currentDayNum.value   = 1;
+    balance.value         = 0;
+    totalEarned.value     = 0;
+    planProgress.value    = 0;
+    remainingDays.value   = planDays;
+    dayProgress.value     = 0;
+    dayStarted.value      = false;
+    canStartNewDay.value  = true;
+    todayEarned.value     = 0;
   }
 
   void activateAutoStart() {
@@ -145,12 +146,12 @@ class MiningController extends GetxController {
     _timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       if (_dayElapsedTicks >= ticksPerDay) {
         t.cancel();
-        isMining.value    = false;
-        dayStarted.value  = false;
+        isMining.value     = false;
+        dayStarted.value   = false;
         completedDays.value++;
-        _dayElapsedTicks  = 0;
-        dayProgress.value = 0;
-        todayEarned.value = 0;
+        _dayElapsedTicks   = 0;
+        dayProgress.value  = 0;
+        todayEarned.value  = 0;
 
         if (completedDays.value >= planDays) {
           isComplete.value    = true;
@@ -173,26 +174,26 @@ class MiningController extends GetxController {
         return;
       }
 
-      balance.value      += perTickEarning;
-      totalEarned.value  += perTickEarning;
-      todayEarned.value  += perTickEarning;
-      cycleProgress.value = (cycleProgress.value + 0.005) % 1.0;
+      balance.value       += perTickEarning;
+      totalEarned.value   += perTickEarning;
+      todayEarned.value   += perTickEarning;
+      cycleProgress.value  = (cycleProgress.value + 0.005) % 1.0;
       _dayElapsedTicks++;
-      dayProgress.value   = _dayElapsedTicks / ticksPerDay;
-      planProgress.value  =
+      dayProgress.value    = _dayElapsedTicks / ticksPerDay;
+      planProgress.value   =
           (completedDays.value * ticksPerDay + _dayElapsedTicks) /
           (planDays * ticksPerDay);
-      remainingDays.value =
+      remainingDays.value  =
           (planDays - completedDays.value - _dayElapsedTicks / ticksPerDay)
               .ceil()
               .clamp(0, planDays);
 
       if (boostPaid.value && !boostIsComplete.value) {
         if (_boostElapsedTicks < totalBoostTicks) {
-          balance.value         += _boostPerTick;
-          boostEarned.value     += _boostPerTick;
+          balance.value          += _boostPerTick;
+          boostEarned.value      += _boostPerTick;
           _boostElapsedTicks++;
-          boostProgress.value    = _boostElapsedTicks / totalBoostTicks;
+          boostProgress.value     = _boostElapsedTicks / totalBoostTicks;
           boostRemainingDays.value =
               (boostDays - _boostElapsedTicks / ticksPerDay)
                   .ceil()
@@ -217,11 +218,11 @@ class MiningController extends GetxController {
     _boostPerTick            = total / totalBoostTicks;
   }
 
-  /// Resets balance to 0 after claim and accumulates totalClaimedSOL
+  /// Claim করলে balance 0 হয়ে যাবে, totalClaimedSOL তে যোগ হবে
   double claimReward() {
-    final claimed         = balance.value;
+    final claimed        = balance.value;
     totalClaimedSOL.value += claimed;
-    balance.value         = 0.0;
+    balance.value        = 0.0;
     claimCount.value++;
     return claimed;
   }
@@ -243,14 +244,6 @@ class MiningScreen extends StatefulWidget {
 class _MiningScreenState extends State<MiningScreen>
     with TickerProviderStateMixin {
   final MiningController controller = Get.put(MiningController());
-
-  // Helper: responsive dialog width/height
-  double _dw(BuildContext ctx, {double pct = 0.84, double min = 260, double max = 340}) {
-    return (MediaQuery.of(ctx).size.width * pct).clamp(min, max);
-  }
-  double _dh(BuildContext ctx, {double pct = 0.45, double min = 240, double max = 360}) {
-    return (MediaQuery.of(ctx).size.height * pct).clamp(min, max);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -314,7 +307,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Daily Section ────────────────────────────────
+  // ─── Daily Section ───────────────────────────────────
   Widget _buildDailySection() {
     return Obx(() {
       final dayNum   = controller.currentDayNum.value;
@@ -329,19 +322,19 @@ class _MiningScreenState extends State<MiningScreen>
       String statusText;
       Color  statusColor;
       if (complete) {
-        statusText  = "Plan Complete!";
+        statusText  = "Plan Complete! 🎉";
         statusColor = AppColors.accentLeaf;
       } else if (mining && hasAuto) {
-        statusText  = "Auto Mining Active";
+        statusText  = "⚡ Auto Mining Active";
         statusColor = AppColors.accentOrange;
       } else if (mining) {
         statusText  = "Mining in progress...";
         statusColor = AppColors.accentGreen;
       } else if (started && !mining) {
-        statusText  = "Paused - tap ORB to resume";
+        statusText  = "Paused • tap ORB to resume";
         statusColor = Colors.orange;
       } else if (!canStart && !started) {
-        statusText  = "Today done - next day soon";
+        statusText  = "Today done • next day soon";
         statusColor = Colors.white38;
       } else {
         statusText  = "Tap ORB to start today";
@@ -380,7 +373,7 @@ class _MiningScreenState extends State<MiningScreen>
                     ),
                     SizedBox(width: 4.w),
                     Text(
-                      "DAY $dayNum / 365${hasAuto ? '   AUTO' : ''}",
+                      "DAY $dayNum / 365${hasAuto ? '   ⚡ AUTO' : ''}",
                       style: GoogleFonts.inter(
                         color: barColor, fontSize: 9.sp,
                         fontWeight: FontWeight.w800, letterSpacing: 0.8,
@@ -435,7 +428,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Balance Section ──────────────────────────────
+  // ─── Balance Section ─────────────────────────────────
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -475,8 +468,7 @@ class _MiningScreenState extends State<MiningScreen>
                     child: Text(
                       "SOL",
                       style: GoogleFonts.inter(
-                          color: AppColors.accentGreen,
-                          fontSize: 14.sp, fontWeight: FontWeight.w800),
+                          color: AppColors.accentGreen, fontSize: 14.sp, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ],
@@ -487,7 +479,7 @@ class _MiningScreenState extends State<MiningScreen>
             final pct = (controller.balance.value / MiningController.claimThreshold * 100)
                 .clamp(0.0, 100.0);
             return Text(
-              "= \$${usd.toStringAsFixed(2)} USD  |  ${pct.toStringAsFixed(1)}% to \$100 Claim",
+              "≈ \$${usd.toStringAsFixed(2)} USD  •  ${pct.toStringAsFixed(1)}% to \$100 Claim",
               style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
             );
           }),
@@ -496,7 +488,7 @@ class _MiningScreenState extends State<MiningScreen>
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  // ─── Plan Progress ────────────────────────────────
+  // ─── Plan Progress ────────────────────────────────────
   Widget _buildPlanProgressSection() {
     return Obx(() {
       final prog   = controller.planProgress.value;
@@ -525,20 +517,18 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Text(
+                    "365-DAY PLAN  •  \$18 → \$100",
+                    style: GoogleFonts.inter(
+                        color: AppColors.accentLeaf, fontSize: 9.sp,
+                        fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                  ),
                   Flexible(
                     child: Text(
-                      "365-DAY PLAN  |  \$18 => \$100",
-                      style: GoogleFonts.inter(
-                          color: AppColors.accentLeaf, fontSize: 9.sp,
-                          fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                      "${earned.toStringAsFixed(1)} / 10,000 SOL",
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    "${earned.toStringAsFixed(1)} / 10,000 SOL",
-                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -569,7 +559,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Boost Progress ───────────────────────────────
+  // ─── Boost Progress ───────────────────────────────────
   Widget _buildBoostProgressSection() {
     return Obx(() {
       final prog     = controller.boostProgress.value;
@@ -604,7 +594,7 @@ class _MiningScreenState extends State<MiningScreen>
                         color: AppColors.accentPurple, size: 10.sp),
                     SizedBox(width: 4.w),
                     Text(
-                      "BOOST  |  \$${controller.boostAmount.value.toStringAsFixed(0)} => \$${(controller.boostAmount.value * 2).toStringAsFixed(0)}",
+                      "BOOST  •  \$${controller.boostAmount.value.toStringAsFixed(0)} → \$${(controller.boostAmount.value * 2).toStringAsFixed(0)}",
                       style: GoogleFonts.inter(
                           color: AppColors.accentPurple, fontSize: 9.sp,
                           fontWeight: FontWeight.w800, letterSpacing: 0.8),
@@ -660,7 +650,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Mining Orb ───────────────────────────────────
+  // ─── Mining Orb ───────────────────────────────────────
   Widget _buildMiningOrb() {
     return Obx(() {
       final active   = controller.isMining.value;
@@ -785,7 +775,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
-  // ─── Cycle Bar ────────────────────────────────────
+  // ─── Cycle Bar ────────────────────────────────────────
   Widget _buildCycleProgressBar() {
     return Obx(() => LinearPercentIndicator(
           lineHeight: 6.h,
@@ -798,7 +788,7 @@ class _MiningScreenState extends State<MiningScreen>
         ));
   }
 
-  // ─── Action Buttons ───────────────────────────────
+  // ─── Action Buttons ───────────────────────────────────
   Widget _buildActionButtons() {
     return Obx(() {
       final claimable = controller.canClaim;
@@ -975,14 +965,13 @@ class _MiningScreenState extends State<MiningScreen>
           SizedBox(width: 5.w),
           Text("AUTO ON",
               style: GoogleFonts.inter(
-                  color: AppColors.accentOrange,
-                  fontSize: 11.sp, fontWeight: FontWeight.bold)),
+                  color: AppColors.accentOrange, fontSize: 11.sp, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  // ─── Stats Grid ───────────────────────────────────
+  // ─── Stats Grid ───────────────────────────────────────
   Widget _buildStatsGrid() {
     return Obx(() => Row(
           children: [
@@ -1020,11 +1009,10 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ══════════════════════════════════════════════════
+  // ─────────────────────────────────────────────────────
   // Dialogs
-  // ══════════════════════════════════════════════════
+  // ─────────────────────────────────────────────────────
 
-  // ─── Confirm Payment Dialog ───────────────────────
   void _showConfirmDialog() {
     showCupertinoDialog(
       context: context,
@@ -1034,10 +1022,10 @@ class _MiningScreenState extends State<MiningScreen>
         content: Padding(
           padding: EdgeInsets.only(top: 6.h),
           child: Text(
-            "Pay \$18.00 to activate your plan.\n\n"
-            "Plan: Mine 10,000 SOL over 365 days.\n\n"
-            "Tap the ORB each day to start mining and earn SOL daily.\n\n"
-            "Add Auto Start for \$10 to mine automatically every day.",
+            "\$18.00 পেমেন্ট করুন\n\n"
+            "পরিকল্পনা: ৩৬৫ দিনে ১০,০০০ Solana মাইন করুন\n\n"
+            "প্রতিদিন ORB ট্যাপ করে মাইনিং শুরু করুন এবং দৈনিক SOL আয় করুন\n\n"
+            "• \$10-এ Auto Start যোগ করুন যা স্বয়ংক্রিয়ভাবে মাইনিং শুরু করবে",
             style: GoogleFonts.inter(fontSize: 12.sp),
           ),
         ),
@@ -1061,233 +1049,214 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ─── Claim Dialog ─────────────────────────────────
+  // ── Claim Dialog (balance >= $100) ────────────────────
   void _showClaimDialog() {
     final solAmount = controller.balance.value;
     final usdAmount = solAmount * MiningController.solToUsd;
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
-      builder: (ctx) {
-        final dw = _dw(ctx, pct: 0.84, min: 260, max: 340);
-        final dh = _dh(ctx, pct: 0.44, min: 260, max: 310);
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: GlassmorphicContainer(
-              width: dw,
-              height: dh,
-              borderRadius: 22.r,
-              blur: 22,
-              alignment: Alignment.center,
-              border: 1,
-              linearGradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.accentGreen.withOpacity(0.12),
-                  Colors.black.withOpacity(0.8),
-                ],
-              ),
-              borderGradient: LinearGradient(colors: [
-                AppColors.accentGreen.withOpacity(0.7),
-                AppColors.accentPurple.withOpacity(0.3),
-              ]),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.drop_fill,
-                        color: AppColors.accentGreen, size: 36.sp),
-                    SizedBox(height: 10.h),
-                    Text("CLAIM REWARD",
-                        style: GoogleFonts.inter(
-                            color: Colors.white, fontSize: 16.sp,
-                            fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    SizedBox(height: 6.h),
-                    Text(
-                      "Send your earned Solana to your wallet.",
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 300.w,
+            height: 285.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accentGreen.withOpacity(0.12),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(colors: [
+              AppColors.accentGreen.withOpacity(0.7),
+              AppColors.accentPurple.withOpacity(0.3),
+            ]),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.drop_fill,
+                      color: AppColors.accentGreen, size: 36.sp),
+                  SizedBox(height: 10.h),
+                  Text("CLAIM REWARD",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  SizedBox(height: 6.h),
+                  Text("আপনার মাইন করা Solana উইথড্র করুন",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp),
+                      style: GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp)),
+                  SizedBox(height: 16.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentGreen.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.accentGreen.withOpacity(0.3)),
                     ),
-                    SizedBox(height: 16.h),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentGreen.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: AppColors.accentGreen.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text("${solAmount.toStringAsFixed(2)} SOL",
-                                style: GoogleFonts.inter(
-                                    color: AppColors.accentGreen, fontSize: 26.sp,
-                                    fontWeight: FontWeight.w900)),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text("= \$${usdAmount.toStringAsFixed(2)} USD",
-                              style: GoogleFonts.inter(
-                                  color: Colors.white54, fontSize: 11.sp)),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 18.h),
-                    Row(
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
-                            child: Container(
-                              height: 46.h,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.07),
-                                borderRadius: BorderRadius.circular(13.r),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text("Cancel",
-                                  style: GoogleFonts.inter(
-                                      color: Colors.white60, fontSize: 13.sp)),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              controller.claimReward();
-                              _showClaimSuccessDialog(solAmount, usdAmount);
-                            },
-                            child: Container(
-                              height: 46.h,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [
-                                  AppColors.accentGreen,
-                                  AppColors.accentGreen.withOpacity(0.75),
-                                ]),
-                                borderRadius: BorderRadius.circular(13.r),
-                              ),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(CupertinoIcons.drop_fill,
-                                      color: Colors.black, size: 14.sp),
-                                  SizedBox(width: 6.w),
-                                  Text("Claim Now",
-                                      style: GoogleFonts.inter(
-                                          color: Colors.black, fontSize: 13.sp,
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        Text("${solAmount.toStringAsFixed(2)} SOL",
+                            style: GoogleFonts.inter(
+                                color: AppColors.accentGreen, fontSize: 26.sp,
+                                fontWeight: FontWeight.w900)),
+                        SizedBox(height: 4.h),
+                        Text("≈ \$${usdAmount.toStringAsFixed(2)} USD",
+                            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 18.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(13.r),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text("Cancel",
+                                style: GoogleFonts.inter(
+                                    color: Colors.white60, fontSize: 13.sp)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            controller.claimReward();
+                            _showClaimSuccessDialog(solAmount, usdAmount);
+                          },
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                AppColors.accentGreen,
+                                AppColors.accentGreen.withOpacity(0.75),
+                              ]),
+                              borderRadius: BorderRadius.circular(13.r),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CupertinoIcons.drop_fill,
+                                    color: Colors.black, size: 14.sp),
+                                SizedBox(width: 6.w),
+                                Text("Claim Now",
+                                    style: GoogleFonts.inter(
+                                        color: Colors.black, fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // ─── Claim Success Dialog ─────────────────────────
+  // ── Claim Success Dialog ──────────────────────────────
   void _showClaimSuccessDialog(double sol, double usd) {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
-      builder: (ctx) {
-        final dw = _dw(ctx, pct: 0.78, min: 250, max: 310);
-        final dh = _dh(ctx, pct: 0.38, min: 230, max: 270);
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: GlassmorphicContainer(
-              width: dw,
-              height: dh,
-              borderRadius: 22.r,
-              blur: 22,
-              alignment: Alignment.center,
-              border: 1,
-              linearGradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.accentLeaf.withOpacity(0.12),
-                  Colors.black.withOpacity(0.8),
-                ],
-              ),
-              borderGradient: LinearGradient(colors: [
-                AppColors.accentLeaf.withOpacity(0.7), Colors.transparent,
-              ]),
-              child: Padding(
-                padding: EdgeInsets.all(22.w),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.checkmark_seal_fill,
-                        color: AppColors.accentLeaf, size: 44.sp),
-                    SizedBox(height: 12.h),
-                    Text("Claim Successful!",
-                        style: GoogleFonts.inter(
-                            color: Colors.white, fontSize: 16.sp,
-                            fontWeight: FontWeight.w900)),
-                    SizedBox(height: 8.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        "${sol.toStringAsFixed(2)} SOL  =  \$${usd.toStringAsFixed(2)} USD",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                            color: AppColors.accentLeaf, fontSize: 15.sp,
-                            fontWeight: FontWeight.bold, height: 1.4),
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      "Sent to your Solana wallet successfully.",
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 280.w,
+            height: 245.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accentLeaf.withOpacity(0.12),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(colors: [
+              AppColors.accentLeaf.withOpacity(0.7), Colors.transparent,
+            ]),
+            child: Padding(
+              padding: EdgeInsets.all(22.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.checkmark_seal_fill,
+                      color: AppColors.accentLeaf, size: 44.sp),
+                  SizedBox(height: 12.h),
+                  Text("Claim Successful!",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "${sol.toStringAsFixed(2)} SOL\n≈ \$${usd.toStringAsFixed(2)} USD",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: AppColors.accentLeaf, fontSize: 15.sp,
+                        fontWeight: FontWeight.bold, height: 1.4),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text("আপনার Solana উইথড্র সম্পন্ন হয়েছে",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp),
-                    ),
-                    SizedBox(height: 18.h),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        width: double.infinity,
-                        height: 44.h,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: [AppColors.accentLeaf, Color(0xFF2E8B00)]),
-                          borderRadius: BorderRadius.circular(13.r),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text("OK",
-                            style: GoogleFonts.inter(
-                                color: Colors.white, fontSize: 14.sp,
-                                fontWeight: FontWeight.bold)),
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp)),
+                  SizedBox(height: 18.h),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: double.infinity,
+                      height: 44.h,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [AppColors.accentLeaf, Color(0xFF2E8B00)]),
+                        borderRadius: BorderRadius.circular(13.r),
                       ),
+                      alignment: Alignment.center,
+                      child: Text("OK",
+                          style: GoogleFonts.inter(
+                              color: Colors.white, fontSize: 14.sp,
+                              fontWeight: FontWeight.bold)),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // ─── Claim Not Ready Dialog ───────────────────────
+  // ── Claim Not Ready Dialog ────────────────────────────
   void _showClaimNotReadyDialog() {
     final bal  = controller.balance.value;
     final need = MiningController.claimThreshold - bal;
@@ -1295,108 +1264,233 @@ class _MiningScreenState extends State<MiningScreen>
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.6),
-      builder: (ctx) {
-        final dw = _dw(ctx, pct: 0.78, min: 250, max: 310);
-        final dh = _dh(ctx, pct: 0.40, min: 230, max: 270);
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: GlassmorphicContainer(
-              width: dw,
-              height: dh,
-              borderRadius: 22.r,
-              blur: 22,
-              alignment: Alignment.center,
-              border: 1,
-              linearGradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withOpacity(0.06),
-                  Colors.black.withOpacity(0.8),
-                ],
-              ),
-              borderGradient: LinearGradient(
-                  colors: [Colors.white24, Colors.transparent]),
-              child: Padding(
-                padding: EdgeInsets.all(22.w),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(CupertinoIcons.lock_fill,
-                        color: Colors.white38, size: 36.sp),
-                    SizedBox(height: 10.h),
-                    Text("Claim Locked",
-                        style: GoogleFonts.inter(
-                            color: Colors.white, fontSize: 16.sp,
-                            fontWeight: FontWeight.w900)),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "You need 10,000 SOL (= \$100) to unlock your claim.",
-                      textAlign: TextAlign.center,
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 280.w,
+            height: 240.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.06),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(
+                colors: [Colors.white24, Colors.transparent]),
+            child: Padding(
+              padding: EdgeInsets.all(22.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.lock_fill,
+                      color: Colors.white38, size: 36.sp),
+                  SizedBox(height: 10.h),
+                  Text("Claim Locked",
                       style: GoogleFonts.inter(
-                          color: Colors.white54, fontSize: 11.sp, height: 1.4),
-                    ),
-                    SizedBox(height: 14.h),
-                    LinearPercentIndicator(
-                      lineHeight: 8.h,
-                      percent: pct / 100,
-                      backgroundColor: Colors.white10,
-                      linearGradient: const LinearGradient(
-                          colors: [AppColors.accentPurple, AppColors.accentGreen]),
-                      barRadius: const Radius.circular(10),
-                      padding: EdgeInsets.zero,
-                    ),
-                    SizedBox(height: 8.h),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        "${pct.toStringAsFixed(1)}%  |  ${need.toStringAsFixed(0)} SOL remaining",
-                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+                          color: Colors.white, fontSize: 16.sp,
+                          fontWeight: FontWeight.w900)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "Claim করতে ১০,০০০ SOL\n(= \$100) জমা করতে হবে",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: Colors.white54, fontSize: 11.sp, height: 1.4),
+                  ),
+                  SizedBox(height: 14.h),
+                  LinearPercentIndicator(
+                    lineHeight: 8.h,
+                    percent: pct / 100,
+                    backgroundColor: Colors.white10,
+                    linearGradient: const LinearGradient(
+                        colors: [AppColors.accentPurple, AppColors.accentGreen]),
+                    barRadius: const Radius.circular(10),
+                    padding: EdgeInsets.zero,
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "${pct.toStringAsFixed(1)}%  •  ${need.toStringAsFixed(0)} SOL remaining",
+                    style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+                  ),
+                  SizedBox(height: 16.h),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: double.infinity,
+                      height: 44.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(13.r),
+                        border: Border.all(color: Colors.white12),
                       ),
+                      alignment: Alignment.center,
+                      child: Text("OK",
+                          style: GoogleFonts.inter(
+                              color: Colors.white60, fontSize: 14.sp,
+                              fontWeight: FontWeight.bold)),
                     ),
-                    SizedBox(height: 16.h),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        width: double.infinity,
-                        height: 44.h,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(13.r),
-                          border: Border.all(color: Colors.white12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text("OK",
-                            style: GoogleFonts.inter(
-                                color: Colors.white60, fontSize: 14.sp,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // ─── Auto Start Dialog ────────────────────────────
+  // ── Auto Start Dialog ─────────────────────────────────
   void _showAutoStartDialog() {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
-      builder: (ctx) {
-        final dw = _dw(ctx, pct: 0.84, min: 260, max: 340);
-        final dh = _dh(ctx, pct: 0.48, min: 270, max: 330);
-        return Center(
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: GlassmorphicContainer(
+            width: 300.w,
+            height: 305.h,
+            borderRadius: 22.r,
+            blur: 22,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accentOrange.withOpacity(0.12),
+                Colors.black.withOpacity(0.8),
+              ],
+            ),
+            borderGradient: LinearGradient(colors: [
+              AppColors.accentOrange.withOpacity(0.7),
+              AppColors.accentGreen.withOpacity(0.3),
+            ]),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(CupertinoIcons.bolt_fill,
+                      color: AppColors.accentOrange, size: 32.sp),
+                  SizedBox(height: 10.h),
+                  Text("AUTO START MINING",
+                      style: GoogleFonts.inter(
+                          color: Colors.white, fontSize: 15.sp,
+                          fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "প্রতিদিন ORB ট্যাপ ছাড়াই\nস্বয়ংক্রিয়ভাবে মাইনিং শুরু হবে!\nএকবার পেমেন্ট করুন, সবসময় চলবে",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        color: Colors.white60, fontSize: 11.sp, height: 1.5),
+                  ),
+                  SizedBox(height: 16.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentOrange.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                          color: AppColors.accentOrange.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text("\$10.00",
+                            style: GoogleFonts.inter(
+                                color: AppColors.accentOrange, fontSize: 26.sp,
+                                fontWeight: FontWeight.w900)),
+                        Text("একবার পেমেন্ট • সারাজীবন চলবে",
+                            style: GoogleFonts.inter(
+                                color: Colors.white38, fontSize: 9.sp)),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 18.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(13.r),
+                              border: Border.all(color: Colors.white12, width: 1),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text("Cancel",
+                                style: GoogleFonts.inter(
+                                    color: Colors.white60, fontSize: 13.sp)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            controller.activateAutoStart();
+                          },
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                AppColors.accentOrange,
+                                AppColors.accentOrange.withOpacity(0.75),
+                              ]),
+                              borderRadius: BorderRadius.circular(13.r),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CupertinoIcons.bolt_fill,
+                                    color: Colors.white, size: 14.sp),
+                                SizedBox(width: 6.w),
+                                Text("Pay \$10",
+                                    style: GoogleFonts.inter(
+                                        color: Colors.white, fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Boost Dialog ──────────────────────────────────────
+  void _showBoostDialog() {
+    final TextEditingController amountCtrl = TextEditingController();
+    double? previewSOL;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.75),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => Center(
           child: Material(
             color: Colors.transparent,
             child: GlassmorphicContainer(
-              width: dw,
-              height: dh,
+              width: 300.w,
+              height: 310.h,
               borderRadius: 22.r,
               blur: 22,
               alignment: Alignment.center,
@@ -1405,56 +1499,116 @@ class _MiningScreenState extends State<MiningScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.accentOrange.withOpacity(0.12),
+                  AppColors.accentPurple.withOpacity(0.12),
                   Colors.black.withOpacity(0.8),
                 ],
               ),
               borderGradient: LinearGradient(colors: [
-                AppColors.accentOrange.withOpacity(0.7),
+                AppColors.accentPurple.withOpacity(0.7),
                 AppColors.accentGreen.withOpacity(0.3),
               ]),
               child: Padding(
-                padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 20.h),
+                padding: EdgeInsets.fromLTRB(20.w, 22.h, 20.w, 18.h),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(CupertinoIcons.bolt_fill,
-                        color: AppColors.accentOrange, size: 32.sp),
-                    SizedBox(height: 10.h),
-                    Text("AUTO START MINING",
-                        style: GoogleFonts.inter(
-                            color: Colors.white, fontSize: 15.sp,
-                            fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    Icon(CupertinoIcons.rocket_fill,
+                        color: AppColors.accentPurple, size: 28.sp),
                     SizedBox(height: 8.h),
-                    Text(
-                      "Automatically starts the ORB each day.\nNo need to tap manually every day!\nEarn SOL hands-free, every single day.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                          color: Colors.white60, fontSize: 11.sp, height: 1.5),
+                    Text("BOOST MINING",
+                        style: GoogleFonts.inter(
+                            color: Colors.white, fontSize: 16.sp,
+                            fontWeight: FontWeight.w900, letterSpacing: 1)),
+                    SizedBox(height: 4.h),
+                    Text("Max \$50  •  Earn 2x in 80 days",
+                        style: GoogleFonts.inter(
+                            color: Colors.white54, fontSize: 10.sp)),
+                    SizedBox(height: 18.h),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(13.r),
+                        border: Border.all(
+                            color: AppColors.accentPurple.withOpacity(0.45),
+                            width: 1),
+                      ),
+                      child: TextField(
+                        controller: amountCtrl,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        style: GoogleFonts.inter(
+                            color: Colors.white, fontSize: 16.sp),
+                        decoration: InputDecoration(
+                          hintText: "Enter amount (\$1 – \$50)",
+                          hintStyle: GoogleFonts.inter(
+                              color: Colors.white30, fontSize: 11.sp),
+                          prefixIcon: Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 13.h),
+                            child: Text("\$",
+                                style: GoogleFonts.inter(
+                                    color: AppColors.accentPurple,
+                                    fontSize: 17.sp,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          prefixIconConstraints:
+                              BoxConstraints(minWidth: 0.w, minHeight: 0.h),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12.w, vertical: 14.h),
+                        ),
+                        onChanged: (val) {
+                          final v = double.tryParse(val);
+                          setState(() {
+                            previewSOL = (v != null && v >= 1 && v <= 50)
+                                ? v * 2.0 * (10000.0 / 18.0)
+                                : null;
+                          });
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: previewSOL != null
+                          ? Container(
+                              key: const ValueKey('preview'),
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w, vertical: 10.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentGreen.withOpacity(0.07),
+                                borderRadius: BorderRadius.circular(10.r),
+                                border: Border.all(
+                                    color: AppColors.accentGreen.withOpacity(0.2)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(CupertinoIcons.arrow_up_right,
+                                          color: AppColors.accentGreen, size: 12.sp),
+                                      SizedBox(width: 5.w),
+                                      Text(
+                                        "You'll earn: ${previewSOL!.toStringAsFixed(2)} SOL",
+                                        style: GoogleFonts.inter(
+                                            color: AppColors.accentGreen,
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 3.h),
+                                  Text("in 80 days",
+                                      style: GoogleFonts.inter(
+                                          color: Colors.white38, fontSize: 9.sp)),
+                                ],
+                              ),
+                            )
+                          : SizedBox(key: const ValueKey('empty'), height: 44.h),
                     ),
                     SizedBox(height: 16.h),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 12.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentOrange.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                            color: AppColors.accentOrange.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          Text("\$10.00",
-                              style: GoogleFonts.inter(
-                                  color: AppColors.accentOrange, fontSize: 26.sp,
-                                  fontWeight: FontWeight.w900)),
-                          Text("One-time fee for lifetime auto mining",
-                              style: GoogleFonts.inter(
-                                  color: Colors.white38, fontSize: 9.sp)),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 18.h),
                     Row(
                       children: [
                         Expanded(
@@ -1478,15 +1632,17 @@ class _MiningScreenState extends State<MiningScreen>
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
+                              final v = double.tryParse(amountCtrl.text);
+                              if (v == null || v < 1 || v > 50) return;
                               Navigator.pop(ctx);
-                              controller.activateAutoStart();
+                              controller.activateBoost(v);
                             },
                             child: Container(
                               height: 46.h,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(colors: [
-                                  AppColors.accentOrange,
-                                  AppColors.accentOrange.withOpacity(0.75),
+                                  AppColors.accentPurple,
+                                  AppColors.accentPurple.withOpacity(0.75),
                                 ]),
                                 borderRadius: BorderRadius.circular(13.r),
                               ),
@@ -1494,10 +1650,10 @@ class _MiningScreenState extends State<MiningScreen>
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(CupertinoIcons.bolt_fill,
+                                  Icon(CupertinoIcons.rocket_fill,
                                       color: Colors.white, size: 14.sp),
                                   SizedBox(width: 6.w),
-                                  Text("Pay \$10",
+                                  Text("BOOST",
                                       style: GoogleFonts.inter(
                                           color: Colors.white, fontSize: 13.sp,
                                           fontWeight: FontWeight.bold)),
@@ -1513,212 +1669,7 @@ class _MiningScreenState extends State<MiningScreen>
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  // ─── Boost Dialog ─────────────────────────────────
-  void _showBoostDialog() {
-    final TextEditingController amountCtrl = TextEditingController();
-    double? previewSOL;
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.75),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) {
-          final dw = _dw(ctx, pct: 0.84, min: 260, max: 340);
-          final dh = _dh(ctx, pct: 0.50, min: 290, max: 360);
-          return Center(
-            child: Material(
-              color: Colors.transparent,
-              child: GlassmorphicContainer(
-                width: dw,
-                height: dh,
-                borderRadius: 22.r,
-                blur: 22,
-                alignment: Alignment.center,
-                border: 1,
-                linearGradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.accentPurple.withOpacity(0.12),
-                    Colors.black.withOpacity(0.8),
-                  ],
-                ),
-                borderGradient: LinearGradient(colors: [
-                  AppColors.accentPurple.withOpacity(0.7),
-                  AppColors.accentGreen.withOpacity(0.3),
-                ]),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 22.h, 20.w, 18.h),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(CupertinoIcons.rocket_fill,
-                          color: AppColors.accentPurple, size: 28.sp),
-                      SizedBox(height: 8.h),
-                      Text("BOOST MINING",
-                          style: GoogleFonts.inter(
-                              color: Colors.white, fontSize: 16.sp,
-                              fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      SizedBox(height: 4.h),
-                      Text("Max \$50  |  Earn 2x in 80 days",
-                          style: GoogleFonts.inter(
-                              color: Colors.white54, fontSize: 10.sp)),
-                      SizedBox(height: 18.h),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(13.r),
-                          border: Border.all(
-                              color: AppColors.accentPurple.withOpacity(0.45),
-                              width: 1),
-                        ),
-                        child: TextField(
-                          controller: amountCtrl,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          style: GoogleFonts.inter(
-                              color: Colors.white, fontSize: 16.sp),
-                          decoration: InputDecoration(
-                            hintText: "Enter amount (\$1 - \$50)",
-                            hintStyle: GoogleFonts.inter(
-                                color: Colors.white30, fontSize: 11.sp),
-                            prefixIcon: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w, vertical: 13.h),
-                              child: Text("\$",
-                                  style: GoogleFonts.inter(
-                                      color: AppColors.accentPurple,
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            prefixIconConstraints:
-                                BoxConstraints(minWidth: 0.w, minHeight: 0.h),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12.w, vertical: 14.h),
-                          ),
-                          onChanged: (val) {
-                            final v = double.tryParse(val);
-                            setState(() {
-                              previewSOL = (v != null && v >= 1 && v <= 50)
-                                  ? v * 2.0 * (10000.0 / 18.0)
-                                  : null;
-                            });
-                          },
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: previewSOL != null
-                            ? Container(
-                                key: const ValueKey('preview'),
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 12.w, vertical: 10.h),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentGreen.withOpacity(0.07),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  border: Border.all(
-                                      color: AppColors.accentGreen.withOpacity(0.2)),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(CupertinoIcons.arrow_up_right,
-                                            color: AppColors.accentGreen, size: 12.sp),
-                                        SizedBox(width: 5.w),
-                                        Flexible(
-                                          child: Text(
-                                            "You'll earn: ${previewSOL!.toStringAsFixed(2)} SOL",
-                                            style: GoogleFonts.inter(
-                                                color: AppColors.accentGreen,
-                                                fontSize: 11.sp,
-                                                fontWeight: FontWeight.bold),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 3.h),
-                                    Text("in 80 days",
-                                        style: GoogleFonts.inter(
-                                            color: Colors.white38, fontSize: 9.sp)),
-                                  ],
-                                ),
-                              )
-                            : SizedBox(key: const ValueKey('empty'), height: 44.h),
-                      ),
-                      SizedBox(height: 16.h),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(ctx),
-                              child: Container(
-                                height: 46.h,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.07),
-                                  borderRadius: BorderRadius.circular(13.r),
-                                  border: Border.all(color: Colors.white12, width: 1),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text("Cancel",
-                                    style: GoogleFonts.inter(
-                                        color: Colors.white60, fontSize: 13.sp)),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                final v = double.tryParse(amountCtrl.text);
-                                if (v == null || v < 1 || v > 50) return;
-                                Navigator.pop(ctx);
-                                controller.activateBoost(v);
-                              },
-                              child: Container(
-                                height: 46.h,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: [
-                                    AppColors.accentPurple,
-                                    AppColors.accentPurple.withOpacity(0.75),
-                                  ]),
-                                  borderRadius: BorderRadius.circular(13.r),
-                                ),
-                                alignment: Alignment.center,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(CupertinoIcons.rocket_fill,
-                                        color: Colors.white, size: 14.sp),
-                                    SizedBox(width: 6.w),
-                                    Text("BOOST",
-                                        style: GoogleFonts.inter(
-                                            color: Colors.white, fontSize: 13.sp,
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
+        ),
       ),
     );
   }
