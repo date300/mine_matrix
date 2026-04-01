@@ -1,27 +1,32 @@
+ 
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart'; // Share package
+import 'package:share_plus/share_plus.dart';
 
 class AuthProvider extends ChangeNotifier {
   ReownAppKitModal? _appKitModal;
   bool _isInitialized = false;
   bool _isLoading = false;
   bool _isLoggedIn = false;
-  String? _sessionId;
+  String? _token;
   String? _referralCode;
   String? _lastLoggedAddress;
+  Map<String, dynamic>? _userData;
 
   // --- Getters ---
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
-
   bool get isConnected => _appKitModal?.isConnected ?? false;
   bool get isAuthenticated => isConnected && _isLoggedIn;
+
+  String? get token => _token;
+  String? get referralCode => _referralCode;
+  Map<String, dynamic>? get userData => _userData;
 
   String? get address {
     final session = _appKitModal?.session;
@@ -29,25 +34,30 @@ class AuthProvider extends ChangeNotifier {
     return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
-  String? get referralCode => _referralCode;
+  String? get balance => _userData?['balance']?.toString();
+  String? get walletAddress => _userData?['wallet_address'];
 
-  // Automatically generate your referral link
   String get myReferralLink {
     if (_referralCode == null) return "";
     return "https://ltcminematrix.com?ref=$_referralCode";
   }
 
-  // --- Logic Methods ---
+  // --- Init ---
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
-    _sessionId = prefs.getString('session_id');
+    _token = prefs.getString('token');
 
-    if (_sessionId != null) {
+    if (_token != null) {
       _isLoggedIn = true;
+      final userStr = prefs.getString('user');
+      if (userStr != null) {
+        _userData = jsonDecode(userStr);
+        _referralCode = _userData?['referral_code'];
+      }
     }
-    _setLoading(false);
 
+    _setLoading(false);
     await initWallet(context);
   }
 
@@ -56,16 +66,16 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Generate random referral code if none exists
   void generateReferralCode() {
-    if (_referralCode != null) return; // Already exists
+    if (_referralCode != null) return;
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random rnd = Random();
-    _referralCode = String.fromCharCodes(Iterable.generate(
-        6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+    _referralCode = String.fromCharCodes(
+        Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
     notifyListeners();
   }
 
+  // --- Wallet Init ---
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -78,7 +88,9 @@ class AuthProvider extends ChangeNotifier {
           description: 'Decentralized Mining Platform',
           url: 'https://ltcminematrix.com',
           icons: ['https://ltcminematrix.com/logo.png'],
-          redirect: Redirect(native: 'ltcminematrix://', universal: 'https://ltcminematrix.com'),
+          redirect: Redirect(
+              native: 'ltcminematrix://',
+              universal: 'https://ltcminematrix.com'),
         ),
       );
 
@@ -119,6 +131,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // --- Login to Backend ---
   Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
 
@@ -136,8 +149,16 @@ class AuthProvider extends ChangeNotifier {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('session_id', data['session_id']);
-          _sessionId = data['session_id'];
+
+          // ✅ JWT Token সেভ
+          await prefs.setString('token', data['token']);
+          _token = data['token'];
+
+          // ✅ User data সেভ
+          await prefs.setString('user', jsonEncode(data['user']));
+          _userData = data['user'];
+          _referralCode = _userData?['referral_code'];
+
           return true;
         }
       }
@@ -153,7 +174,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Share referral link
+  // --- Share Referral ---
   void shareReferralLink() {
     if (_referralCode != null && myReferralLink.isNotEmpty) {
       Share.share(
@@ -163,20 +184,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // --- Logout ---
   Future<void> logout() async {
     _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('session_id');
+    await prefs.remove('token');
+    await prefs.remove('user');
 
     if (_appKitModal != null && isConnected) {
       await _appKitModal!.disconnect();
     }
 
     _isLoggedIn = false;
-    _sessionId = null;
+    _token = null;
+    _userData = null;
     _lastLoggedAddress = null;
     _referralCode = null;
     _setLoading(false);
+    notifyListeners();
   }
 
   void _setLoading(bool value) {
