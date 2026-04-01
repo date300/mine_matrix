@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http';
+import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
 
 class ReferScreen extends StatefulWidget {
@@ -160,7 +160,7 @@ class _ReferScreenState extends State<ReferScreen> {
 
                     SizedBox(height: 25.h),
 
-                    // New: Referral Link Box
+                    // Referral Link Box
                     Container(
                       padding: EdgeInsets.all(20.w),
                       decoration: BoxDecoration(
