@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+# Node.js এবং রানার এনভায়রনমেন্ট অপ্টিমাইজেশন
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -32,8 +36,18 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           local-dir: build/web/
-          server-dir: / # যদি আপনার ফাইল public_html এ থাকে তবে এখানে /public_html/ লিখুন
-          # টাইমআউট সমস্যা এড়াতে নিচের অপশনটি যোগ করা হয়েছে
-          timeout: 60000 
-          # লগ ডিবাগ করার জন্য
+          # আপনার ফাইল যদি public_html এর ভেতরে রাখতে হয়, তবে নিচের লাইনটি '/public_html/' করে দিন
+          server-dir: / 
+          # সার্ভার TLS সাপোর্ট করে বলে 'loose' ব্যবহার করা হয়েছে যাতে কানেকশন ড্রপ না হয়
+          security: loose
+          # কানেকশন ঝুলিয়ে রাখা বন্ধ করতে টাইমআউট বাড়ানো হয়েছে (মিলিসেকেন্ডে)
+          timeout: 90000 
+          # কোনো সমস্যা হলে বিস্তারিত দেখার জন্য
           log-level: verbose
+          # অপ্রয়োজনীয় ফাইল বাদ দিতে (ঐচ্ছিক)
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+          # আগের ফাইলগুলো ডিলিট না করে শুধু নতুনগুলো আপডেট করবে
+          dangerous-clean-slate: false
