@@ -22,44 +22,54 @@ class _ReferScreenState extends State<ReferScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchProfile();
+    // উইজেট বিল্ড হওয়ার পর API কল শুরু হবে
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchProfile();
+    });
   }
 
   Future<void> _fetchProfile() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-
-    if (token == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final token = auth.token;
+
+      if (token == null) {
+        debugPrint("Error: No Auth Token Found!");
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // API Request-এ ১৫ সেকেন্ডের টাইমআউট দেওয়া হয়েছে
       final response = await http.get(
         Uri.parse('https://ltcminematrix.com/api/user/profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      );
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
           final user = data['user'];
-          setState(() {
-            _referralCode = user['referral_code'] ?? "";
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              // API থেকে referral_code স্ট্রিং হিসেবে নেওয়া হচ্ছে
+              _referralCode = user['referral_code']?.toString() ?? "";
+              _isLoading = false;
+            });
+          }
         } else {
-          setState(() => _isLoading = false);
+          debugPrint("API error message: ${data['message']}");
+          if (mounted) setState(() => _isLoading = false);
         }
       } else {
-        setState(() => _isLoading = false);
+        debugPrint("Server error code: ${response.statusCode}");
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint("Profile fetch error: $e");
-      setState(() => _isLoading = false);
+      debugPrint("Profile fetch Exception: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -72,7 +82,9 @@ class _ReferScreenState extends State<ReferScreen> {
       backgroundColor: const Color(0xFF0D0D12),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF14F195)))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF14F195)),
+              )
             : SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 child: Column(
@@ -87,10 +99,14 @@ class _ReferScreenState extends State<ReferScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [const Color(0xFF14F195).withOpacity(0.2), Colors.transparent],
+                          colors: [
+                            const Color(0xFF14F195).withOpacity(0.2),
+                            Colors.transparent
+                          ],
                         ),
                       ),
-                      child: Icon(Icons.people_alt_rounded, size: 80.sp, color: const Color(0xFF14F195)),
+                      child: Icon(Icons.people_alt_rounded,
+                          size: 80.sp, color: const Color(0xFF14F195)),
                     ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
 
                     SizedBox(height: 30.h),
@@ -116,92 +132,19 @@ class _ReferScreenState extends State<ReferScreen> {
                     SizedBox(height: 40.h),
 
                     // Referral Code Box
-                    Container(
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1B1B22),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            "Your Referral Code",
-                            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12.sp),
-                          ),
-                          SizedBox(height: 10.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                _referralCode.isEmpty ? "Loading..." : _referralCode,
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF14F195),
-                                  fontSize: 24.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                              SizedBox(width: 15.w),
-                              GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: _referralCode));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Code Copied!")),
-                                  );
-                                },
-                                child: Icon(Icons.copy, color: Colors.white, size: 20.sp),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    _buildInfoBox(
+                      title: "Your Referral Code",
+                      content: _referralCode.isEmpty ? "N/A" : _referralCode,
+                      isCode: true,
                     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
 
                     SizedBox(height: 25.h),
 
                     // Referral Link Box
-                    Container(
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1B1B22),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            "Your Referral Link",
-                            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12.sp),
-                          ),
-                          SizedBox(height: 10.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  referLink,
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF14F195),
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              SizedBox(width: 15.w),
-                              GestureDetector(
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: referLink));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("Link Copied!")),
-                                  );
-                                },
-                                child: Icon(Icons.copy, color: Colors.white, size: 20.sp),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    _buildInfoBox(
+                      title: "Your Referral Link",
+                      content: referLink,
+                      isCode: false,
                     ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
 
                     SizedBox(height: 30.h),
@@ -215,11 +158,13 @@ class _ReferScreenState extends State<ReferScreen> {
                         icon: const Icon(Icons.share, color: Colors.black),
                         label: Text(
                           "Share with Friends",
-                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black),
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.bold, color: Colors.black),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF14F195),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15.r)),
                         ),
                       ),
                     ),
@@ -228,6 +173,55 @@ class _ReferScreenState extends State<ReferScreen> {
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  // কোড ডুপ্লিকেশন কমাতে ছোট একটি উইজেট মেথড
+  Widget _buildInfoBox({required String title, required String content, required bool isCode}) {
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1B22),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12.sp),
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  content,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF14F195),
+                    fontSize: isCode ? 24.sp : 14.sp,
+                    fontWeight: isCode ? FontWeight.bold : FontWeight.w500,
+                    letterSpacing: isCode ? 2 : 0,
+                  ),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              IconButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: content));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Copied to clipboard!")),
+                  );
+                },
+                icon: Icon(Icons.copy, color: Colors.white, size: 20.sp),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
