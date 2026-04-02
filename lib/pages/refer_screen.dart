@@ -85,10 +85,10 @@ class _ReferScreenState extends State<ReferScreen> {
                   children: [
                     SizedBox(height: 30.h),
 
-                    // Hero Icon
+                    // Top Hub Icon
                     Container(
-                      height: 120.h,
-                      width: 120.w,
+                      height: 110.h,
+                      width: 110.w,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
@@ -98,8 +98,8 @@ class _ReferScreenState extends State<ReferScreen> {
                           ],
                         ),
                       ),
-                      child: Icon(Icons.hub_rounded,
-                          size: 60.sp, color: const Color(0xFF14F195)),
+                      child: Icon(Icons.account_tree_rounded,
+                          size: 55.sp, color: const Color(0xFF14F195)),
                     ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
 
                     SizedBox(height: 20.h),
@@ -112,9 +112,9 @@ class _ReferScreenState extends State<ReferScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 10.h),
+                    SizedBox(height: 8.h),
                     Text(
-                      "Earn rewards from 3 levels of connections!\nInvite friends and grow your mining team.",
+                      "Grow your team and earn rewards from\nthree levels of mining network.",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 13.sp,
@@ -124,34 +124,28 @@ class _ReferScreenState extends State<ReferScreen> {
 
                     SizedBox(height: 30.h),
 
-                    // Code & Link Section (Side by Side for modern look)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoBox(
-                            title: "Referral Code",
-                            content: _referralCode.isEmpty ? "N/A" : _referralCode,
-                            isCode: true,
-                          ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.2),
-                        ),
-                      ],
-                    ),
-                    
-                    SizedBox(height: 15.h),
-                    
+                    // Referral Info Box
                     _buildInfoBox(
-                      title: "Referral Link",
+                      title: "Your Referral Code",
+                      content: _referralCode.isEmpty ? "N/A" : _referralCode,
+                      isCode: true,
+                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+
+                    SizedBox(height: 15.h),
+
+                    _buildInfoBox(
+                      title: "Your Referral Link",
                       content: referLink,
                       isCode: false,
-                    ).animate().fadeIn(delay: 300.ms).slideX(begin: 0.2),
+                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
 
                     SizedBox(height: 35.h),
 
-                    // Multi-Level Network Section
+                    // Network Stats Title
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Your Network Stats",
+                        "Network Earnings",
                         style: GoogleFonts.inter(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
@@ -161,60 +155,56 @@ class _ReferScreenState extends State<ReferScreen> {
                     ),
                     SizedBox(height: 15.h),
 
-                    // Level 1, 2, 3 Cards
+                    // Multi-Level Cards
                     _buildLevelCard(
                       levelName: "Level 1",
-                      description: "Direct Referrals",
-                      rewardPer: "10%",
-                      userCount: "0", // এগুলো পরে API থেকে ডাইনামিক করতে পারবেন
+                      description: "Direct Friends",
+                      reward: "10% Reward",
                       iconColor: const Color(0xFF14F195),
-                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-                    
+                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1),
+
                     SizedBox(height: 12.h),
 
                     _buildLevelCard(
                       levelName: "Level 2",
-                      description: "Indirect Referrals",
-                      rewardPer: "5%",
-                      userCount: "0",
+                      description: "Friends of Friends",
+                      reward: "5% Reward",
                       iconColor: Colors.orangeAccent,
-                    ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-                    
+                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1),
+
                     SizedBox(height: 12.h),
 
                     _buildLevelCard(
                       levelName: "Level 3",
-                      description: "Sub-Indirect Referrals",
-                      rewardPer: "2%",
-                      userCount: "0",
+                      description: "Sub-Network",
+                      reward: "2% Reward",
                       iconColor: Colors.blueAccent,
-                    ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.2),
+                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
 
-                    SizedBox(height: 35.h),
+                    SizedBox(height: 40.h),
 
-                    // Share Button
+                    // Fixed Share Button
                     SizedBox(
                       width: double.infinity,
                       height: 55.h,
                       child: ElevatedButton.icon(
-                        // লিংটি সরাসরি শেয়ার ফাংশনে পাস করে দেওয়া হলো
-                        onPressed: () => auth.shareReferralLink(referLink),
+                        // ERROR FIXED: Removed argument to match your AuthProvider
+                        onPressed: () => auth.shareReferralLink(),
                         icon: const Icon(Icons.share_rounded, color: Colors.black),
                         label: Text(
                           "Share Invite Link",
                           style: GoogleFonts.inter(
                               fontSize: 16.sp,
-                              fontWeight: FontWeight.bold, 
+                              fontWeight: FontWeight.bold,
                               color: Colors.black),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF14F195),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15.r)),
-                          elevation: 5,
                         ),
                       ),
-                    ).animate().scale(delay: 800.ms),
+                    ).animate().scale(delay: 700.ms),
 
                     SizedBox(height: 50.h),
                   ],
@@ -224,10 +214,9 @@ class _ReferScreenState extends State<ReferScreen> {
     );
   }
 
-  // Code/Link Box Widget
   Widget _buildInfoBox({required String title, required String content, required bool isCode}) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: const Color(0xFF1B1B22),
         borderRadius: BorderRadius.circular(15.r),
@@ -236,13 +225,9 @@ class _ReferScreenState extends State<ReferScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12.sp),
-          ),
+          Text(title, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
           SizedBox(height: 8.h),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
@@ -251,31 +236,19 @@ class _ReferScreenState extends State<ReferScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     color: const Color(0xFF14F195),
-                    fontSize: isCode ? 20.sp : 14.sp,
-                    fontWeight: isCode ? FontWeight.bold : FontWeight.w500,
-                    letterSpacing: isCode ? 2 : 0,
+                    fontSize: isCode ? 22.sp : 13.sp,
+                    fontWeight: isCode ? FontWeight.bold : FontWeight.w400,
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
+              IconButton(
+                onPressed: () {
                   Clipboard.setData(ClipboardData(text: content));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Copied $title!"),
-                      backgroundColor: const Color(0xFF14F195),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                    const SnackBar(content: Text("Copied to clipboard!")),
                   );
                 },
-                child: Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Icon(Icons.copy_rounded, color: Colors.white70, size: 18.sp),
-                ),
+                icon: Icon(Icons.copy_rounded, color: Colors.white70, size: 18.sp),
               ),
             ],
           ),
@@ -284,12 +257,10 @@ class _ReferScreenState extends State<ReferScreen> {
     );
   }
 
-  // Level Card Widget
   Widget _buildLevelCard({
     required String levelName,
     required String description,
-    required String rewardPer,
-    required String userCount,
+    required String reward,
     required Color iconColor,
   }) {
     return Container(
@@ -301,70 +272,25 @@ class _ReferScreenState extends State<ReferScreen> {
       ),
       child: Row(
         children: [
-          // Level Icon
           Container(
-            padding: EdgeInsets.all(12.w),
+            padding: EdgeInsets.all(10.w),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.15),
+              color: iconColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.people_outline_rounded, color: iconColor, size: 24.sp),
+            child: Icon(Icons.group_add_rounded, color: iconColor, size: 22.sp),
           ),
           SizedBox(width: 15.w),
-          
-          // Level Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  levelName,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  description,
-                  style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 12.sp,
-                  ),
-                ),
+                Text(levelName, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15.sp)),
+                Text(description, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
               ],
             ),
           ),
-
-          // Stats (Percentage & Users)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                rewardPer,
-                style: GoogleFonts.inter(
-                  color: iconColor,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 4.h),
-              Row(
-                children: [
-                  Icon(Icons.person, color: Colors.white54, size: 12.sp),
-                  SizedBox(width: 4.w),
-                  Text(
-                    userCount,
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12.sp,
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
+          Text(reward, style: GoogleFonts.inter(color: iconColor, fontWeight: FontWeight.bold, fontSize: 14.sp)),
         ],
       ),
     );
