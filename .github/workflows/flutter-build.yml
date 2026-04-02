@@ -5,22 +5,18 @@ on:
     branches:
       - main
 
-# Node.js ২৪ এবং ফিউচার আপডেট সাপোর্ট নিশ্চিত করার জন্য
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: 🚚 Checkout Code
-        uses: actions/checkout@v4 # Node deprecation সমস্যা সমাধান করবে
+        uses: actions/checkout@v4
 
       - name: 💽 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable' # স্ট্যাবল চ্যানেল ব্যবহার করা সবচেয়ে নিরাপদ
+          channel: 'stable'
 
       - name: 📦 Install Dependencies
         run: flutter pub get
@@ -36,7 +32,8 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           local-dir: build/web/
-          server-dir: /
-          # এটি false রাখা হয়েছে যাতে পারমিশন এরর না আসে। 
-          # সব ঠিক থাকলে পরে true করতে পারেন।
-          dangerous-clean-slate: false 
+          server-dir: / # যদি আপনার ফাইল public_html এ থাকে তবে এখানে /public_html/ লিখুন
+          # টাইমআউট সমস্যা এড়াতে নিচের অপশনটি যোগ করা হয়েছে
+          timeout: 60000 
+          # লগ ডিবাগ করার জন্য
+          log-level: verbose
