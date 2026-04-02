@@ -32,5 +32,5 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: 21
           local-dir: build/web/
-          server-dir: /ssh/
+          server-dir: /app/
           dangerous-clean-slate: true
