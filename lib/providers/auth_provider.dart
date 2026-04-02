@@ -41,7 +41,7 @@ class AuthProvider extends ChangeNotifier {
 
   String get myReferralLink {
     if (_referralCode == null) return "";
-    return "https://ltcminematrix.com?ref=$_referralCode";
+    return "https://web3.ltcminematrix.com?ref=$_referralCode";
   }
 
   // =========================
@@ -81,7 +81,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> verifyToken() async {
     try {
       final res = await http.get(
-        Uri.parse('https://ltcminematrix.com/api/user/profile'),
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
         headers: {
           'Authorization': 'Bearer $_token'
         },
@@ -127,13 +127,13 @@ class AuthProvider extends ChangeNotifier {
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
-          url: 'https://ltcminematrix.com',
-          icons: ['https://ltcminematrix.com/logo.png'],
+          url: 'https://web3.ltcminematrix.com',
+          icons: ['https://web3.ltcminematrix.com/logo.png'],
 
           // 🔥 IMPORTANT (Deep Link Fix)
           redirect: Redirect(
-            native: 'ltcminematrix://',
-            universal: 'https://ltcminematrix.com',
+            native: 'web3.ltcminematrix://',
+            universal: 'https://web3.ltcminematrix.com',
           ),
         ),
       );
