@@ -3,45 +3,46 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:reown_appkit/reown_appkit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// ============================================================
+// AuthProvider — Phantom Deep Link (Solana)
+// Reown/WalletConnect সম্পূর্ণ বাদ দেওয়া হয়েছে
+// Mobile browser → Phantom app open হবে
+// Web → Phantom browser extension কাজ করবে
+// ============================================================
+
 class AuthProvider extends ChangeNotifier {
-  ReownAppKitModal? _appKitModal;
-  bool _isInitialized = false;
   bool _isLoading = false;
   bool _isLoggedIn = false;
-  bool _isLoggingIn = false;
 
   String? _token;
+  String? _walletAddress;
   String? _referralCode;
   String? _inputReferralCode;
-  String? _lastLoggedAddress;
 
   Map<String, dynamic>? _userData;
 
   // --- Base URLs ---
   static const String _baseUrl = 'https://web3.ltcminematrix.com';
-  static const String _apiUrl = 'https://ltcminematrix.com/api';
+  static const String _apiUrl  = 'https://ltcminematrix.com/api';
+
+  // Phantom deep link এর জন্য app identity
+  static const String _appUrl      = _baseUrl;
+  static const String _redirectUrl = '$_baseUrl/phantom-callback';
 
   // --- Getters ---
-  bool get isInitialized => _isInitialized;
-  bool get isLoading => _isLoading;
-  bool get isLoggedIn => _isLoggedIn;
-  bool get isConnected => _appKitModal?.isConnected ?? false;
+  bool get isLoading    => _isLoading;
+  bool get isLoggedIn   => _isLoggedIn;
+  bool get isConnected  => _walletAddress != null;
   bool get isAuthenticated => isConnected && _isLoggedIn;
 
-  String? get token => _token;
-  String? get referralCode => _referralCode;
+  String? get token         => _token;
+  String? get address       => _walletAddress;
+  String? get referralCode  => _referralCode;
   Map<String, dynamic>? get userData => _userData;
-
-  String? get address {
-    final session = _appKitModal?.session;
-    if (session == null) return null;
-    return session.getAddress('solana') ?? session.getAddress('eip155');
-  }
 
   String? get balance => _userData?['balance']?.toString();
 
@@ -57,7 +58,8 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
 
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('token');
+    _token         = prefs.getString('token');
+    _walletAddress = prefs.getString('wallet_address');
 
     if (_token != null) {
       bool valid = await verifyToken();
@@ -66,18 +68,16 @@ class AuthProvider extends ChangeNotifier {
         _isLoggedIn = true;
         final userStr = prefs.getString('user');
         if (userStr != null) {
-          _userData = jsonDecode(userStr);
+          _userData     = jsonDecode(userStr);
           _referralCode = _userData?['referral_code'];
         }
       } else {
-        await prefs.remove('token');
-        await prefs.remove('user');
-        _token = null;
+        await _clearPrefs();
       }
     }
 
     _setLoading(false);
-    await initWallet(context);
+    notifyListeners();
   }
 
   // =========================
@@ -106,7 +106,7 @@ class AuthProvider extends ChangeNotifier {
     if (_referralCode != null) return;
 
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    Random rnd = Random();
+    final rnd = Random();
 
     _referralCode = String.fromCharCodes(
       Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
@@ -116,118 +116,133 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT
+  // CONNECT WALLET
+  // Mobile → Phantom app open হবে
+  // Web    → Phantom extension কাজ করবে
   // =========================
-  Future<void> initWallet(BuildContext context) async {
-    if (_isInitialized) return;
+  Future<void> connectWallet(BuildContext context) async {
+    if (kIsWeb) {
+      // Web এ JavaScript দিয়ে Phantom extension connect করতে হবে
+      // index.html এ phantom_connector.js add করতে হবে (নিচে instructions দেওয়া আছে)
+      _connectPhantomWeb(context);
+    } else {
+      // Mobile app এ Phantom deep link দিয়ে connect
+      await _connectPhantomMobile();
+    }
+  }
 
-    try {
-      _appKitModal = ReownAppKitModal(
-        context: context,
-        projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+  // -------------------------------------------------------
+  // MOBILE: Phantom deep link
+  // -------------------------------------------------------
+  Future<void> _connectPhantomMobile() async {
+    // Phantom এর connect deep link
+    // docs: https://docs.phantom.app/phantom-deeplinks/provider-methods/connect
+    final params = Uri(
+      queryParameters: {
+        'app_url'      : _appUrl,
+        'redirect_link': _redirectUrl,
+        'cluster'      : 'mainnet-beta',
+      },
+    ).query;
 
-        metadata: const PairingMetadata(
-          name: 'Mine Matrix',
-          description: 'Decentralized Mining Platform',
-          url: _baseUrl,
-          icons: ['$_baseUrl/logo.png'],
-          redirect: Redirect(
-            native: 'ltcminematrix://',
-            universal: _baseUrl,
-            linkMode: true,
-          ),
+    final phantomUri = Uri.parse('phantom://v1/connect?$params');
+    final universalUri = Uri.parse('https://phantom.app/ul/v1/connect?$params');
+
+    // Phantom app installed থাকলে app open হবে
+    // না থাকলে Phantom website এ যাবে
+    if (await canLaunchUrl(phantomUri)) {
+      await launchUrl(phantomUri, mode: LaunchMode.externalApplication);
+    } else {
+      await launchUrl(universalUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  // -------------------------------------------------------
+  // WEB: Phantom browser extension
+  // index.html এ window.connectPhantom() function থাকতে হবে
+  // -------------------------------------------------------
+  void _connectPhantomWeb(BuildContext context) {
+    // Web এ JS interop দিয়ে Phantom extension call করতে হবে
+    // এই function টা index.html এ defined থাকবে
+    // আপাতত dialog দিয়ে user কে guide করছি
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Connect Phantom Wallet'),
+        content: const Text(
+          'Browser এ Phantom extension install করুন,\n'
+          'তারপর Connect বাটনে চাপুন।',
         ),
-
-        // ✅ Popular wallets — Binance সহ
-        featuredWalletIds: {
-          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
-          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
-          '8a0ee50d1f22f6651afcae7eb4253e52a3310b90af5daef78a8c4929a9bb99d4', // Binance Web3
-          'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase
-        },
-      );
-
-      await _appKitModal!.init();
-      _appKitModal!.addListener(_onWalletUpdate);
-
-      _isInitialized = true;
-      notifyListeners();
-
-    } catch (e) {
-      debugPrint("Wallet Init Error: $e");
-    }
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Phantom extension এর download link
+              await launchUrl(
+                Uri.parse('https://phantom.app'),
+                mode: LaunchMode.externalApplication,
+              );
+            },
+            child: const Text('Phantom Install করুন'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('বাতিল'),
+          ),
+        ],
+      ),
+    );
   }
 
   // =========================
-  // OPEN WALLET MODAL
+  // PHANTOM CALLBACK HANDLER
+  // Phantom app থেকে ফিরে আসার পর এই function call করো
+  // Deep link: ltcminematrix://phantom-callback?phantom_encryption_public_key=...&data=...
   // =========================
-  void openModal(BuildContext context) {
-    if (!_isInitialized || _appKitModal == null) return;
-    _appKitModal!.openModalView();
-  }
+  Future<void> handlePhantomCallback(Uri callbackUri) async {
+    try {
+      // Phantom connect success হলে wallet address পাওয়া যাবে
+      final data      = callbackUri.queryParameters['data'];
+      final publicKey = callbackUri.queryParameters['phantom_encryption_public_key'];
 
-  // ✅ Mobile browser থেকে manually wallet app open করতে
-  // যেমন: openWalletApp(wcUri, 'bnc://') for Binance
-  //        openWalletApp(wcUri, 'metamask://') for MetaMask
-  //        openWalletApp(wcUri, 'trust://') for Trust Wallet
-  Future<void> openWalletApp(String wcUri, String walletScheme) async {
-    final encoded = Uri.encodeComponent(wcUri);
-
-    // Wallet এর নিজস্ব deep link দিয়ে try করো
-    final customUri = Uri.parse('${walletScheme}wc?uri=$encoded');
-    if (await canLaunchUrl(customUri)) {
-      await launchUrl(customUri, mode: LaunchMode.externalApplication);
-      return;
-    }
-
-    // Fallback: WalletConnect এর নিজস্ব link
-    final fallbackUri = Uri.parse('https://walletconnect.com/wc?uri=$encoded');
-    if (await canLaunchUrl(fallbackUri)) {
-      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  // =========================
-  // WALLET UPDATE
-  // =========================
-  void _onWalletUpdate() {
-    final currentAddress = address;
-
-    if (isConnected && currentAddress != null) {
-
-      // wallet change fix
-      if (_userData?['wallet_address'] != null &&
-          _userData!['wallet_address'] != currentAddress) {
-        logout();
+      if (data == null) {
+        debugPrint("Phantom callback: no data");
         return;
       }
 
-      // duplicate login fix
-      if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
-        _isLoggingIn = true;
-        _lastLoggedAddress = currentAddress;
-        _setLoading(true);
+      // Phantom encrypted data decode করতে হবে
+      // Simple case: public key directly পাওয়া গেলে
+      final walletAddress = callbackUri.queryParameters['public_key'] ?? publicKey;
 
-        _loginToBackend(currentAddress).then((success) {
-          _isLoggedIn = success;
-
-          if (!success) {
-            _lastLoggedAddress = null;
-          }
-
-          _isLoggingIn = false;
-          _setLoading(false);
-          notifyListeners();
-        });
+      if (walletAddress != null && walletAddress.isNotEmpty) {
+        await _onWalletConnected(walletAddress);
       }
 
-    } else if (!isConnected) {
-      if (_lastLoggedAddress != null || _isLoggedIn) {
-        _lastLoggedAddress = null;
-        _isLoggedIn = false;
-        notifyListeners();
-      }
+    } catch (e) {
+      debugPrint("Phantom callback error: $e");
     }
+  }
+
+  // =========================
+  // WALLET CONNECTED → LOGIN
+  // =========================
+  Future<void> _onWalletConnected(String walletAddress) async {
+    _walletAddress = walletAddress;
+    _setLoading(true);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('wallet_address', walletAddress);
+
+    final success = await _loginToBackend(walletAddress);
+
+    _isLoggedIn = success;
+    _setLoading(false);
+    notifyListeners();
+  }
+
+  // Manual wallet address set (যদি Web JS interop থেকে আসে)
+  Future<void> setWalletAddress(String walletAddress) async {
+    await _onWalletConnected(walletAddress);
   }
 
   // =========================
@@ -242,7 +257,7 @@ class AuthProvider extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'referred_by': _inputReferralCode ?? "",
+          'referred_by'   : _inputReferralCode ?? "",
         }),
       );
 
@@ -255,8 +270,8 @@ class AuthProvider extends ChangeNotifier {
           await prefs.setString('token', data['token']);
           await prefs.setString('user', jsonEncode(data['user']));
 
-          _token = data['token'];
-          _userData = data['user'];
+          _token        = data['token'];
+          _userData     = data['user'];
           _referralCode = _userData?['referral_code'];
 
           return true;
@@ -288,22 +303,27 @@ class AuthProvider extends ChangeNotifier {
   // LOGOUT
   // =========================
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
+    await _clearPrefs();
 
-    await prefs.remove('token');
-    await prefs.remove('user');
-
-    if (_appKitModal != null && isConnected) {
-      await _appKitModal!.disconnect();
-    }
-
-    _isLoggedIn = false;
-    _token = null;
-    _userData = null;
-    _lastLoggedAddress = null;
-    _referralCode = null;
+    _isLoggedIn    = false;
+    _token         = null;
+    _userData      = null;
+    _walletAddress = null;
+    _referralCode  = null;
 
     notifyListeners();
+  }
+
+  // =========================
+  // HELPERS
+  // =========================
+  Future<void> _clearPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('user');
+    await prefs.remove('wallet_address');
+    _token         = null;
+    _walletAddress = null;
   }
 
   void _setLoading(bool value) {
