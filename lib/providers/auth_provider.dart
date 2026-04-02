@@ -10,13 +10,13 @@ import 'package:url_launcher/url_launcher.dart';
 // ============================================================
 // AuthProvider — Phantom Deep Link (Solana)
 // Reown/WalletConnect সম্পূর্ণ বাদ দেওয়া হয়েছে
-// Mobile browser → Phantom app open হবে
-// Web → Phantom browser extension কাজ করবে
+// topbar.dart এর সাথে backward compatible
 // ============================================================
 
 class AuthProvider extends ChangeNotifier {
-  bool _isLoading = false;
-  bool _isLoggedIn = false;
+  bool _isInitialized = false; // ✅ topbar এর জন্য
+  bool _isLoading     = false;
+  bool _isLoggedIn    = false;
 
   String? _token;
   String? _walletAddress;
@@ -29,19 +29,16 @@ class AuthProvider extends ChangeNotifier {
   static const String _baseUrl = 'https://web3.ltcminematrix.com';
   static const String _apiUrl  = 'https://ltcminematrix.com/api';
 
-  // Phantom deep link এর জন্য app identity
-  static const String _appUrl      = _baseUrl;
-  static const String _redirectUrl = '$_baseUrl/phantom-callback';
-
   // --- Getters ---
-  bool get isLoading    => _isLoading;
-  bool get isLoggedIn   => _isLoggedIn;
-  bool get isConnected  => _walletAddress != null;
+  bool get isInitialized   => _isInitialized; // ✅ topbar এ লাগে
+  bool get isLoading       => _isLoading;
+  bool get isLoggedIn      => _isLoggedIn;
+  bool get isConnected     => _walletAddress != null;
   bool get isAuthenticated => isConnected && _isLoggedIn;
 
-  String? get token         => _token;
-  String? get address       => _walletAddress;
-  String? get referralCode  => _referralCode;
+  String? get token        => _token;
+  String? get address      => _walletAddress;
+  String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
   String? get balance => _userData?['balance']?.toString();
@@ -52,7 +49,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT
+  // INIT AUTH
   // =========================
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
@@ -63,7 +60,6 @@ class AuthProvider extends ChangeNotifier {
 
     if (_token != null) {
       bool valid = await verifyToken();
-
       if (valid) {
         _isLoggedIn = true;
         final userStr = prefs.getString('user');
@@ -76,7 +72,20 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    _isInitialized = true; // ✅ init শেষ
     _setLoading(false);
+    notifyListeners();
+  }
+
+  // =========================
+  // INIT WALLET
+  // topbar.dart এ initWallet(context) call হয় — এটা initAuth কে delegate করে
+  // =========================
+  Future<void> initWallet(BuildContext context) async {
+    // Phantom এর জন্য আলাদা init দরকার নেই
+    // শুধু initialized mark করে দাও
+    if (_isInitialized) return;
+    _isInitialized = true;
     notifyListeners();
   }
 
@@ -116,17 +125,21 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
+  // OPEN MODAL
+  // topbar.dart এ openModal(context) call হয়
+  // Phantom connect flow শুরু করে
+  // =========================
+  void openModal(BuildContext context) {
+    connectWallet(context);
+  }
+
+  // =========================
   // CONNECT WALLET
-  // Mobile → Phantom app open হবে
-  // Web    → Phantom extension কাজ করবে
   // =========================
   Future<void> connectWallet(BuildContext context) async {
     if (kIsWeb) {
-      // Web এ JavaScript দিয়ে Phantom extension connect করতে হবে
-      // index.html এ phantom_connector.js add করতে হবে (নিচে instructions দেওয়া আছে)
       _connectPhantomWeb(context);
     } else {
-      // Mobile app এ Phantom deep link দিয়ে connect
       await _connectPhantomMobile();
     }
   }
@@ -135,21 +148,17 @@ class AuthProvider extends ChangeNotifier {
   // MOBILE: Phantom deep link
   // -------------------------------------------------------
   Future<void> _connectPhantomMobile() async {
-    // Phantom এর connect deep link
-    // docs: https://docs.phantom.app/phantom-deeplinks/provider-methods/connect
     final params = Uri(
       queryParameters: {
-        'app_url'      : _appUrl,
-        'redirect_link': _redirectUrl,
+        'app_url'      : _baseUrl,
+        'redirect_link': '$_baseUrl/phantom-callback',
         'cluster'      : 'mainnet-beta',
       },
     ).query;
 
-    final phantomUri = Uri.parse('phantom://v1/connect?$params');
+    final phantomUri   = Uri.parse('phantom://v1/connect?$params');
     final universalUri = Uri.parse('https://phantom.app/ul/v1/connect?$params');
 
-    // Phantom app installed থাকলে app open হবে
-    // না থাকলে Phantom website এ যাবে
     if (await canLaunchUrl(phantomUri)) {
       await launchUrl(phantomUri, mode: LaunchMode.externalApplication);
     } else {
@@ -159,31 +168,26 @@ class AuthProvider extends ChangeNotifier {
 
   // -------------------------------------------------------
   // WEB: Phantom browser extension
-  // index.html এ window.connectPhantom() function থাকতে হবে
   // -------------------------------------------------------
   void _connectPhantomWeb(BuildContext context) {
-    // Web এ JS interop দিয়ে Phantom extension call করতে হবে
-    // এই function টা index.html এ defined থাকবে
-    // আপাতত dialog দিয়ে user কে guide করছি
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Connect Phantom Wallet'),
+        title: const Text('Phantom Wallet Connect'),
         content: const Text(
-          'Browser এ Phantom extension install করুন,\n'
-          'তারপর Connect বাটনে চাপুন।',
+          'Desktop এ Phantom extension install করুন।\n\n'
+          'Mobile এ Mine Matrix app ব্যবহার করুন।',
         ),
         actions: [
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              // Phantom extension এর download link
               await launchUrl(
                 Uri.parse('https://phantom.app'),
                 mode: LaunchMode.externalApplication,
               );
             },
-            child: const Text('Phantom Install করুন'),
+            child: const Text('Phantom Install'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -196,28 +200,15 @@ class AuthProvider extends ChangeNotifier {
 
   // =========================
   // PHANTOM CALLBACK HANDLER
-  // Phantom app থেকে ফিরে আসার পর এই function call করো
-  // Deep link: ltcminematrix://phantom-callback?phantom_encryption_public_key=...&data=...
+  // main.dart বা router এ deep link handle করার পর এটা call করো
   // =========================
   Future<void> handlePhantomCallback(Uri callbackUri) async {
     try {
-      // Phantom connect success হলে wallet address পাওয়া যাবে
-      final data      = callbackUri.queryParameters['data'];
-      final publicKey = callbackUri.queryParameters['phantom_encryption_public_key'];
-
-      if (data == null) {
-        debugPrint("Phantom callback: no data");
-        return;
-      }
-
-      // Phantom encrypted data decode করতে হবে
-      // Simple case: public key directly পাওয়া গেলে
-      final walletAddress = callbackUri.queryParameters['public_key'] ?? publicKey;
+      final walletAddress = callbackUri.queryParameters['public_key'];
 
       if (walletAddress != null && walletAddress.isNotEmpty) {
         await _onWalletConnected(walletAddress);
       }
-
     } catch (e) {
       debugPrint("Phantom callback error: $e");
     }
@@ -240,7 +231,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Manual wallet address set (যদি Web JS interop থেকে আসে)
+  // Manual set (Web JS interop থেকে)
   Future<void> setWalletAddress(String walletAddress) async {
     await _onWalletConnected(walletAddress);
   }
@@ -279,7 +270,6 @@ class AuthProvider extends ChangeNotifier {
       } else {
         debugPrint("API ERROR: ${response.body}");
       }
-
     } catch (e) {
       debugPrint("Login Failed: $e");
     }
@@ -331,3 +321,4 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
