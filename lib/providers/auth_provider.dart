@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthProvider extends ChangeNotifier {
   ReownAppKitModal? _appKitModal;
@@ -21,7 +22,7 @@ class AuthProvider extends ChangeNotifier {
 
   Map<String, dynamic>? _userData;
 
-  // --- Base URL ---
+  // --- Base URLs ---
   static const String _baseUrl = 'https://web3.ltcminematrix.com';
   static const String _apiUrl = 'https://ltcminematrix.com/api';
 
@@ -63,7 +64,6 @@ class AuthProvider extends ChangeNotifier {
 
       if (valid) {
         _isLoggedIn = true;
-
         final userStr = prefs.getString('user');
         if (userStr != null) {
           _userData = jsonDecode(userStr);
@@ -87,11 +87,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       final res = await http.get(
         Uri.parse('$_apiUrl/user/profile'),
-        headers: {
-          'Authorization': 'Bearer $_token',
-        },
+        headers: {'Authorization': 'Bearer $_token'},
       );
-
       return res.statusCode == 200;
     } catch (e) {
       return false;
@@ -134,13 +131,20 @@ class AuthProvider extends ChangeNotifier {
           description: 'Decentralized Mining Platform',
           url: _baseUrl,
           icons: ['$_baseUrl/logo.png'],
-
           redirect: Redirect(
-            native: 'ltcminematrix://',   // ✅ App open হবে (mobile)
-            universal: _baseUrl,           // ✅ Updated URL
-            linkMode: true,                // ✅ Browser এ না গিয়ে app এ যাবে
+            native: 'ltcminematrix://',
+            universal: _baseUrl,
+            linkMode: true,
           ),
         ),
+
+        // ✅ Popular wallets — Binance সহ
+        featuredWalletIds: {
+          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
+          '8a0ee50d1f22f6651afcae7eb4253e52a3310b90af5daef78a8c4929a9bb99d4', // Binance Web3
+          'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase
+        },
       );
 
       await _appKitModal!.init();
@@ -151,6 +155,35 @@ class AuthProvider extends ChangeNotifier {
 
     } catch (e) {
       debugPrint("Wallet Init Error: $e");
+    }
+  }
+
+  // =========================
+  // OPEN WALLET MODAL
+  // =========================
+  void openModal(BuildContext context) {
+    if (!_isInitialized || _appKitModal == null) return;
+    _appKitModal!.openModalView();
+  }
+
+  // ✅ Mobile browser থেকে manually wallet app open করতে
+  // যেমন: openWalletApp(wcUri, 'bnc://') for Binance
+  //        openWalletApp(wcUri, 'metamask://') for MetaMask
+  //        openWalletApp(wcUri, 'trust://') for Trust Wallet
+  Future<void> openWalletApp(String wcUri, String walletScheme) async {
+    final encoded = Uri.encodeComponent(wcUri);
+
+    // Wallet এর নিজস্ব deep link দিয়ে try করো
+    final customUri = Uri.parse('${walletScheme}wc?uri=$encoded');
+    if (await canLaunchUrl(customUri)) {
+      await launchUrl(customUri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    // Fallback: WalletConnect এর নিজস্ব link
+    final fallbackUri = Uri.parse('https://walletconnect.com/wc?uri=$encoded');
+    if (await canLaunchUrl(fallbackUri)) {
+      await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -237,15 +270,6 @@ class AuthProvider extends ChangeNotifier {
     }
 
     return false;
-  }
-
-  // =========================
-  // OPEN WALLET MODAL
-  // =========================
-  void openModal(BuildContext context) {
-    if (_isInitialized && _appKitModal != null) {
-      _appKitModal!.openModalView();
-    }
   }
 
   // =========================
