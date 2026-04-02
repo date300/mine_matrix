@@ -1,4 +1,4 @@
-name: Flutter Build & FTP Deploy
+name: Flutter Web Deploy via FTP
 
 on:
   push:
@@ -10,31 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 2️⃣ Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: 'stable'
 
-      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # 4️⃣ Build Web
       - name: Build Web
-        run: flutter build web --release --base-href=/
+        run: flutter build web
 
-      # 5️⃣ Install FTP tool
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
-
-      # 6️⃣ Deploy via FTP
-      - name: Deploy to FTP Server
-        run: |
-          lftp -c "
-          open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
-          mirror -R build/web /ssh --delete --verbose
-          "
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.ftp.ltcminematrix.com }}
+          username: ${{ secrets.mining@web3.ltcminematrix.com }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          local-dir: build/web/
+          server-dir: /ssh/
+          dangerous-clean-slate: true
