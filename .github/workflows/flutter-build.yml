@@ -1,4 +1,4 @@
-name: Flutter Build & Deploy
+name: Flutter Build & FTP Deploy
 
 on:
   push:
@@ -6,35 +6,35 @@ on:
       - main
 
 jobs:
-  build-web:
-    name: Build & Deploy Web to cPanel
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - uses: actions/checkout@v3
 
+      # 2️⃣ Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.2'
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
+      # 4️⃣ Build Web
       - name: Build Web
         run: flutter build web --release --base-href=/
 
-      # SSH Setup
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 209.74.67.35 >> ~/.ssh/known_hosts
+      # 5️⃣ Install FTP tool
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
 
-      # Deploy to cPanel public_html
-      - name: Deploy to cPanel
+      # 6️⃣ Deploy via FTP
+      - name: Deploy to FTP Server
         run: |
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          build/web/ \
-          ltcmlgtn@209.74.67.35:/home/ltcmlgtn/ssh/
+          lftp -c "
+          open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }};
+          mirror -R build/web /ssh --delete --verbose
+          "
