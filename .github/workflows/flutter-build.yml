@@ -6,38 +6,8 @@ on:
       - main
 
 jobs:
-  build-apk:
-    name: Build APK
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.41.2'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build release APK
-        run: flutter build apk --release
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
   build-web:
-    name: Build & Deploy Web
+    name: Build & Deploy Web to cPanel
     runs-on: ubuntu-latest
 
     steps:
@@ -51,17 +21,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build web release
-        run: flutter build web --release --base-href=/mine_matrix/
+      - name: Build Web
+        run: flutter build web --release --base-href=/
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          personal_token: ${{ secrets.DEPLOY_TOKEN }}
-          publish_dir: ./build/web
+      # SSH Setup
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 209.74.67.35 >> ~/.ssh/known_hosts
 
-      - name: Upload Web artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-web
-          path: build/web/
+      # Deploy to cPanel public_html
+      - name: Deploy to cPanel
+        run: |
+          rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
+          build/web/ \
+          ltcmlgtn@209.74.67.35:/home/ltcmlgtn/ssh/
