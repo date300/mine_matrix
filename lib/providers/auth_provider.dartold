@@ -1,4 +1,3 @@
- 
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -12,9 +11,13 @@ class AuthProvider extends ChangeNotifier {
   bool _isInitialized = false;
   bool _isLoading = false;
   bool _isLoggedIn = false;
+  bool _isLoggingIn = false;
+
   String? _token;
   String? _referralCode;
+  String? _inputReferralCode;
   String? _lastLoggedAddress;
+
   Map<String, dynamic>? _userData;
 
   // --- Getters ---
@@ -35,25 +38,36 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String? get balance => _userData?['balance']?.toString();
-  String? get walletAddress => _userData?['wallet_address'];
 
   String get myReferralLink {
     if (_referralCode == null) return "";
     return "https://ltcminematrix.com?ref=$_referralCode";
   }
 
-  // --- Init ---
+  // =========================
+  // INIT
+  // =========================
   Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
+
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
 
     if (_token != null) {
-      _isLoggedIn = true;
-      final userStr = prefs.getString('user');
-      if (userStr != null) {
-        _userData = jsonDecode(userStr);
-        _referralCode = _userData?['referral_code'];
+      bool valid = await verifyToken();
+
+      if (valid) {
+        _isLoggedIn = true;
+
+        final userStr = prefs.getString('user');
+        if (userStr != null) {
+          _userData = jsonDecode(userStr);
+          _referralCode = _userData?['referral_code'];
+        }
+      } else {
+        await prefs.remove('token');
+        await prefs.remove('user');
+        _token = null;
       }
     }
 
@@ -61,21 +75,47 @@ class AuthProvider extends ChangeNotifier {
     await initWallet(context);
   }
 
-  void setReferralCode(String code) {
-    _referralCode = code;
-    notifyListeners();
+  // =========================
+  // TOKEN VERIFY
+  // =========================
+  Future<bool> verifyToken() async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://ltcminematrix.com/api/user/profile'),
+        headers: {
+          'Authorization': 'Bearer $_token'
+        },
+      );
+
+      return res.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // =========================
+  // REFERRAL
+  // =========================
+  void setInputReferralCode(String code) {
+    _inputReferralCode = code;
   }
 
   void generateReferralCode() {
     if (_referralCode != null) return;
+
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random rnd = Random();
+
     _referralCode = String.fromCharCodes(
-        Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+      Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
+    );
+
     notifyListeners();
   }
 
-  // --- Wallet Init ---
+  // =========================
+  // WALLET INIT (DEEP LINK FIX)
+  // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
 
@@ -83,45 +123,66 @@ class AuthProvider extends ChangeNotifier {
       _appKitModal = ReownAppKitModal(
         context: context,
         projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
           url: 'https://ltcminematrix.com',
           icons: ['https://ltcminematrix.com/logo.png'],
+
+          // 🔥 IMPORTANT (Deep Link Fix)
           redirect: Redirect(
-              native: 'ltcminematrix://',
-              universal: 'https://ltcminematrix.com'),
+            native: 'ltcminematrix://',
+            universal: 'https://ltcminematrix.com',
+          ),
         ),
       );
 
       await _appKitModal!.init();
       _appKitModal!.addListener(_onWalletUpdate);
+
       _isInitialized = true;
       notifyListeners();
+
     } catch (e) {
       debugPrint("Wallet Init Error: $e");
     }
   }
 
+  // =========================
+  // WALLET UPDATE
+  // =========================
   void _onWalletUpdate() {
     final currentAddress = address;
 
     if (isConnected && currentAddress != null) {
-      if (currentAddress != _lastLoggedAddress) {
+
+      // 🔥 wallet change fix
+      if (_userData?['wallet_address'] != null &&
+          _userData!['wallet_address'] != currentAddress) {
+        logout();
+        return;
+      }
+
+      // 🔥 duplicate login fix
+      if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
+        _isLoggingIn = true;
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
 
         _loginToBackend(currentAddress).then((success) {
-          if (success) {
-            _isLoggedIn = true;
-          } else {
+          _isLoggedIn = success;
+
+          if (!success) {
             _lastLoggedAddress = null;
-            _isLoggedIn = false;
           }
+
+          _isLoggingIn = false;
           _setLoading(false);
           notifyListeners();
         });
       }
+
     } else if (!isConnected) {
       if (_lastLoggedAddress != null || _isLoggedIn) {
         _lastLoggedAddress = null;
@@ -131,7 +192,9 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // --- Login to Backend ---
+  // =========================
+  // LOGIN API
+  // =========================
   Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
 
@@ -141,53 +204,63 @@ class AuthProvider extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'referred_by': _referralCode ?? ""
+          'referred_by': _inputReferralCode ?? ""
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
 
-          // ✅ JWT Token সেভ
           await prefs.setString('token', data['token']);
-          _token = data['token'];
-
-          // ✅ User data সেভ
           await prefs.setString('user', jsonEncode(data['user']));
+
+          _token = data['token'];
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
           return true;
         }
+      } else {
+        debugPrint("API ERROR: ${response.body}");
       }
+
     } catch (e) {
       debugPrint("Login Failed: $e");
     }
+
     return false;
   }
 
+  // =========================
+  // OPEN WALLET MODAL
+  // =========================
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
     }
   }
 
-  // --- Share Referral ---
+  // =========================
+  // SHARE
+  // =========================
   void shareReferralLink() {
     if (_referralCode != null && myReferralLink.isNotEmpty) {
       Share.share(
-        "Join Mine Matrix with my referral link: $myReferralLink",
-        subject: "Mine Matrix Referral",
+        "Join Mine Matrix: $myReferralLink",
+        subject: "Referral",
       );
     }
   }
 
-  // --- Logout ---
+  // =========================
+  // LOGOUT
+  // =========================
   Future<void> logout() async {
-    _setLoading(true);
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove('token');
     await prefs.remove('user');
 
@@ -200,18 +273,12 @@ class AuthProvider extends ChangeNotifier {
     _userData = null;
     _lastLoggedAddress = null;
     _referralCode = null;
-    _setLoading(false);
+
     notifyListeners();
   }
 
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _appKitModal?.removeListener(_onWalletUpdate);
-    super.dispose();
   }
 }
