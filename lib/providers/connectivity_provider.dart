@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';                                      // ← এই লাইনটা যোগ করা হয়েছে
 import '../services/connectivity_service.dart';
 
 class ConnectivityProvider with ChangeNotifier {
