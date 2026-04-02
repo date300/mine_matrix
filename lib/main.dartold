@@ -1,14 +1,13 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-// আপনার লেআউট, প্রোভাইডার এবং স্প্ল্যাশ স্ক্রিন ইমপোর্ট
+// আপনার লেআউট, প্রোভাইডার এবং নতুন স্প্ল্যাশ স্ক্রিন ইমপোর্ট
 import 'layout/layout.dart';
 import 'providers/auth_provider.dart';
-import 'providers/connectivity_provider.dart';     // ← নতুন যোগ করা হয়েছে
-import 'pages/splash_screen.dart';
+import 'pages/splash_screen.dart'; // <-- এটি নতুন যোগ করুন
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +17,6 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ConnectivityProvider()), // ← এই লাইনটা যোগ করা হয়েছে
       ],
       child: const MiningApp(),
     ),
@@ -44,7 +42,8 @@ class MiningApp extends StatelessWidget {
             scaffoldBackgroundColor: const Color(0xFF0D0D12),
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           ),
-          home: const SplashScreen(),
+          // অ্যাপ শুরুতে SplashScreen-এ যাবে
+          home: const SplashScreen(), 
         );
       },
     );
