@@ -9,6 +9,7 @@
         <package android:name="io.metamask" />
         <package android:name="com.wallet.crypto.trustapp" />
         <package android:name="com.binance.dev" />
+        <package android:name="com.coinsafe.wallet" />
         
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -17,10 +18,6 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
         </intent>
     </queries>
 
@@ -56,17 +53,19 @@
                 <data android:scheme="ltcminematrix" />
             </intent-filter>
 
-<intent-filter android:autoVerify="true">
-    <action android:name="android.intent.action.VIEW"/>
-
-    <category android:name="android.intent.category.DEFAULT"/>
-    <category android:name="android.intent.category.BROWSABLE"/>
-
-    <data
-        android:scheme="https"
-        android:host="ltcminematrix.com"
-        android:pathPrefix="/register"/>
-</intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                
+                <data
+                    android:scheme="https"
+                    android:host="web3.ltcminematrix.com" />
+                
+                <data
+                    android:scheme="https"
+                    android:host="ltcminematrix.com" />
+            </intent-filter>
 
         </activity>
 
