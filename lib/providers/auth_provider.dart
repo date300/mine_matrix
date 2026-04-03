@@ -31,28 +31,17 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
-  // ✅ FIX: Social login এ eip155/solana namespace এ address নাও আসতে পারে
-  // তাই সব possible namespace চেক করা হচ্ছে
+  // ✅ FIX: Social login সহ সব ধরনের wallet এর address পাওয়ার জন্য
+  // শুধু getAddress() ব্যবহার করা হচ্ছে — কোনো অনুমানের property নেই
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
 
-    // Normal wallet: eip155 (Ethereum)
-    final eip155 = session.getAddress('eip155');
-    if (eip155 != null && eip155.isNotEmpty) return eip155;
-
-    // Solana wallet
-    final solana = session.getAddress('solana');
-    if (solana != null && solana.isNotEmpty) return solana;
-
-    // ✅ Social login fallback: topic বা peer থেকে address বের করা
-    // ReownAppKitModal এ getAccount() দিয়ে চেষ্টা
-    try {
-      final account = _appKitModal?.selectedChain != null
-          ? session.getAddress(_appKitModal!.selectedChain!.namespace)
-          : null;
-      if (account != null && account.isNotEmpty) return account;
-    } catch (_) {}
+    final namespaces = ['eip155', 'solana', 'polkadot', 'cosmos', 'near'];
+    for (final ns in namespaces) {
+      final addr = session.getAddress(ns);
+      if (addr != null && addr.isNotEmpty) return addr;
+    }
 
     return null;
   }
@@ -102,11 +91,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       final res = await http.get(
         Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
-        headers: {
-          'Authorization': 'Bearer $_token'
-        },
+        headers: {'Authorization': 'Bearer $_token'},
       );
-
       return res.statusCode == 200;
     } catch (e) {
       return false;
@@ -185,27 +171,25 @@ class AuthProvider extends ChangeNotifier {
   void _onWalletUpdate() {
     final currentAddress = address;
 
-    // ✅ FIX: Social login এ address পেতে সামান্য delay লাগে,
-    // তাই connected কিন্তু address null হলে retry করা হচ্ছে
+    // ✅ Social login এ connected হওয়ার পর address পেতে delay হয়
+    // তাই null হলে 1 সেকেন্ড পরে retry
     if (isConnected && currentAddress == null) {
-      debugPrint("Connected but address is null — retrying in 1s...");
-      Future.delayed(const Duration(seconds: 1), () {
-        _onWalletUpdate();
-      });
+      debugPrint("Connected but address null — retrying in 1s...");
+      Future.delayed(const Duration(seconds: 1), _onWalletUpdate);
       return;
     }
 
     if (isConnected && currentAddress != null) {
       debugPrint("Wallet connected: $currentAddress");
 
-      // wallet change fix
+      // wallet change হলে logout
       if (_userData?['wallet_address'] != null &&
           _userData!['wallet_address'] != currentAddress) {
         logout();
         return;
       }
 
-      // duplicate login fix
+      // duplicate login prevent
       if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentAddress;
@@ -245,7 +229,7 @@ class AuthProvider extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'referred_by': _inputReferralCode ?? ""
+          'referred_by': _inputReferralCode ?? "",
         }),
       );
 
@@ -323,4 +307,3 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-
