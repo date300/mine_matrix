@@ -44,11 +44,10 @@ class AuthProvider extends ChangeNotifier {
     final solana = session.getAddress('solana');
     if (solana != null && solana.isNotEmpty) return solana;
 
-    // FIX ①: namespace → chainId ব্যবহার করা হচ্ছে
+    // FIX ①: namespace getter নেই, chainId থেকে namespace বের করা হচ্ছে
     try {
       final chain = _appKitModal?.selectedChain;
       if (chain != null) {
-        // chainId থেকে namespace বের করা (যেমন "eip155:1" → "eip155")
         final chainNamespace = chain.chainId.contains(':')
             ? chain.chainId.split(':').first
             : 'eip155';
@@ -188,7 +187,6 @@ class AuthProvider extends ChangeNotifier {
   void _onWalletUpdate() {
     final currentAddress = address;
 
-    // Social login এ address পেতে সামান্য delay লাগে, তাই retry লজিক
     if (isConnected && currentAddress == null) {
       debugPrint("Connected but address is null — retrying in 1s...");
       Future.delayed(const Duration(seconds: 1), () {
@@ -213,28 +211,10 @@ class AuthProvider extends ChangeNotifier {
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
 
-        // FIX ② ও ③: email ও userName সরাসরি session থেকে নেই
-        // sessionService এর মাধ্যমে নেওয়া হচ্ছে
-        final session = _appKitModal?.session;
-        String? extractedEmail;
-        String? extractedName;
-
-        try {
-          // reown_appkit v1.8.3 এ sessionService এর মাধ্যমে পাওয়া যায়
-          extractedEmail = session?.sessionService.email;
-          extractedName = session?.sessionService.userName;
-        } catch (_) {
-          // যদি sessionService না থাকে, null রাখা হবে
-          extractedEmail = null;
-          extractedName = null;
-        }
-
-        // ✅ API তে অ্যাড্রেসের সাথে ইমেইল ও নাম পাঠানো হচ্ছে
-        _loginToBackend(
-          currentAddress, 
-          email: extractedEmail, 
-          name: extractedName,
-        ).then((success) {
+        // NOTE: reown_appkit v1.8.3 Flutter SDK-এ email/userName
+        // সরাসরি expose করা নেই (ReownAppKitModalConnector-এ নেই)।
+        // শুধু walletAddress দিয়ে login করা হচ্ছে।
+        _loginToBackend(currentAddress).then((success) {
           _isLoggedIn = success;
 
           if (!success) {
@@ -257,7 +237,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // LOGIN API (Updated with Email & Name)
+  // LOGIN API
   // =========================
   Future<bool> _loginToBackend(String walletAddress, {String? email, String? name}) async {
     final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
