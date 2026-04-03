@@ -44,12 +44,17 @@ class AuthProvider extends ChangeNotifier {
     final solana = session.getAddress('solana');
     if (solana != null && solana.isNotEmpty) return solana;
 
-    // Social login fallback: topic বা peer থেকে address বের করা
+    // FIX ①: namespace → chainId ব্যবহার করা হচ্ছে
     try {
-      final account = _appKitModal?.selectedChain != null
-          ? session.getAddress(_appKitModal!.selectedChain!.namespace)
-          : null;
-      if (account != null && account.isNotEmpty) return account;
+      final chain = _appKitModal?.selectedChain;
+      if (chain != null) {
+        // chainId থেকে namespace বের করা (যেমন "eip155:1" → "eip155")
+        final chainNamespace = chain.chainId.contains(':')
+            ? chain.chainId.split(':').first
+            : 'eip155';
+        final account = session.getAddress(chainNamespace);
+        if (account != null && account.isNotEmpty) return account;
+      }
     } catch (_) {}
 
     return null;
@@ -208,12 +213,21 @@ class AuthProvider extends ChangeNotifier {
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
 
-        // ✅ Reown/Social Login থেকে ইমেইল এবং নাম নেওয়ার চেষ্টা
+        // FIX ② ও ③: email ও userName সরাসরি session থেকে নেই
+        // sessionService এর মাধ্যমে নেওয়া হচ্ছে
         final session = _appKitModal?.session;
-        
-        // Reown AppKit এর সেশন থেকে ইমেইল ও নাম বের করা (যদি সোশ্যাল লগইন হয়)
-        String? extractedEmail = session?.email; 
-        String? extractedName = session?.userName; 
+        String? extractedEmail;
+        String? extractedName;
+
+        try {
+          // reown_appkit v1.8.3 এ sessionService এর মাধ্যমে পাওয়া যায়
+          extractedEmail = session?.sessionService.email;
+          extractedName = session?.sessionService.userName;
+        } catch (_) {
+          // যদি sessionService না থাকে, null রাখা হবে
+          extractedEmail = null;
+          extractedName = null;
+        }
 
         // ✅ API তে অ্যাড্রেসের সাথে ইমেইল ও নাম পাঠানো হচ্ছে
         _loginToBackend(
@@ -254,8 +268,8 @@ class AuthProvider extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'email': email ?? "", // ডাটাবেসে সেভ করার জন্য
-          'name': name ?? "",   // ডাটাবেসে সেভ করার জন্য
+          'email': email ?? "",
+          'name': name ?? "",
           'referred_by': _inputReferralCode ?? ""
         }),
       );
