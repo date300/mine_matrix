@@ -31,10 +31,32 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
+  // ✅ FIX: Social login-এ address বিভিন্নভাবে আসে
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
-    return session.getAddress('solana') ?? session.getAddress('eip155');
+
+    // Normal wallet
+    final walletAddress = session.getAddress('solana') ??
+        session.getAddress('eip155');
+    if (walletAddress != null) return walletAddress;
+
+    // Social login - email বা account identifier
+    final socialAddress = session.getAddress('email') ??
+        session.getAddress('social') ??
+        session.peer?.metadata.name; // fallback: social name/email
+
+    return socialAddress;
+  }
+
+  // ✅ FIX: Social login unique identifier
+  String? get _sessionIdentifier {
+    final session = _appKitModal?.session;
+    if (session == null) return null;
+
+    return address ??
+        session.topic ?? // session topic as fallback
+        session.peer?.metadata.url;
   }
 
   String? get balance => _userData?['balance']?.toString();
@@ -82,11 +104,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       final res = await http.get(
         Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
-        headers: {
-          'Authorization': 'Bearer $_token'
-        },
+        headers: {'Authorization': 'Bearer $_token'},
       );
-
       return res.statusCode == 200;
     } catch (e) {
       return false;
@@ -114,7 +133,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT (DEEP LINK FIX)
+  // WALLET INIT
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -123,21 +142,16 @@ class AuthProvider extends ChangeNotifier {
       _appKitModal = ReownAppKitModal(
         context: context,
         projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
-
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
           url: 'https://web3.ltcminematrix.com',
           icons: ['https://web3.ltcminematrix.com/logo.png'],
-
-          // ? IMPORTANT (Deep Link Fix)
           redirect: Redirect(
             native: 'web3.ltcminematrix://',
             universal: 'https://web3.ltcminematrix.com',
           ),
         ),
-
-        // ✅ Social Login যোগ করা হয়েছে
         featuresConfig: FeaturesConfig(
           socials: [
             AppKitSocialOption.Email,
@@ -146,7 +160,7 @@ class AuthProvider extends ChangeNotifier {
             AppKitSocialOption.Telegram,
             AppKitSocialOption.Discord,
           ],
-          showMainWallets: true, // true = wallet + social দুটোই দেখাবে
+          showMainWallets: true,
         ),
       );
 
@@ -155,34 +169,42 @@ class AuthProvider extends ChangeNotifier {
 
       _isInitialized = true;
       notifyListeners();
-
     } catch (e) {
       debugPrint("Wallet Init Error: $e");
     }
   }
 
   // =========================
-  // WALLET UPDATE
+  // WALLET UPDATE - MAIN FIX
   // =========================
   void _onWalletUpdate() {
-    final currentAddress = address;
+    // ✅ FIX: address-এর বদলে _sessionIdentifier ব্যবহার
+    final currentIdentifier = _sessionIdentifier;
 
-    if (isConnected && currentAddress != null) {
+    debugPrint("=== WALLET UPDATE ===");
+    debugPrint("isConnected: $isConnected");
+    debugPrint("identifier: $currentIdentifier");
 
-      // ? wallet change fix
+    if (isConnected && currentIdentifier != null) {
+
+      // Wallet change হলে logout
       if (_userData?['wallet_address'] != null &&
-          _userData!['wallet_address'] != currentAddress) {
+          _userData!['wallet_address'] != address &&
+          address != null) {
         logout();
         return;
       }
 
-      // ? duplicate login fix
-      if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
+      // ✅ FIX: duplicate login block
+      if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
-        _lastLoggedAddress = currentAddress;
+        _lastLoggedAddress = currentIdentifier;
         _setLoading(true);
 
-        _loginToBackend(currentAddress).then((success) {
+        // ✅ FIX: address null হলে identifier দিয়ে login
+        final loginAddress = address ?? currentIdentifier;
+
+        _loginToBackend(loginAddress).then((success) {
           _isLoggedIn = success;
 
           if (!success) {
@@ -211,6 +233,8 @@ class AuthProvider extends ChangeNotifier {
     final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
 
     try {
+      debugPrint("Logging in with: $walletAddress");
+
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -219,6 +243,8 @@ class AuthProvider extends ChangeNotifier {
           'referred_by': _inputReferralCode ?? ""
         }),
       );
+
+      debugPrint("Login response: ${response.statusCode} - ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -238,7 +264,6 @@ class AuthProvider extends ChangeNotifier {
       } else {
         debugPrint("API ERROR: ${response.body}");
       }
-
     } catch (e) {
       debugPrint("Login Failed: $e");
     }

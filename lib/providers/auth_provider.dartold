@@ -130,11 +130,23 @@ class AuthProvider extends ChangeNotifier {
           url: 'https://web3.ltcminematrix.com',
           icons: ['https://web3.ltcminematrix.com/logo.png'],
 
-          // 🔥 IMPORTANT (Deep Link Fix)
+          // ? IMPORTANT (Deep Link Fix)
           redirect: Redirect(
             native: 'web3.ltcminematrix://',
             universal: 'https://web3.ltcminematrix.com',
           ),
+        ),
+
+        // ✅ Social Login যোগ করা হয়েছে
+        featuresConfig: FeaturesConfig(
+          socials: [
+            AppKitSocialOption.Email,
+            AppKitSocialOption.Google,
+            AppKitSocialOption.Apple,
+            AppKitSocialOption.Telegram,
+            AppKitSocialOption.Discord,
+          ],
+          showMainWallets: true, // true = wallet + social দুটোই দেখাবে
         ),
       );
 
@@ -157,14 +169,14 @@ class AuthProvider extends ChangeNotifier {
 
     if (isConnected && currentAddress != null) {
 
-      // 🔥 wallet change fix
+      // ? wallet change fix
       if (_userData?['wallet_address'] != null &&
           _userData!['wallet_address'] != currentAddress) {
         logout();
         return;
       }
 
-      // 🔥 duplicate login fix
+      // ? duplicate login fix
       if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentAddress;
