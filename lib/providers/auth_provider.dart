@@ -31,22 +31,28 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
-  // ✅ FIX: Social login এ eip155 address সরাসরি আসে না,
-  // ezmbedded wallet থেকে fallback দিয়ে address নেওয়া হচ্ছে
+  // ✅ FIX: Social login এ eip155/solana namespace এ address নাও আসতে পারে
+  // তাই সব possible namespace চেক করা হচ্ছে
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
 
-    // Normal wallet login: eip155 বা solana
+    // Normal wallet: eip155 (Ethereum)
     final eip155 = session.getAddress('eip155');
     if (eip155 != null && eip155.isNotEmpty) return eip155;
 
+    // Solana wallet
     final solana = session.getAddress('solana');
     if (solana != null && solana.isNotEmpty) return solana;
 
-    // ✅ Social login fallback: embedded wallet address
-    final sessionAddress = _appKitModal?.session?.address;
-    if (sessionAddress != null && sessionAddress.isNotEmpty) return sessionAddress;
+    // ✅ Social login fallback: topic বা peer থেকে address বের করা
+    // ReownAppKitModal এ getAccount() দিয়ে চেষ্টা
+    try {
+      final account = _appKitModal?.selectedChain != null
+          ? session.getAddress(_appKitModal!.selectedChain!.namespace)
+          : null;
+      if (account != null && account.isNotEmpty) return account;
+    } catch (_) {}
 
     return null;
   }
