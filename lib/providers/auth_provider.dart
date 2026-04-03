@@ -31,32 +31,10 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
-  // সব possible namespace চেক করা হচ্ছে
   String? get address {
     final session = _appKitModal?.session;
     if (session == null) return null;
-
-    // Normal wallet: eip155 (Ethereum)
-    final eip155 = session.getAddress('eip155');
-    if (eip155 != null && eip155.isNotEmpty) return eip155;
-
-    // Solana wallet
-    final solana = session.getAddress('solana');
-    if (solana != null && solana.isNotEmpty) return solana;
-
-    // FIX ①: namespace getter নেই, chainId থেকে namespace বের করা হচ্ছে
-    try {
-      final chain = _appKitModal?.selectedChain;
-      if (chain != null) {
-        final chainNamespace = chain.chainId.contains(':')
-            ? chain.chainId.split(':').first
-            : 'eip155';
-        final account = session.getAddress(chainNamespace);
-        if (account != null && account.isNotEmpty) return account;
-      }
-    } catch (_) {}
-
-    return null;
+    return session.getAddress('solana') ?? session.getAddress('eip155');
   }
 
   String? get balance => _userData?['balance']?.toString();
@@ -136,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT
+  // WALLET INIT (DEEP LINK FIX)
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -152,12 +130,14 @@ class AuthProvider extends ChangeNotifier {
           url: 'https://web3.ltcminematrix.com',
           icons: ['https://web3.ltcminematrix.com/logo.png'],
 
+          // ? IMPORTANT (Deep Link Fix)
           redirect: Redirect(
             native: 'web3.ltcminematrix://',
             universal: 'https://web3.ltcminematrix.com',
           ),
         ),
 
+        // ✅ Social Login যোগ করা হয়েছে
         featuresConfig: FeaturesConfig(
           socials: [
             AppKitSocialOption.Email,
@@ -166,7 +146,7 @@ class AuthProvider extends ChangeNotifier {
             AppKitSocialOption.Telegram,
             AppKitSocialOption.Discord,
           ],
-          showMainWallets: true,
+          showMainWallets: true, // true = wallet + social দুটোই দেখাবে
         ),
       );
 
@@ -187,33 +167,21 @@ class AuthProvider extends ChangeNotifier {
   void _onWalletUpdate() {
     final currentAddress = address;
 
-    if (isConnected && currentAddress == null) {
-      debugPrint("Connected but address is null — retrying in 1s...");
-      Future.delayed(const Duration(seconds: 1), () {
-        _onWalletUpdate();
-      });
-      return;
-    }
-
     if (isConnected && currentAddress != null) {
-      debugPrint("Wallet connected: $currentAddress");
 
-      // wallet change fix
+      // ? wallet change fix
       if (_userData?['wallet_address'] != null &&
           _userData!['wallet_address'] != currentAddress) {
         logout();
         return;
       }
 
-      // duplicate login fix
+      // ? duplicate login fix
       if (currentAddress != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentAddress;
         _setLoading(true);
 
-        // NOTE: reown_appkit v1.8.3 Flutter SDK-এ email/userName
-        // সরাসরি expose করা নেই (ReownAppKitModalConnector-এ নেই)।
-        // শুধু walletAddress দিয়ে login করা হচ্ছে।
         _loginToBackend(currentAddress).then((success) {
           _isLoggedIn = success;
 
@@ -239,7 +207,7 @@ class AuthProvider extends ChangeNotifier {
   // =========================
   // LOGIN API
   // =========================
-  Future<bool> _loginToBackend(String walletAddress, {String? email, String? name}) async {
+  Future<bool> _loginToBackend(String walletAddress) async {
     final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
 
     try {
@@ -248,8 +216,6 @@ class AuthProvider extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'email': email ?? "",
-          'name': name ?? "",
           'referred_by': _inputReferralCode ?? ""
         }),
       );
