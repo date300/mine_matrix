@@ -1,4 +1,4 @@
-import 'dart:convert';
+ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,7 +17,6 @@ class ReferScreen extends StatefulWidget {
 
 class _ReferScreenState extends State<ReferScreen> {
   bool _isLoading = true;
-  bool _hasFetched = false; // একবারই fetch করবে
 
   String _referralCode    = "";
   String _referredBy      = "";
@@ -35,58 +34,21 @@ class _ReferScreenState extends State<ReferScreen> {
   @override
   void initState() {
     super.initState();
-    // IndexedStack সব page একসাথে build করে
-    // তাই initAuth() শেষ হওয়ার পরে token পাওয়া গেলে fetch করবো
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tryFetch();
+      _fetchProfile();
     });
   }
 
-  // Token না পেলে AuthProvider ready হওয়া পর্যন্ত অপেক্ষা করবে
-  void _tryFetch() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-
-    if (auth.token != null) {
-      // Token আছে, এখনই fetch করো
-      _fetchProfile(auth.token!);
-    } else if (!auth.isLoading) {
-      // Loading শেষ কিন্তু token নেই = logged out
-      if (mounted) setState(() => _isLoading = false);
-    } else {
-      // এখনও initAuth() চলছে, শেষ হওয়ার পরে আবার try করবো
-      auth.addListener(_onAuthReady);
-    }
-  }
-
-  void _onAuthReady() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-
-    if (!auth.isLoading && !_hasFetched) {
-      auth.removeListener(_onAuthReady);
-
-      if (auth.token != null) {
-        _fetchProfile(auth.token!);
-      } else {
-        if (mounted) setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    // Listener থাকলে remove করো
+  Future<void> _fetchProfile() async {
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      auth.removeListener(_onAuthReady);
-    } catch (_) {}
-    super.dispose();
-  }
+      final token = auth.token;
 
-  Future<void> _fetchProfile(String token) async {
-    if (_hasFetched) return;
-    _hasFetched = true;
+      if (token == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
 
-    try {
       final response = await http.get(
         Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
         headers: {
@@ -373,3 +335,4 @@ class _ReferScreenState extends State<ReferScreen> {
     );
   }
 }
+
