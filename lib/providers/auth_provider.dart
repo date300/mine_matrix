@@ -230,7 +230,7 @@ class AuthProvider extends ChangeNotifier {
   // LOGIN API
   // =========================
   Future<bool> _loginToBackend(String walletAddress) async {
-    final url = Uri.parse('https://ltcminematrix.com/api/auth/login');
+    final url = Uri.parse('https://web3.ltcminematrix.com/api/auth/login');
 
     try {
       debugPrint("Logging in with: $walletAddress");
