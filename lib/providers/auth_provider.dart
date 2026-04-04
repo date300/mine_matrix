@@ -31,31 +31,26 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
-  // ✅ FIX: Social login-এ address বিভিন্নভাবে আসে
-  String? get address {
-    final session = _appKitModal?.session;
-    if (session == null) return null;
+  // ✅ FIX: wallet address সবসময় database থেকে আসবে (JWT token থাকলে)
+  // Session থেকে আর নেওয়া হবে না
+  String? get address => _userData?['wallet_address']?.toString();
 
-    // Normal wallet
-    final walletAddress = session.getAddress('solana') ??
-        session.getAddress('eip155');
-    if (walletAddress != null) return walletAddress;
-
-    // Social login - email বা account identifier
-    final socialAddress = session.getAddress('email') ??
-        session.getAddress('social') ??
-        session.peer?.metadata.name; // fallback: social name/email
-
-    return socialAddress;
-  }
-
-  // ✅ FIX: Social login unique identifier
+  // ✅ FIX: session identifier - database address প্রথমে, তারপর session fallback
   String? get _sessionIdentifier {
+    // JWT আছে এবং database-এ wallet address আছে → সেটাই ব্যবহার করো
+    if (_userData?['wallet_address'] != null) {
+      return _userData!['wallet_address'].toString();
+    }
+
+    // fallback: session থেকে নাও (login হওয়ার আগে)
     final session = _appKitModal?.session;
     if (session == null) return null;
 
-    return address ??
-        session.topic ?? // session topic as fallback
+    return session.getAddress('solana') ??
+        session.getAddress('eip155') ??
+        session.getAddress('email') ??
+        session.getAddress('social') ??
+        session.topic ??
         session.peer?.metadata.url;
   }
 
@@ -76,16 +71,11 @@ class AuthProvider extends ChangeNotifier {
     _token = prefs.getString('token');
 
     if (_token != null) {
-      bool valid = await verifyToken();
+      // ✅ Token valid হলে database থেকে fresh user data আনো
+      final valid = await verifyTokenAndFetchUser();
 
       if (valid) {
         _isLoggedIn = true;
-
-        final userStr = prefs.getString('user');
-        if (userStr != null) {
-          _userData = jsonDecode(userStr);
-          _referralCode = _userData?['referral_code'];
-        }
       } else {
         await prefs.remove('token');
         await prefs.remove('user');
@@ -110,6 +100,53 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       return false;
     }
+  }
+
+  // ✅ NEW: Token verify করো + database থেকে user data আনো
+  Future<bool> verifyTokenAndFetchUser() async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
+        headers: {'Authorization': 'Bearer $_token'},
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+
+        // API response-এ user data থাকলে সেটা save করো
+        if (data['user'] != null) {
+          _userData = data['user'];
+        } else if (data['data'] != null) {
+          _userData = data['data'];
+        } else {
+          // Response নিজেই user object হলে
+          _userData = data;
+        }
+
+        _referralCode = _userData?['referral_code'];
+
+        // SharedPreferences আপডেট করো
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', jsonEncode(_userData));
+
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Token verify failed: $e");
+
+      // Network error হলে cached data থেকে লোড করো
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('user');
+      if (userStr != null) {
+        _userData = jsonDecode(userStr);
+        _referralCode = _userData?['referral_code'];
+        notifyListeners();
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // =========================
@@ -175,10 +212,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET UPDATE - MAIN FIX
+  // WALLET UPDATE
   // =========================
   void _onWalletUpdate() {
-    // ✅ FIX: address-এর বদলে _sessionIdentifier ব্যবহার
     final currentIdentifier = _sessionIdentifier;
 
     debugPrint("=== WALLET UPDATE ===");
@@ -187,24 +223,33 @@ class AuthProvider extends ChangeNotifier {
 
     if (isConnected && currentIdentifier != null) {
 
-      // Wallet change হলে logout
-      if (_userData?['wallet_address'] != null &&
-          _userData!['wallet_address'] != address &&
-          address != null) {
-        logout();
-        return;
+      // ✅ FIX: database-এর wallet address দিয়ে wallet change চেক করো
+      final dbWalletAddress = _userData?['wallet_address'];
+      if (dbWalletAddress != null) {
+        final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
+            _appKitModal?.session?.getAddress('eip155');
+
+        if (sessionAddress != null && sessionAddress != dbWalletAddress) {
+          debugPrint("Wallet changed! Logging out...");
+          logout();
+          return;
+        }
       }
 
-      // ✅ FIX: duplicate login block
+      // Duplicate login block
       if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentIdentifier;
         _setLoading(true);
 
-        // ✅ FIX: address null হলে identifier দিয়ে login
-        final loginAddress = address ?? currentIdentifier;
+        // Login করো session address দিয়ে
+        final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
+            _appKitModal?.session?.getAddress('eip155') ??
+            _appKitModal?.session?.getAddress('email') ??
+            _appKitModal?.session?.getAddress('social') ??
+            currentIdentifier;
 
-        _loginToBackend(loginAddress).then((success) {
+        _loginToBackend(sessionAddress).then((success) {
           _isLoggedIn = success;
 
           if (!success) {
@@ -256,8 +301,13 @@ class AuthProvider extends ChangeNotifier {
           await prefs.setString('user', jsonEncode(data['user']));
 
           _token = data['token'];
+
+          // ✅ _userData সবসময় database response থেকে সেট হয়
+          // এখান থেকেই address getter কাজ করবে
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
+
+          debugPrint("✅ DB wallet address: ${_userData?['wallet_address']}");
 
           return true;
         }
