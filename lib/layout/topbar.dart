@@ -1,38 +1,134 @@
-<?php
-  $rawData = file_get_contents("php://input");
-  $data = json_decode($rawData, true);
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:mine_matrix/providers/auth_provider.dart';
 
-  $headers = getallheaders();
+class TopBar extends StatelessWidget {
+  const TopBar({super.key});
 
-  $received_api_key = '';
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        final String displayAddress =
+            (auth.isConnected && auth.address != null && auth.address!.length > 10)
+                ? '${auth.address!.substring(0, 6)}...${auth.address!.substring(auth.address!.length - 4)}'
+                : 'Connect';
 
-  if (isset($headers['mh-piprapay-api-key'])) {
-      $received_api_key = $headers['mh-piprapay-api-key'];
-  } elseif (isset($headers['Mh-Piprapay-Api-Key'])) {
-      $received_api_key = $headers['Mh-Piprapay-Api-Key'];
-  } elseif (isset($_SERVER['HTTP_MH_PIPRAPAY_API_KEY'])) {
-      $received_api_key = $_SERVER['HTTP_MH_PIPRAPAY_API_KEY']; // fallback if needed
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildLogo(),
+              _buildWalletBtn(auth, displayAddress, context),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  if ($received_api_key !== "YOUR_API") {
-      status_header(401);
-      echo json_encode(["status" => false, "message" => "Unauthorized request."]);
-      exit;
+  Widget _buildLogo() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Image.asset(
+          'assets/icon/icon.png',
+          height: 28.h,
+          width: 28.h,
+          fit: BoxFit.contain,
+        ),
+        SizedBox(width: 6.w),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "WEB3",
+              style: GoogleFonts.inter(
+                color: Colors.white60,
+                fontSize: 8.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              "MINE MATRIX",
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
-  $pp_id = $data['pp_id'] ?? '';
-  $customer_name = $data['customer_name'] ?? '';
-  $customer_email_mobile = $data['customer_email_mobile'] ?? '';
-  $payment_method = $data['payment_method'] ?? '';
-  $amount = $data['amount'] ?? 0;
-  $fee = $data['fee'] ?? 0;
-  $refund_amount = $data['refund_amount'] ?? 0;
-  $total = $data['total'] ?? 0;
-  $currency = $data['currency'] ?? '';
-  $status = $data['status'] ?? '';
-  $date = $data['date'] ?? '';
+  Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
+    final Color accentGreen = const Color(0xFF14F195);
 
-  $metadata = $data['metadata'] ?? [];
-
-  http_response_code(200);
-  echo json_encode(['status' => true, 'message' => 'Webhook received']);
+    return GestureDetector(
+      onTap: () => auth.openModal(context),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.r),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w),
+            height: 38.h,
+            constraints: BoxConstraints(minWidth: 90.w),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: auth.isConnected
+                    ? accentGreen.withOpacity(0.5)
+                    : Colors.white24,
+                width: 1.2,
+              ),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.1),
+                  Colors.white.withOpacity(0.05),
+                ],
+              ),
+            ),
+            child: !auth.isInitialized
+                ? SizedBox(
+                    height: 16.h,
+                    width: 16.h,
+                    child: const CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        auth.isConnected
+                            ? CupertinoIcons.checkmark_seal_fill
+                            : CupertinoIcons.link,
+                        color: auth.isConnected ? accentGreen : Colors.white,
+                        size: 14.sp,
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        addr,
+                        style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
