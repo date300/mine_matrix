@@ -17,7 +17,19 @@ class ReferScreen extends StatefulWidget {
 
 class _ReferScreenState extends State<ReferScreen> {
   bool _isLoading = true;
-  String _referralCode = "";
+
+  String _referralCode    = "";
+  String _referredBy      = "";
+  String _name            = "";
+  String _email           = "";
+  String _walletAddress   = "";
+  double _balance         = 0;
+  double _mainBalance     = 0;
+  double _miningBalance   = 0;
+  double _coins           = 0;
+  double _withdrawable    = 0;
+  double _boostAmount     = 0;
+  double _boostMultiplier = 1;
 
   @override
   void initState() {
@@ -38,7 +50,7 @@ class _ReferScreenState extends State<ReferScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('https://ltcminematrix.com/api/user/profile'),
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -51,8 +63,19 @@ class _ReferScreenState extends State<ReferScreen> {
           final user = data['user'];
           if (mounted) {
             setState(() {
-              _referralCode = user['referral_code']?.toString() ?? "";
-              _isLoading = false;
+              _referralCode    = user['referral_code']?.toString() ?? "";
+              _referredBy      = user['referred_by']?.toString() ?? "";
+              _name            = user['name']?.toString() ?? "";
+              _email           = user['email']?.toString() ?? "";
+              _walletAddress   = user['wallet_address']?.toString() ?? "";
+              _balance         = double.tryParse(user['balance']?.toString() ?? '0') ?? 0;
+              _mainBalance     = double.tryParse(user['main_balance']?.toString() ?? '0') ?? 0;
+              _miningBalance   = double.tryParse(user['mining_balance']?.toString() ?? '0') ?? 0;
+              _coins           = double.tryParse(user['coins']?.toString() ?? '0') ?? 0;
+              _withdrawable    = double.tryParse(user['withdrawable_coins']?.toString() ?? '0') ?? 0;
+              _boostAmount     = double.tryParse(user['boost_amount']?.toString() ?? '0') ?? 0;
+              _boostMultiplier = double.tryParse(user['boost_multiplier']?.toString() ?? '1') ?? 1;
+              _isLoading       = false;
             });
           }
         } else {
@@ -69,7 +92,7 @@ class _ReferScreenState extends State<ReferScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
-    final referLink = "https://ltcminematrix.com?ref=$_referralCode";
+    final referLink = "https://web3.ltcminematrix.com?ref=$_referralCode";
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D12),
@@ -85,126 +108,141 @@ class _ReferScreenState extends State<ReferScreen> {
                   children: [
                     SizedBox(height: 30.h),
 
-                    // Top Hub Icon
+                    // ── Avatar ─────────────────────────────────────────────
                     Container(
-                      height: 110.h,
-                      width: 110.w,
+                      height: 80.h,
+                      width: 80.w,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14F195).withOpacity(0.2),
-                            Colors.transparent
-                          ],
-                        ),
+                        gradient: LinearGradient(colors: [
+                          const Color(0xFF14F195).withOpacity(0.25),
+                          Colors.transparent,
+                        ]),
+                        border: Border.all(
+                            color: const Color(0xFF14F195).withOpacity(0.4),
+                            width: 1.5),
                       ),
-                      child: Icon(Icons.account_tree_rounded,
-                          size: 55.sp, color: const Color(0xFF14F195)),
+                      child: Icon(Icons.person_rounded,
+                          size: 38.sp, color: const Color(0xFF14F195)),
                     ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+
+                    SizedBox(height: 12.h),
+
+                    if (_name.isNotEmpty)
+                      Text(_name,
+                          style: GoogleFonts.inter(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+
+                    if (_email.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(top: 4.h),
+                        child: Text(_email,
+                            style: GoogleFonts.inter(
+                                fontSize: 12.sp, color: Colors.white54)),
+                      ),
+
+                    SizedBox(height: 24.h),
+
+                    // ── Balance Cards ──────────────────────────────────────
+                    Row(children: [
+                      Expanded(child: _balanceCard("Total Balance", _balance.toStringAsFixed(4), "LTC", const Color(0xFF14F195))),
+                      SizedBox(width: 12.w),
+                      Expanded(child: _balanceCard("Main Balance", _mainBalance.toStringAsFixed(4), "LTC", Colors.purpleAccent)),
+                    ]).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1),
+
+                    SizedBox(height: 12.h),
+
+                    Row(children: [
+                      Expanded(child: _balanceCard("Mining Balance", _miningBalance.toStringAsFixed(4), "LTC", Colors.orangeAccent)),
+                      SizedBox(width: 12.w),
+                      Expanded(child: _balanceCard("Withdrawable", _withdrawable.toStringAsFixed(2), "Coins", Colors.blueAccent)),
+                    ]).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+
+                    SizedBox(height: 12.h),
+
+                    Row(children: [
+                      Expanded(child: _balanceCard("Coins", _coins.toStringAsFixed(2), "Coins", Colors.amberAccent)),
+                      SizedBox(width: 12.w),
+                      Expanded(child: _balanceCard(
+                        "Boost",
+                        "${_boostMultiplier.toStringAsFixed(1)}x  +${_boostAmount.toStringAsFixed(2)}",
+                        "Active",
+                        Colors.redAccent,
+                      )),
+                    ]).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1),
 
                     SizedBox(height: 20.h),
 
-                    Text(
-                      "Refer & Build Network",
-                      style: GoogleFonts.inter(
-                        fontSize: 26.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "Grow your team and earn rewards from\nthree levels of mining network.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.white.withOpacity(0.6),
-                      ),
-                    ),
+                    // ── Wallet Address ─────────────────────────────────────
+                    if (_walletAddress.isNotEmpty) ...[
+                      _infoBox("Wallet Address", _walletAddress, false)
+                          .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                      SizedBox(height: 12.h),
+                    ],
+
+                    // ── Referral Code ──────────────────────────────────────
+                    _infoBox(
+                      "Your Referral Code",
+                      _referralCode.isEmpty ? "N/A" : _referralCode,
+                      true,
+                    ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
+
+                    SizedBox(height: 12.h),
+
+                    _infoBox("Your Referral Link", referLink, false)
+                        .animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+
+                    if (_referredBy.isNotEmpty) ...[
+                      SizedBox(height: 12.h),
+                      _infoBox("Referred By", _referredBy, false)
+                          .animate().fadeIn(delay: 450.ms).slideY(begin: 0.1),
+                    ],
 
                     SizedBox(height: 30.h),
 
-                    // Referral Info Box
-                    _buildInfoBox(
-                      title: "Your Referral Code",
-                      content: _referralCode.isEmpty ? "N/A" : _referralCode,
-                      isCode: true,
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-
-                    SizedBox(height: 15.h),
-
-                    _buildInfoBox(
-                      title: "Your Referral Link",
-                      content: referLink,
-                      isCode: false,
-                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
-
-                    SizedBox(height: 35.h),
-
-                    // Network Stats Title
+                    // ── Network Earnings ───────────────────────────────────
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Network Earnings",
-                        style: GoogleFonts.inter(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: Text("Network Earnings",
+                          style: GoogleFonts.inter(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                     ),
                     SizedBox(height: 15.h),
 
-                    // Multi-Level Cards
-                    _buildLevelCard(
-                      levelName: "Level 1",
-                      description: "Direct Friends",
-                      reward: "10% Reward",
-                      iconColor: const Color(0xFF14F195),
-                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1),
-
+                    _levelCard("Level 1", "Direct Friends", "10% Reward", const Color(0xFF14F195))
+                        .animate().fadeIn(delay: 500.ms).slideX(begin: 0.1),
                     SizedBox(height: 12.h),
-
-                    _buildLevelCard(
-                      levelName: "Level 2",
-                      description: "Friends of Friends",
-                      reward: "5% Reward",
-                      iconColor: Colors.orangeAccent,
-                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1),
-
+                    _levelCard("Level 2", "Friends of Friends", "5% Reward", Colors.orangeAccent)
+                        .animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
                     SizedBox(height: 12.h),
+                    _levelCard("Level 3", "Sub-Network", "2% Reward", Colors.blueAccent)
+                        .animate().fadeIn(delay: 700.ms).slideX(begin: 0.1),
 
-                    _buildLevelCard(
-                      levelName: "Level 3",
-                      description: "Sub-Network",
-                      reward: "2% Reward",
-                      iconColor: Colors.blueAccent,
-                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
+                    SizedBox(height: 35.h),
 
-                    SizedBox(height: 40.h),
-
-                    // Fixed Share Button
+                    // ── Share Button ───────────────────────────────────────
                     SizedBox(
                       width: double.infinity,
                       height: 55.h,
                       child: ElevatedButton.icon(
-                        // ERROR FIXED: Removed argument to match your AuthProvider
                         onPressed: () => auth.shareReferralLink(),
                         icon: const Icon(Icons.share_rounded, color: Colors.black),
-                        label: Text(
-                          "Share Invite Link",
-                          style: GoogleFonts.inter(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black),
-                        ),
+                        label: Text("Share Invite Link",
+                            style: GoogleFonts.inter(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF14F195),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15.r)),
                         ),
                       ),
-                    ).animate().scale(delay: 700.ms),
+                    ).animate().scale(delay: 800.ms),
 
                     SizedBox(height: 50.h),
                   ],
@@ -214,7 +252,28 @@ class _ReferScreenState extends State<ReferScreen> {
     );
   }
 
-  Widget _buildInfoBox({required String title, required String content, required bool isCode}) {
+  Widget _balanceCard(String label, String value, String unit, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1B22),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp)),
+        SizedBox(height: 6.h),
+        Text(value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(color: color, fontSize: 15.sp, fontWeight: FontWeight.bold)),
+        SizedBox(height: 2.h),
+        Text(unit, style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
+      ]),
+    );
+  }
+
+  Widget _infoBox(String title, String content, bool isCode) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -222,47 +281,35 @@ class _ReferScreenState extends State<ReferScreen> {
         borderRadius: BorderRadius.circular(15.r),
         border: Border.all(color: Colors.white10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
-          SizedBox(height: 8.h),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  content,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF14F195),
-                    fontSize: isCode ? 22.sp : 13.sp,
-                    fontWeight: isCode ? FontWeight.bold : FontWeight.w400,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Copied to clipboard!")),
-                  );
-                },
-                icon: Icon(Icons.copy_rounded, color: Colors.white70, size: 18.sp),
-              ),
-            ],
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
+        SizedBox(height: 8.h),
+        Row(children: [
+          Expanded(
+            child: Text(content,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF14F195),
+                  fontSize: isCode ? 22.sp : 13.sp,
+                  fontWeight: isCode ? FontWeight.bold : FontWeight.w400,
+                )),
           ),
-        ],
-      ),
+          IconButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: content));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Copied to clipboard!")),
+              );
+            },
+            icon: Icon(Icons.copy_rounded, color: Colors.white70, size: 18.sp),
+          ),
+        ]),
+      ]),
     );
   }
 
-  Widget _buildLevelCard({
-    required String levelName,
-    required String description,
-    required String reward,
-    required Color iconColor,
-  }) {
+  Widget _levelCard(String level, String desc, String reward, Color color) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -270,29 +317,21 @@ class _ReferScreenState extends State<ReferScreen> {
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.white10),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.group_add_rounded, color: iconColor, size: 22.sp),
-          ),
-          SizedBox(width: 15.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(levelName, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15.sp)),
-                Text(description, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
-              ],
-            ),
-          ),
-          Text(reward, style: GoogleFonts.inter(color: iconColor, fontWeight: FontWeight.bold, fontSize: 14.sp)),
-        ],
-      ),
+      child: Row(children: [
+        Container(
+          padding: EdgeInsets.all(10.w),
+          decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+          child: Icon(Icons.group_add_rounded, color: color, size: 22.sp),
+        ),
+        SizedBox(width: 15.w),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(level, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15.sp)),
+            Text(desc, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
+          ]),
+        ),
+        Text(reward, style: GoogleFonts.inter(color: color, fontWeight: FontWeight.bold, fontSize: 14.sp)),
+      ]),
     );
   }
 }
