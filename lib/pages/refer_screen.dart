@@ -1,298 +1,368 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import '../providers/auth_provider.dart';
+import 'package:reown_appkit/reown_appkit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
-class ReferScreen extends StatefulWidget {
-  const ReferScreen({super.key});
+class AuthProvider extends ChangeNotifier {
+  ReownAppKitModal? _appKitModal;
+  bool _isInitialized = false;
+  bool _isLoading = false;
+  bool _isLoggedIn = false;
+  bool _isLoggingIn = false;
 
-  @override
-  State<ReferScreen> createState() => _ReferScreenState();
-}
+  String? _token;
+  String? _referralCode;
+  String? _inputReferralCode;
+  String? _lastLoggedAddress;
 
-class _ReferScreenState extends State<ReferScreen> {
-  bool _isLoading = true;
-  String _referralCode = "";
+  Map<String, dynamic>? _userData;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchProfile();
-    });
+  // --- Getters ---
+  bool get isInitialized => _isInitialized;
+  bool get isLoading => _isLoading;
+  bool get isLoggedIn => _isLoggedIn;
+  bool get isConnected => _appKitModal?.isConnected ?? false;
+  bool get isAuthenticated => isConnected && _isLoggedIn;
+
+  String? get token => _token;
+  String? get referralCode => _referralCode;
+  Map<String, dynamic>? get userData => _userData;
+
+  // ✅ FIX: wallet address সবসময় database থেকে আসবে (JWT token থাকলে)
+  // Session থেকে আর নেওয়া হবে না
+  String? get address => _userData?['wallet_address']?.toString();
+
+  // ✅ FIX: session identifier - database address প্রথমে, তারপর session fallback
+  String? get _sessionIdentifier {
+    // JWT আছে এবং database-এ wallet address আছে → সেটাই ব্যবহার করো
+    if (_userData?['wallet_address'] != null) {
+      return _userData!['wallet_address'].toString();
+    }
+
+    // fallback: session থেকে নাও (login হওয়ার আগে)
+    final session = _appKitModal?.session;
+    if (session == null) return null;
+
+    return session.getAddress('solana') ??
+        session.getAddress('eip155') ??
+        session.getAddress('email') ??
+        session.getAddress('social') ??
+        session.topic ??
+        session.peer?.metadata.url;
   }
 
-  Future<void> _fetchProfile() async {
-    try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final token = auth.token;
+  String? get balance => _userData?['balance']?.toString();
 
-      if (token == null) {
-        if (mounted) setState(() => _isLoading = false);
-        return;
-      }
+  String get myReferralLink {
+    if (_referralCode == null) return "";
+    return "https://web3.ltcminematrix.com?ref=$_referralCode";
+  }
 
-      final response = await http.get(
-        Uri.parse('https://ltcminematrix.com/api/user/profile'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 15));
+  // =========================
+  // INIT
+  // =========================
+  Future<void> initAuth(BuildContext context) async {
+    _setLoading(true);
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          final user = data['user'];
-          if (mounted) {
-            setState(() {
-              _referralCode = user['referral_code']?.toString() ?? "";
-              _isLoading = false;
-            });
-          }
-        } else {
-          if (mounted) setState(() => _isLoading = false);
-        }
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('token');
+
+    if (_token != null) {
+      // ✅ Token valid হলে database থেকে fresh user data আনো
+      final valid = await verifyTokenAndFetchUser();
+
+      if (valid) {
+        _isLoggedIn = true;
       } else {
-        if (mounted) setState(() => _isLoading = false);
+        await prefs.remove('token');
+        await prefs.remove('user');
+        _token = null;
       }
+    }
+
+    _setLoading(false);
+    await initWallet(context);
+  }
+
+  // =========================
+  // TOKEN VERIFY
+  // =========================
+  Future<bool> verifyToken() async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
+        headers: {'Authorization': 'Bearer $_token'},
+      );
+      return res.statusCode == 200;
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      return false;
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-    final referLink = "https://ltcminematrix.com?ref=$_referralCode";
+  // ✅ NEW: Token verify করো + database থেকে user data আনো
+  Future<bool> verifyTokenAndFetchUser() async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
+        headers: {'Authorization': 'Bearer $_token'},
+      );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D12),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF14F195)),
-              )
-            : SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 30.h),
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
 
-                    // Top Hub Icon
-                    Container(
-                      height: 110.h,
-                      width: 110.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF14F195).withOpacity(0.2),
-                            Colors.transparent
-                          ],
-                        ),
-                      ),
-                      child: Icon(Icons.account_tree_rounded,
-                          size: 55.sp, color: const Color(0xFF14F195)),
-                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+        // API: { "status": "success", "user": { wallet_address, referral_code, balance... } }
+        if (data['status'] == 'success' && data['user'] != null) {
+          _userData = data['user'];
+        } else {
+          return false;
+        }
 
-                    SizedBox(height: 20.h),
+        _referralCode = _userData?['referral_code'];
 
-                    Text(
-                      "Refer & Build Network",
-                      style: GoogleFonts.inter(
-                        fontSize: 26.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "Grow your team and earn rewards from\nthree levels of mining network.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
-                        color: Colors.white.withOpacity(0.6),
-                      ),
-                    ),
+        // SharedPreferences আপডেট করো
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', jsonEncode(_userData));
 
-                    SizedBox(height: 30.h),
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Token verify failed: $e");
 
-                    // Referral Info Box
-                    _buildInfoBox(
-                      title: "Your Referral Code",
-                      content: _referralCode.isEmpty ? "N/A" : _referralCode,
-                      isCode: true,
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+      // Network error হলে cached data থেকে লোড করো
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('user');
+      if (userStr != null) {
+        _userData = jsonDecode(userStr);
+        _referralCode = _userData?['referral_code'];
+        notifyListeners();
+        return true;
+      }
+    }
 
-                    SizedBox(height: 15.h),
-
-                    _buildInfoBox(
-                      title: "Your Referral Link",
-                      content: referLink,
-                      isCode: false,
-                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
-
-                    SizedBox(height: 35.h),
-
-                    // Network Stats Title
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Network Earnings",
-                        style: GoogleFonts.inter(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 15.h),
-
-                    // Multi-Level Cards
-                    _buildLevelCard(
-                      levelName: "Level 1",
-                      description: "Direct Friends",
-                      reward: "10% Reward",
-                      iconColor: const Color(0xFF14F195),
-                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1),
-
-                    SizedBox(height: 12.h),
-
-                    _buildLevelCard(
-                      levelName: "Level 2",
-                      description: "Friends of Friends",
-                      reward: "5% Reward",
-                      iconColor: Colors.orangeAccent,
-                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1),
-
-                    SizedBox(height: 12.h),
-
-                    _buildLevelCard(
-                      levelName: "Level 3",
-                      description: "Sub-Network",
-                      reward: "2% Reward",
-                      iconColor: Colors.blueAccent,
-                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
-
-                    SizedBox(height: 40.h),
-
-                    // Fixed Share Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55.h,
-                      child: ElevatedButton.icon(
-                        // ERROR FIXED: Removed argument to match your AuthProvider
-                        onPressed: () => auth.shareReferralLink(),
-                        icon: const Icon(Icons.share_rounded, color: Colors.black),
-                        label: Text(
-                          "Share Invite Link",
-                          style: GoogleFonts.inter(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF14F195),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15.r)),
-                        ),
-                      ),
-                    ).animate().scale(delay: 700.ms),
-
-                    SizedBox(height: 50.h),
-                  ],
-                ),
-              ),
-      ),
-    );
+    return false;
   }
 
-  Widget _buildInfoBox({required String title, required String content, required bool isCode}) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B1B22),
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
-          SizedBox(height: 8.h),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  content,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFF14F195),
-                    fontSize: isCode ? 22.sp : 13.sp,
-                    fontWeight: isCode ? FontWeight.bold : FontWeight.w400,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Copied to clipboard!")),
-                  );
-                },
-                icon: Icon(Icons.copy_rounded, color: Colors.white70, size: 18.sp),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  // =========================
+  // REFERRAL
+  // =========================
+  void setInputReferralCode(String code) {
+    _inputReferralCode = code;
   }
 
-  Widget _buildLevelCard({
-    required String levelName,
-    required String description,
-    required String reward,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B1B22),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.group_add_rounded, color: iconColor, size: 22.sp),
-          ),
-          SizedBox(width: 15.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(levelName, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15.sp)),
-                Text(description, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp)),
-              ],
-            ),
-          ),
-          Text(reward, style: GoogleFonts.inter(color: iconColor, fontWeight: FontWeight.bold, fontSize: 14.sp)),
-        ],
-      ),
+  void generateReferralCode() {
+    if (_referralCode != null) return;
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    Random rnd = Random();
+
+    _referralCode = String.fromCharCodes(
+      Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
     );
+
+    notifyListeners();
+  }
+
+  // =========================
+  // WALLET INIT
+  // =========================
+  Future<void> initWallet(BuildContext context) async {
+    if (_isInitialized) return;
+
+    try {
+      _appKitModal = ReownAppKitModal(
+        context: context,
+        projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+        metadata: const PairingMetadata(
+          name: 'Mine Matrix',
+          description: 'Decentralized Mining Platform',
+          url: 'https://web3.ltcminematrix.com',
+          icons: ['https://web3.ltcminematrix.com/logo.png'],
+          redirect: Redirect(
+            native: 'web3.ltcminematrix://',
+            universal: 'https://web3.ltcminematrix.com',
+          ),
+        ),
+        featuresConfig: FeaturesConfig(
+          socials: [
+            AppKitSocialOption.Email,
+            AppKitSocialOption.Google,
+            AppKitSocialOption.Apple,
+            AppKitSocialOption.Telegram,
+            AppKitSocialOption.Discord,
+          ],
+          showMainWallets: true,
+        ),
+      );
+
+      await _appKitModal!.init();
+      _appKitModal!.addListener(_onWalletUpdate);
+
+      _isInitialized = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Wallet Init Error: $e");
+    }
+  }
+
+  // =========================
+  // WALLET UPDATE
+  // =========================
+  void _onWalletUpdate() {
+    final currentIdentifier = _sessionIdentifier;
+
+    debugPrint("=== WALLET UPDATE ===");
+    debugPrint("isConnected: $isConnected");
+    debugPrint("identifier: $currentIdentifier");
+
+    if (isConnected && currentIdentifier != null) {
+
+      // ✅ FIX: database-এর wallet address দিয়ে wallet change চেক করো
+      final dbWalletAddress = _userData?['wallet_address'];
+      if (dbWalletAddress != null) {
+        final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
+            _appKitModal?.session?.getAddress('eip155');
+
+        if (sessionAddress != null && sessionAddress != dbWalletAddress) {
+          debugPrint("Wallet changed! Logging out...");
+          logout();
+          return;
+        }
+      }
+
+      // Duplicate login block
+      if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
+        _isLoggingIn = true;
+        _lastLoggedAddress = currentIdentifier;
+        _setLoading(true);
+
+        // Login করো session address দিয়ে
+        final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
+            _appKitModal?.session?.getAddress('eip155') ??
+            _appKitModal?.session?.getAddress('email') ??
+            _appKitModal?.session?.getAddress('social') ??
+            currentIdentifier;
+
+        _loginToBackend(sessionAddress).then((success) {
+          _isLoggedIn = success;
+
+          if (!success) {
+            _lastLoggedAddress = null;
+          }
+
+          _isLoggingIn = false;
+          _setLoading(false);
+          notifyListeners();
+        });
+      }
+
+    } else if (!isConnected) {
+      if (_lastLoggedAddress != null || _isLoggedIn) {
+        _lastLoggedAddress = null;
+        _isLoggedIn = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  // =========================
+  // LOGIN API
+  // =========================
+  Future<bool> _loginToBackend(String walletAddress) async {
+    final url = Uri.parse('https://web3.ltcminematrix.com/api/auth/login');
+
+    try {
+      debugPrint("Logging in with: $walletAddress");
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'wallet_address': walletAddress,
+          'referred_by': _inputReferralCode ?? ""
+        }),
+      );
+
+      debugPrint("Login response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'success') {
+          final prefs = await SharedPreferences.getInstance();
+
+          await prefs.setString('token', data['token']);
+          await prefs.setString('user', jsonEncode(data['user']));
+
+          _token = data['token'];
+
+          // ✅ _userData সবসময় database response থেকে সেট হয়
+          // এখান থেকেই address getter কাজ করবে
+          _userData = data['user'];
+          _referralCode = _userData?['referral_code'];
+
+          debugPrint("✅ DB wallet address: ${_userData?['wallet_address']}");
+
+          return true;
+        }
+      } else {
+        debugPrint("API ERROR: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("Login Failed: $e");
+    }
+
+    return false;
+  }
+
+  // =========================
+  // OPEN WALLET MODAL
+  // =========================
+  void openModal(BuildContext context) {
+    if (_isInitialized && _appKitModal != null) {
+      _appKitModal!.openModalView();
+    }
+  }
+
+  // =========================
+  // SHARE
+  // =========================
+  void shareReferralLink() {
+    if (_referralCode != null && myReferralLink.isNotEmpty) {
+      Share.share(
+        "Join Mine Matrix: $myReferralLink",
+        subject: "Referral",
+      );
+    }
+  }
+
+  // =========================
+  // LOGOUT
+  // =========================
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.remove('token');
+    await prefs.remove('user');
+
+    if (_appKitModal != null && isConnected) {
+      await _appKitModal!.disconnect();
+    }
+
+    _isLoggedIn = false;
+    _token = null;
+    _userData = null;
+    _lastLoggedAddress = null;
+    _referralCode = null;
+
+    notifyListeners();
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
   }
 }
