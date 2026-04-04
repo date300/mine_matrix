@@ -1,142 +1,38 @@
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+<?php
+  $rawData = file_get_contents("php://input");
+  $data = json_decode($rawData, true);
 
-import 'package:provider/provider.dart';
-import 'package:mine_matrix/providers/auth_provider.dart';
+  $headers = getallheaders();
 
-class TopBar extends StatefulWidget {
-  const TopBar({super.key});
+  $received_api_key = '';
 
-  @override
-  State<TopBar> createState() => _TopBarState();
-}
-
-class _TopBarState extends State<TopBar> {
-  final Color accentGreen = const Color(0xFF14F195);
-
-  @override
-  void initState() {
-    super.initState();
-    // অ্যাপ চালু হলেই ওয়ালেট ইনিশিয়ালাইজ হবে
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false).initWallet(context);
-    });
+  if (isset($headers['mh-piprapay-api-key'])) {
+      $received_api_key = $headers['mh-piprapay-api-key'];
+  } elseif (isset($headers['Mh-Piprapay-Api-Key'])) {
+      $received_api_key = $headers['Mh-Piprapay-Api-Key'];
+  } elseif (isset($_SERVER['HTTP_MH_PIPRAPAY_API_KEY'])) {
+      $received_api_key = $_SERVER['HTTP_MH_PIPRAPAY_API_KEY']; // fallback if needed
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Consumer ব্যবহার করে Provider থেকে ডেটা নিচ্ছি
-    return Consumer<AuthProvider>(
-      builder: (context, auth, child) {
-        String displayAddress = (auth.isConnected && auth.address != null && auth.address!.length > 10)
-            ? '${auth.address!.substring(0, 6)}...${auth.address!.substring(auth.address!.length - 4)}'
-            : 'Connect';
-
-        return Container(
-          // প্যাডিং কিছুটা কমিয়েছি যেন সব স্ক্রিনে সুন্দর ফিট হয়
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildLogo(),
-              _buildWalletBtn(auth, displayAddress, context),
-            ],
-          ),
-        );
-      },
-    );
+  if ($received_api_key !== "YOUR_API") {
+      status_header(401);
+      echo json_encode(["status" => false, "message" => "Unauthorized request."]);
+      exit;
   }
 
-  Widget _buildLogo() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // বাম সাইডের লোগো
-        Image.asset(
-          'assets/icon/icon.png',
-          height: 28.h, // লোগোর সাইজ ছোট করা হয়েছে
-          width: 28.h,
-          fit: BoxFit.contain,
-        ),
-        SizedBox(width: 6.w), // লোগো এবং টেক্সটের মাঝের গ্যাপ
-        
-        // টেক্সট অংশ
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "WEB3",
-              style: GoogleFonts.inter(
-                color: Colors.white60,
-                fontSize: 8.sp, // ফন্ট সাইজ ছোট করা হয়েছে
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              "MINE MATRIX",
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 16.sp, // ফন্ট সাইজ ছোট করা হয়েছে
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  $pp_id = $data['pp_id'] ?? '';
+  $customer_name = $data['customer_name'] ?? '';
+  $customer_email_mobile = $data['customer_email_mobile'] ?? '';
+  $payment_method = $data['payment_method'] ?? '';
+  $amount = $data['amount'] ?? 0;
+  $fee = $data['fee'] ?? 0;
+  $refund_amount = $data['refund_amount'] ?? 0;
+  $total = $data['total'] ?? 0;
+  $currency = $data['currency'] ?? '';
+  $status = $data['status'] ?? '';
+  $date = $data['date'] ?? '';
 
-  Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
-    return GestureDetector(
-      onTap: () => auth.openModal(context),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.r), // বর্ডার রেডিয়াস একটু কমানো হয়েছে
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w), // প্যাডিং কমানো হয়েছে
-            height: 38.h, // বাটনের হাইট কমানো হয়েছে
-            constraints: BoxConstraints(minWidth: 90.w),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(
-                color: auth.isConnected ? accentGreen.withOpacity(0.5) : Colors.white24,
-                width: 1.2, // বর্ডারের পুরুত্ব কমানো হয়েছে
-              ),
-              gradient: LinearGradient(
-                colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)],
-              ),
-            ),
-            child: !auth.isInitialized
-                ? SizedBox(
-                    height: 16.h,
-                    width: 16.h,
-                    child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        auth.isConnected ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.link,
-                        color: auth.isConnected ? accentGreen : Colors.white,
-                        size: 14.sp, // আইকনের সাইজ কমানো হয়েছে
-                      ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        addr,
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 11.sp, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+  $metadata = $data['metadata'] ?? [];
+
+  http_response_code(200);
+  echo json_encode(['status' => true, 'message' => 'Webhook received']);
