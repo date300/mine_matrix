@@ -1,4 +1,4 @@
-import 'dart:ui';
+ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,8 +6,25 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:mine_matrix/providers/auth_provider.dart';
 
-class TopBar extends StatelessWidget {
+class TopBar extends StatefulWidget {
   const TopBar({super.key});
+
+  @override
+  State<TopBar> createState() => _TopBarState();
+}
+
+class _TopBarState extends State<TopBar> {
+  final Color accentGreen = const Color(0xFF14F195);
+
+  @override
+  void initState() {
+    super.initState();
+    // AuthProvider এ if (_isInitialized) return; আছে
+    // তাই দুইবার call হলেও double init হবে না — safe
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).initWallet(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +88,6 @@ class TopBar extends StatelessWidget {
   }
 
   Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
-    final Color accentGreen = const Color(0xFF14F195);
-
     return GestureDetector(
       onTap: () => auth.openModal(context),
       child: ClipRRect(
@@ -132,3 +147,4 @@ class TopBar extends StatelessWidget {
     );
   }
 }
+
