@@ -1,473 +1,39 @@
 // mining_screen.dart
-// pubspec.yaml dependencies:
-//   http: ^1.2.1
-//   get: ^4.6.6
-//   google_fonts: ^6.1.0
-//   glassmorphism: ^3.0.0
-//   percent_indicator: ^4.2.3
-//   flutter_animate: ^4.5.0
-//   animated_background: ^2.0.0
-//   flutter_screenutil: ^5.9.0
-//
-// Before use, set your JWT token:
-//   MiningApi.token = 'your_jwt_token_here';
+// Token নেওয়া হয় Provider<AuthProvider> থেকে — ReferScreen এর মতো।
 
-import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:get/get.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_background/animated_background.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import '../providers/auth_provider.dart';
 
+// ─── Colors ──────────────────────────────────────────────────────────────────
 class AppColors {
   static const Color background   = Color(0xFF0D0D12);
   static const Color accentGreen  = Color(0xFF14F195);
   static const Color accentPurple = Color(0xFF9945FF);
-  static const Color glassWhite   = Color(0xAAFFFFFF);
   static const Color accentLeaf   = Color(0xFF76C442);
-  static const Color accentOrange = Color(0xFFFF9500);
+  static const Color bgCard       = Color(0xFF1B1B22);
 }
 
-// ===================== API SERVICE =====================
-//
-// BACKEND ENDPOINTS (web3.ltcminematrix.com):
-//
-//   GET  /api/mining/status
-//   Response: {
-//     miningActive: bool,
-//     minedCoins: number,      ← coins accumulated in current cycle
-//     equivalentUSD: number,   ← minedCoins / 1000
-//     withdrawableUSD: number  ← total withdrawable balance
-//   }
-//
-//   POST /api/mining/start-day
-//   Response: { message: "Mining started" }
-//   Error:    { error: "Already active" | "Need $18 balance" }
-//
-//   POST /api/mining/claim
-//   Response: {
-//     message: string,
-//     coins: number,       ← remaining coins after claim
-//     usd: number,         ← coins/1000
-//     withdrawable: number ← updated total withdrawable
-//   }
-//   Error: { error: "No active session" | "Wait before claim" }
+// ─── Constants (mirrors backend mining.routes.js) ────────────────────────────
+const double kEntryFee    = 18.0;
+const double kUsdTarget   = 100.0;
+const double kCoinsPerUsd = 1000.0;
+const int    kNormalDays  = 360;
+const int    kBoostDays   = 80;
+// BASE earning rate USD/second = $100 / (360days * 86400sec)
+const double kBasePerSec  = kUsdTarget / (kNormalDays * 24 * 60 * 60);
 
-class MiningApi {
-  // ✅ FIXED: Correct server URL (web3 subdomain)
-  static const String _baseUrl = 'https://web3.ltcminematrix.com/api/mining';
-
-  // Set this before any API call: MiningApi.token = 'your_jwt_token';
-  static String token = '';
-
-  static Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $token',
-  };
-
-  // GET /api/mining/status
-  // Returns: { miningActive, minedCoins, equivalentUSD, withdrawableUSD }
-  static Future<Map<String, dynamic>?> getStatus() async {
-    try {
-      final res = await http
-          .get(Uri.parse('$_baseUrl/status'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) return jsonDecode(res.body);
-      // Return error info for non-200
-      return {'error': true, 'statusCode': res.statusCode, 'body': res.body};
-    } catch (e) {
-      return {'error': true, 'body': e.toString()};
-    }
-  }
-
-  // POST /api/mining/start-day
-  // Returns: { message: "Mining started" }
-  // Error:   { error: "Already active" | "Need $18 balance" }
-  static Future<Map<String, dynamic>?> startDay() async {
-    try {
-      final res = await http
-          .post(Uri.parse('$_baseUrl/start-day'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) return jsonDecode(res.body);
-      // Return error body so controller can show message
-      return {'error': true, 'body': res.body, 'statusCode': res.statusCode};
-    } catch (e) {
-      return {'error': true, 'body': e.toString()};
-    }
-  }
-
-  // POST /api/mining/claim
-  // Returns: { message, coins, usd, withdrawable }
-  // Error:   { error: "No active session" | "Wait before claim" }
-  static Future<Map<String, dynamic>?> claim() async {
-    try {
-      final res = await http
-          .post(Uri.parse('$_baseUrl/claim'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) return jsonDecode(res.body);
-      // Return error body for 400 cases
-      return {'error': true, 'body': res.body, 'statusCode': res.statusCode};
-    } catch (e) {
-      return {'error': true, 'body': e.toString()};
-    }
-  }
-}
-
-void main() => runApp(const VexylonApp());
-
-class VexylonApp extends StatelessWidget {
-  const VexylonApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return ScreenUtilInit(
-      designSize: const Size(360, 690),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      builder: (context, child) {
-        return GetMaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: AppColors.background,
-            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
-          ),
-          home: const MiningScreen(),
-        );
-      },
-    );
-  }
-}
-
-// ===================== CONTROLLER =====================
-//
-// BACKEND CONSTANTS (from mining.routes.js):
-//   COINS_PER_USD = 1000
-//   USD_TARGET    = $100
-//   COIN_TARGET   = 100,000 coins
-//   ENTRY_FEE     = $18
-//   BASE_RATE     = COIN_TARGET / (360 * 24 * 60 * 60) coins/sec
-//   MIN_CLAIM     = 60,000ms (60 seconds between claims)
-//
-// LIVE EARNING (local estimation, synced from server):
-//   BASE_PER_SECOND (USD) = USD_TARGET / (360 * 86400) ≈ 0.00000321 USD/sec
-//   liveEarning = equivalentUSD + seconds_since_last_sync * BASE_PER_SECOND * boostMult * aiMult
-//
-// NOTE: Backend does NOT return boost/ai multipliers from /status.
-//       boostMultiplier and aiMultiplier default to 1.0 unless a
-//       /boost endpoint is implemented. The UI still shows these
-//       fields (defaulting to 1.0x) for future compatibility.
-
-class MiningController extends GetxController {
-  // Config matching backend
-  static const double entryFee      = 18.0;    // $18 entry fee
-  static const double usdTarget     = 100.0;   // $100 to complete a cycle
-  static const double coinsPerUsd   = 1000.0;  // 1000 coins = $1
-  static const int    normalDays    = 360;      // base plan days
-  static const int    boostDays     = 80;       // boosted plan days
-  static const double boostMin      = 1.0;
-  static const double boostMax      = 50.0;
-
-  // BASE earning rate in USD/second (mirrors backend BASE_RATE / COINS_PER_USD)
-  static const double basePerSecond = usdTarget / (normalDays * 24 * 60 * 60);
-
-  // ─── Observables ────────────────────────────────────────────────────────────
-  var isLoading        = false.obs;
-
-  // From GET /status
-  // ✅ FIXED field names to match actual backend response:
-  var minedCoins       = 0.0.obs;   // minedCoins (raw coin count in current cycle)
-  var equivalentUSD    = 0.0.obs;   // equivalentUSD = minedCoins / 1000
-  var withdrawable     = 0.0.obs;   // withdrawableUSD
-  var miningActive     = false.obs; // miningActive (bool from server)
-
-  // Multipliers — backend /status does not return these yet; default to 1.0
-  var boostMultiplier  = 1.0.obs;
-  var aiMultiplier     = 1.0.obs;
-
-  // Local derived state
-  var isMining         = false.obs;  // mirrors miningActive after sync
-  var hasPaid          = false.obs;  // true if user has enough balance for $18 fee
-  var dayStarted       = false.obs;  // true once start-day succeeds
-  var boostActive      = false.obs;  // true if boostMultiplier > 1
-  var boostAmount      = 0.0.obs;
-
-  // Progress tracking (local UI)
-  var cycleProgress    = 0.0.obs;   // 0→1 for $100 cycle
-  var liveEarning      = 0.0.obs;   // live estimated USD (updates every 100ms)
-
-  Timer? _liveTimer;
-  Timer? _syncTimer;
-  DateTime? _lastSyncTime;   // when we last got data from server
-  double _baseUsdAtSync = 0; // equivalentUSD value at last sync
-
-  bool get canClaim  => dayStarted.value && isMining.value;
-  bool get canStart  => hasPaid.value && !dayStarted.value;
-
-  @override
-  void onInit() {
-    super.onInit();
-    _loadFromServer();
-  }
-
-  // ── Load initial status from server ─────────────────────────────────────────
-  Future<void> _loadFromServer() async {
-    isLoading.value = true;
-    final data = await MiningApi.getStatus();
-    if (data != null && data['error'] == null) {
-      _applyStatusResponse(data);
-    }
-    isLoading.value = false;
-  }
-
-  // ── Refresh (call after any action) ────────────────────────────────────────
-  Future<void> refreshStatus() async {
-    final data = await MiningApi.getStatus();
-    if (data != null && data['error'] == null) {
-      _applyStatusResponse(data);
-    }
-  }
-
-  // ✅ FIXED: Maps actual backend response fields correctly
-  //
-  //   Backend returns:
-  //     { miningActive, minedCoins, equivalentUSD, withdrawableUSD }
-  //
-  void _applyStatusResponse(Map<String, dynamic> data) {
-    // Core fields from backend
-    miningActive.value  = data['miningActive'] == true;
-    minedCoins.value    = _toDouble(data['minedCoins']);
-    equivalentUSD.value = _toDouble(data['equivalentUSD']);
-    withdrawable.value  = _toDouble(data['withdrawableUSD']);
-
-    // Multipliers: backend /status doesn't expose these yet → keep at 1.0
-    // If a future /boost endpoint returns them in /status, map here:
-    boostMultiplier.value = _toDouble(data['boostMultiplier'] ?? 1.0);
-    aiMultiplier.value    = _toDouble(data['aiMultiplier'] ?? 1.0);
-    boostActive.value     = boostMultiplier.value > 1.0;
-
-    // Sync live earning baseline
-    _baseUsdAtSync = equivalentUSD.value;
-    _lastSyncTime  = DateTime.now();
-
-    // Derive local state from server truth
-    if (miningActive.value) {
-      isMining.value   = true;
-      dayStarted.value = true;
-      hasPaid.value    = true; // if mining is active, $18 was already paid
-      _startLiveTimer();
-      _startAutoSync();
-    } else {
-      // Mining not active — still check if they *can* start (need $18 balance)
-      // Backend doesn't return balance in /status; we infer from dayStarted flag
-      // hasPaid is set true once they successfully call start-day, or if we know
-      // their balance. For now, keep previous value or default true to allow attempt.
-      isMining.value = false;
-      // Don't reset dayStarted here — user may have paused locally
-    }
-
-    // Update progress
-    cycleProgress.value = (equivalentUSD.value / usdTarget).clamp(0.0, 1.0);
-    liveEarning.value   = equivalentUSD.value;
-  }
-
-  // ── Start Mining Day → POST /api/mining/start-day ──────────────────────────
-  Future<bool> startDay() async {
-    isLoading.value = true;
-    final data = await MiningApi.startDay();
-    isLoading.value = false;
-
-    if (data != null && data['error'] == null) {
-      // ✅ Backend returns: { message: "Mining started" }
-      dayStarted.value = true;
-      isMining.value   = true;
-      hasPaid.value    = true;
-      _baseUsdAtSync   = equivalentUSD.value;
-      _lastSyncTime    = DateTime.now();
-      _startLiveTimer();
-      _startAutoSync();
-
-      Get.snackbar('⛏ Mining Started', 'Earn \$100 to complete a cycle!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.accentGreen.withOpacity(0.9),
-          colorText: Colors.black);
-      return true;
-    } else {
-      // ✅ FIXED: Backend returns { error: "..." } for errors
-      String errMsg = 'Could not start mining';
-      try {
-        if (data?['body'] != null) {
-          final parsed = jsonDecode(data!['body']);
-          errMsg = parsed['error'] ?? parsed['message'] ?? errMsg;
-        } else if (data?['error'] is String) {
-          errMsg = data!['error'];
-        }
-      } catch (_) {}
-
-      Get.snackbar('❌ Error', errMsg,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8));
-      return false;
-    }
-  }
-
-  void toggleMining() {
-    if (!hasPaid.value && !dayStarted.value) {
-      // Try starting — let server validate the $18 balance
-      startDay();
-      return;
-    }
-    if (!dayStarted.value) {
-      startDay();
-    } else if (isMining.value) {
-      // Pause local timer (server session stays active)
-      _liveTimer?.cancel();
-      isMining.value = false;
-    } else {
-      // Resume local timer
-      isMining.value = true;
-      _lastSyncTime  = DateTime.now();
-      _startLiveTimer();
-    }
-  }
-
-  // ── Live USD counter (local estimation, based on backend formula) ───────────
-  void _startLiveTimer() {
-    _liveTimer?.cancel();
-    _liveTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (!isMining.value || _lastSyncTime == null) return;
-
-      final secsSinceSync = DateTime.now()
-              .difference(_lastSyncTime!)
-              .inMilliseconds /
-          1000.0;
-
-      final usdPerSecond =
-          basePerSecond * boostMultiplier.value * aiMultiplier.value;
-
-      liveEarning.value =
-          (_baseUsdAtSync + secsSinceSync * usdPerSecond).clamp(0.0, usdTarget);
-
-      cycleProgress.value = (liveEarning.value / usdTarget).clamp(0.0, 1.0);
-    });
-  }
-
-  // Auto-sync status every 30s while mining
-  void _startAutoSync() {
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (isMining.value) refreshStatus();
-    });
-  }
-
-  // ── Claim → POST /api/mining/claim ─────────────────────────────────────────
-  //
-  // ✅ FIXED: Backend returns { message, coins, usd, withdrawable }
-  //   NOT { earned, withdrawableAdded, totalWithdrawable }
-  //
-  // We map them so the success dialog still works:
-  //   earned            ← liveEarning.value (what user saw)
-  //   withdrawableAdded ← new withdrawable - old withdrawable (if cycle complete)
-  //   totalWithdrawable ← data['withdrawable']
-  //
-  Future<Map<String, dynamic>?> claimReward() async {
-    isLoading.value = true;
-    final data = await MiningApi.claim();
-    isLoading.value = false;
-
-    if (data != null && data['error'] == null) {
-      // ✅ Map backend fields to what the dialog expects
-      final double prevWithdrawable = withdrawable.value;
-      final double newWithdrawable  = _toDouble(data['withdrawable']);
-      final double earnedUsd        = liveEarning.value; // what user saw live
-      final double withdrawableAdded =
-          (newWithdrawable - prevWithdrawable).clamp(0.0, double.infinity);
-
-      // Check if cycle completed (backend resets coins to 0 and adds $100)
-      final bool cycleComplete = data['message']
-              ?.toString()
-              .toLowerCase()
-              .contains('complete') ??
-          false;
-
-      // Reset local state
-      _liveTimer?.cancel();
-      _syncTimer?.cancel();
-      isMining.value   = false;
-      dayStarted.value = false;
-      _lastSyncTime    = null;
-
-      // Refresh from server to get updated state
-      await refreshStatus();
-
-      final String msg = cycleComplete
-          ? '🎉 Cycle Complete! \$100 added!'
-          : '✅ Claim Success';
-
-      Get.snackbar(msg, 'Earned: \$${earnedUsd.toStringAsFixed(4)}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.accentGreen.withOpacity(0.9),
-          colorText: Colors.black);
-
-      // Return in the shape the dialog expects
-      return {
-        'earned': earnedUsd,
-        'withdrawableAdded': withdrawableAdded,
-        'totalWithdrawable': newWithdrawable,
-        'cycleComplete': cycleComplete,
-      };
-    } else {
-      // ✅ FIXED: Backend returns { error: "..." } for errors
-      String errMsg = 'Claim failed';
-      try {
-        if (data?['body'] != null) {
-          final parsed = jsonDecode(data!['body']);
-          errMsg = parsed['error'] ?? parsed['message'] ?? errMsg;
-        } else if (data?['error'] is String) {
-          errMsg = data!['error'];
-        }
-      } catch (_) {}
-
-      // Handle "Wait before claim" (60s cooldown)
-      if (errMsg.toLowerCase().contains('wait')) {
-        Get.snackbar('⏳ Too Soon', 'Wait at least 60 seconds between claims',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange.withOpacity(0.85));
-        return null;
-      }
-
-      // Handle "No active session"
-      if (errMsg.toLowerCase().contains('no active')) {
-        dayStarted.value = false;
-        isMining.value   = false;
-        _liveTimer?.cancel();
-        _syncTimer?.cancel();
-        _lastSyncTime = null;
-      }
-
-      Get.snackbar('❌ Claim Failed', errMsg,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8));
-      return null;
-    }
-  }
-
-  // Helper
-  double _toDouble(dynamic v) => double.tryParse(v?.toString() ?? '0') ?? 0.0;
-
-  @override
-  void onClose() {
-    _liveTimer?.cancel();
-    _syncTimer?.cancel();
-    super.onClose();
-  }
-}
-
-// ===================== SCREEN =====================
+// ─── Screen ───────────────────────────────────────────────────────────────────
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
   @override
@@ -476,7 +42,281 @@ class MiningScreen extends StatefulWidget {
 
 class _MiningScreenState extends State<MiningScreen>
     with TickerProviderStateMixin {
-  final MiningController controller = Get.put(MiningController());
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  bool _isLoading = true;
+  bool _hasError  = false;
+
+  // From GET /api/mining/status
+  bool   _miningActive    = false;
+  double _minedCoins      = 0.0;
+  double _equivalentUSD   = 0.0;
+  double _withdrawableUSD = 0.0;
+
+  // Multipliers (default 1.0 — backend /status doesn't expose these yet)
+  double _boostMultiplier = 1.0;
+  double _aiMultiplier    = 1.0;
+  bool   _boostActive     = false;
+  double _boostAmount     = 0.0;
+
+  // Local UI state
+  bool   _dayStarted    = false;
+  bool   _isMining      = false;
+
+  // Live earning (local estimate, synced from server)
+  double   _liveEarning   = 0.0;
+  double   _cycleProgress = 0.0;
+  double   _baseUsdAtSync = 0.0;
+  DateTime? _lastSyncTime;
+
+  Timer? _liveTimer;
+  Timer? _syncTimer;
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchStatus());
+  }
+
+  @override
+  void dispose() {
+    _liveTimer?.cancel();
+    _syncTimer?.cancel();
+    super.dispose();
+  }
+
+  // ── Token helper — exactly like ReferScreen ────────────────────────────────
+  String? _getToken() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    return auth.token;
+  }
+
+  Map<String, String> _headers(String token) => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+  double _toDouble(dynamic v) =>
+      double.tryParse(v?.toString() ?? '0') ?? 0.0;
+
+  // ── GET /api/mining/status ────────────────────────────────────────────────
+  Future<void> _fetchStatus() async {
+    if (!mounted) return;
+    setState(() { _isLoading = true; _hasError = false; });
+
+    try {
+      // ✅ Same as ReferScreen — get token from AuthProvider
+      final token = _getToken();
+      if (token == null) {
+        if (mounted) setState(() { _isLoading = false; _hasError = true; });
+        return;
+      }
+
+      final res = await http.get(
+        Uri.parse('https://web3.ltcminematrix.com/api/mining/status'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        _applyStatus(data);
+        setState(() => _isLoading = false);
+      } else {
+        setState(() { _isLoading = false; _hasError = true; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _isLoading = false; _hasError = true; });
+    }
+  }
+
+  // Backend returns: { miningActive, minedCoins, equivalentUSD, withdrawableUSD }
+  void _applyStatus(Map<String, dynamic> data) {
+    _miningActive    = data['miningActive'] == true;
+    _minedCoins      = _toDouble(data['minedCoins']);
+    _equivalentUSD   = _toDouble(data['equivalentUSD']);
+    _withdrawableUSD = _toDouble(data['withdrawableUSD']);
+
+    _boostMultiplier = _toDouble(data['boostMultiplier'] ?? 1.0);
+    _aiMultiplier    = _toDouble(data['aiMultiplier'] ?? 1.0);
+    _boostActive     = _boostMultiplier > 1.0;
+
+    _baseUsdAtSync = _equivalentUSD;
+    _lastSyncTime  = DateTime.now();
+    _liveEarning   = _equivalentUSD;
+    _cycleProgress = (_equivalentUSD / kUsdTarget).clamp(0.0, 1.0);
+
+    if (_miningActive) {
+      _dayStarted = true;
+      _isMining   = true;
+      _startLiveTimer();
+      _startAutoSync();
+    }
+  }
+
+  void _startAutoSync() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (_isMining) _fetchStatus();
+    });
+  }
+
+  void _startLiveTimer() {
+    _liveTimer?.cancel();
+    _liveTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!_isMining || _lastSyncTime == null || !mounted) return;
+      final secs = DateTime.now()
+              .difference(_lastSyncTime!)
+              .inMilliseconds /
+          1000.0;
+      final earned =
+          (_baseUsdAtSync + secs * kBasePerSec * _boostMultiplier * _aiMultiplier)
+              .clamp(0.0, kUsdTarget);
+      setState(() {
+        _liveEarning   = earned;
+        _cycleProgress = (earned / kUsdTarget).clamp(0.0, 1.0);
+      });
+    });
+  }
+
+  // ── POST /api/mining/start-day ────────────────────────────────────────────
+  Future<void> _startDay() async {
+    // ✅ Same pattern as ReferScreen
+    final token = _getToken();
+    if (token == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final res = await http.post(
+        Uri.parse('https://web3.ltcminematrix.com/api/mining/start-day'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (res.statusCode == 200) {
+        // Backend returns: { message: "Mining started" }
+        setState(() {
+          _dayStarted    = true;
+          _isMining      = true;
+          _baseUsdAtSync = _equivalentUSD;
+          _lastSyncTime  = DateTime.now();
+        });
+        _startLiveTimer();
+        _startAutoSync();
+        _showSnack('⛏ Mining Started', 'Earn \$100 to complete a cycle!',
+            AppColors.accentGreen, Colors.black);
+      } else {
+        // Backend returns: { error: "Already active" | "Need $18 balance" }
+        final body = jsonDecode(res.body);
+        final msg = body['error'] ?? body['message'] ?? 'Could not start mining';
+        _showSnack('❌ Error', msg, Colors.red, Colors.white);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnack('❌ Error', 'Connection failed', Colors.red, Colors.white);
+      }
+    }
+  }
+
+  void _toggleMining() {
+    if (!_dayStarted) {
+      _startDay();
+    } else if (_isMining) {
+      _liveTimer?.cancel();
+      setState(() => _isMining = false);
+    } else {
+      setState(() {
+        _isMining      = true;
+        _baseUsdAtSync = _liveEarning;
+        _lastSyncTime  = DateTime.now();
+      });
+      _startLiveTimer();
+    }
+  }
+
+  // ── POST /api/mining/claim ────────────────────────────────────────────────
+  Future<void> _doClaim() async {
+    // ✅ Same pattern as ReferScreen
+    final token = _getToken();
+    if (token == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final res = await http.post(
+        Uri.parse('https://web3.ltcminematrix.com/api/mining/claim'),
+        headers: _headers(token),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (res.statusCode == 200) {
+        // Backend returns: { message, coins, usd, withdrawable }
+        final data = jsonDecode(res.body);
+
+        final double prevW   = _withdrawableUSD;
+        final double newW    = _toDouble(data['withdrawable']);
+        final double earned  = _liveEarning;
+        final double added   = (newW - prevW).clamp(0.0, double.infinity);
+        final bool complete  = (data['message'] ?? '')
+            .toString().toLowerCase().contains('complete');
+
+        _liveTimer?.cancel();
+        _syncTimer?.cancel();
+        setState(() {
+          _dayStarted   = false;
+          _isMining     = false;
+          _lastSyncTime = null;
+        });
+
+        await _fetchStatus();
+
+        if (mounted) {
+          _showClaimSuccessDialog(earned, added, newW);
+          if (complete) {
+            _showSnack('🎉 Cycle Complete!', '\$100 added to withdrawable!',
+                AppColors.accentGreen, Colors.black);
+          }
+        }
+      } else {
+        // Backend returns: { error: "No active session" | "Wait before claim" }
+        final body = jsonDecode(res.body);
+        final msg  = body['error'] ?? body['message'] ?? 'Claim failed';
+        if (msg.toLowerCase().contains('wait')) {
+          _showSnack('⏳ Too Soon',
+              'Wait at least 60 seconds between claims', Colors.orange, Colors.white);
+        } else {
+          if (msg.toLowerCase().contains('no active')) {
+            _liveTimer?.cancel();
+            _syncTimer?.cancel();
+            setState(() { _dayStarted = false; _isMining = false; });
+          }
+          _showSnack('❌ Claim Failed', msg, Colors.red, Colors.white);
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnack('❌ Error', 'Connection failed', Colors.red, Colors.white);
+      }
+    }
+  }
+
+  void _showSnack(String title, String msg, Color bg, Color textColor) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$title  $msg',
+          style: GoogleFonts.inter(
+              color: textColor, fontWeight: FontWeight.bold)),
+      backgroundColor: bg,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+    ));
+  }
 
   double _dw(BuildContext ctx,
           {double pct = 0.84, double min = 260, double max = 340}) =>
@@ -485,9 +325,11 @@ class _MiningScreenState extends State<MiningScreen>
           {double pct = 0.45, double min = 240, double max = 360}) =>
       (MediaQuery.of(ctx).size.height * pct).clamp(min, max);
 
+  // ============================================================ BUILD ========
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           AnimatedBackground(
@@ -502,58 +344,53 @@ class _MiningScreenState extends State<MiningScreen>
             child: Container(),
           ),
           SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: LayoutBuilder(
-                builder: (context, constraints) => _buildMiningContent(),
-              ),
-            ),
-          ),
-          // Loading overlay
-          Obx(() => controller.isLoading.value
-              ? Container(
-                  color: Colors.black45,
-                  child: const Center(
+            child: _isLoading
+                ? const Center(
                     child: CircularProgressIndicator(
-                        color: AppColors.accentGreen),
-                  ),
-                )
-              : const SizedBox.shrink()),
+                        color: AppColors.accentGreen))
+                : _hasError
+                    ? _buildError()
+                    : RefreshIndicator(
+                        color: AppColors.accentGreen,
+                        backgroundColor: AppColors.bgCard,
+                        onRefresh: _fetchStatus,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.symmetric(horizontal: 18.w),
+                          child: Column(
+                            children: [
+                              SizedBox(height: 15.h),
+                              _buildBalanceSection(),
+                              SizedBox(height: 10.h),
+                              _buildCycleProgressSection(),
+                              SizedBox(height: 8.h),
+                              if (_boostActive) ...[
+                                _buildBoostInfoSection(),
+                                SizedBox(height: 8.h),
+                              ],
+                              if (_withdrawableUSD > 0) ...[
+                                _buildWithdrawableSection(),
+                                SizedBox(height: 8.h),
+                              ],
+                              SizedBox(height: 16.h),
+                              _buildMiningOrb(),
+                              SizedBox(height: 20.h),
+                              _buildCycleProgressBar(),
+                              SizedBox(height: 25.h),
+                              _buildActionButtons(),
+                              SizedBox(height: 12.h),
+                              _buildStatsGrid(),
+                              SizedBox(height: 30.h),
+                            ],
+                          ),
+                        ),
+                      ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMiningContent() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 18.w),
-      child: Column(
-        children: [
-          SizedBox(height: 15.h),
-          _buildBalanceSection(),
-          SizedBox(height: 10.h),
-          _buildCycleProgressSection(),
-          SizedBox(height: 8.h),
-          Obx(() => controller.boostActive.value
-              ? _buildBoostInfoSection()
-              : const SizedBox.shrink()),
-          SizedBox(height: 8.h),
-          _buildWithdrawableSection(),
-          SizedBox(height: 24.h),
-          _buildMiningOrb(),
-          SizedBox(height: 20.h),
-          _buildCycleProgressBar(),
-          SizedBox(height: 25.h),
-          _buildActionButtons(),
-          SizedBox(height: 12.h),
-          _buildStatsGrid(),
-          SizedBox(height: 20.h),
-        ],
-      ),
-    );
-  }
-
-  // ─── Balance Section ────────────────────────────────────────────────────────
   Widget _buildBalanceSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -573,425 +410,339 @@ class _MiningScreenState extends State<MiningScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            "LIVE EARNINGS",
-            style: GoogleFonts.inter(
-                color: Colors.white54,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2),
-          ),
+          Text("LIVE EARNINGS",
+              style: GoogleFonts.inter(
+                  color: Colors.white54, fontSize: 10.sp,
+                  fontWeight: FontWeight.w600, letterSpacing: 1.2)),
           SizedBox(height: 4.h),
-          Obx(() => Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "\$${controller.liveEarning.value.toStringAsFixed(4)}",
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text("\$${_liveEarning.toStringAsFixed(4)}",
+                  style: GoogleFonts.inter(
+                      color: Colors.white, fontSize: 28.sp,
+                      fontWeight: FontWeight.bold)),
+              SizedBox(width: 5.w),
+              Padding(
+                padding: EdgeInsets.only(bottom: 3.h),
+                child: Text("USD",
                     style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 28.sp,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(width: 5.w),
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 3.h),
-                    child: Text(
-                      "USD",
-                      style: GoogleFonts.inter(
-                          color: AppColors.accentGreen,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ],
-              )),
+                        color: AppColors.accentGreen,
+                        fontSize: 14.sp, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
           SizedBox(height: 5.h),
-          Obx(() {
-            final pct = (controller.liveEarning.value /
-                    MiningController.usdTarget *
-                    100)
-                .clamp(0.0, 100.0);
-            return Text(
-              "Withdrawable: \$${controller.withdrawable.value.toStringAsFixed(2)}  |  ${pct.toStringAsFixed(1)}% to \$100",
-              style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
-            );
-          }),
+          Text(
+            "Withdrawable: \$${_withdrawableUSD.toStringAsFixed(2)}"
+            "  |  ${(_liveEarning / kUsdTarget * 100).clamp(0, 100).toStringAsFixed(1)}% to \$100",
+            style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+          ),
         ],
       ),
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
-  // ─── Cycle Progress Section ─────────────────────────────────────────────────
   Widget _buildCycleProgressSection() {
-    return Obx(() {
-      final prog   = controller.cycleProgress.value;
-      final earned = controller.liveEarning.value;
-      final mining = controller.isMining.value;
+    String statusText;
+    Color  statusColor;
+    if (_isMining) {
+      statusText  = "Mining in progress...";
+      statusColor = AppColors.accentGreen;
+    } else if (_dayStarted) {
+      statusText  = "Paused — tap ORB to resume";
+      statusColor = Colors.orange;
+    } else {
+      statusText  = "Tap ORB to start mining";
+      statusColor = AppColors.accentGreen.withOpacity(0.85);
+    }
 
-      String statusText;
-      Color statusColor;
-      if (mining) {
-        statusText  = "Mining in progress...";
-        statusColor = AppColors.accentGreen;
-      } else if (controller.dayStarted.value) {
-        statusText  = "Paused — tap ORB to resume";
-        statusColor = Colors.orange;
-      } else {
-        statusText  = "Tap ORB to start mining";
-        statusColor = AppColors.accentGreen.withOpacity(0.85);
-      }
-
-      return GlassmorphicContainer(
-        width: double.infinity,
-        height: 82.h,
-        borderRadius: 16.r,
-        blur: 10,
-        alignment: Alignment.center,
-        border: 0.5,
-        linearGradient: LinearGradient(colors: [
-          AppColors.accentGreen.withOpacity(0.06),
-          Colors.white.withOpacity(0.02),
-        ]),
-        borderGradient: LinearGradient(colors: [
-          AppColors.accentGreen.withOpacity(0.35),
-          Colors.transparent,
-        ]),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(children: [
-                    Icon(CupertinoIcons.chart_bar_fill,
-                        color: AppColors.accentGreen, size: 10.sp),
-                    SizedBox(width: 4.w),
-                    Text(
-                      "\$18 → \$100 CYCLE",
-                      style: GoogleFonts.inter(
-                        color: AppColors.accentGreen,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ]),
-                  Flexible(
-                    child: Text(
-                      "\$${earned.toStringAsFixed(3)} / \$${MiningController.usdTarget.toStringAsFixed(0)}",
-                      style:
-                          GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              LinearPercentIndicator(
-                lineHeight: 5.h,
-                percent: prog.clamp(0.0, 1.0),
-                backgroundColor: Colors.white10,
-                linearGradient: const LinearGradient(
-                  colors: [AppColors.accentGreen, AppColors.accentPurple],
-                ),
-                barRadius: const Radius.circular(10),
-                padding: EdgeInsets.zero,
-              ),
-              SizedBox(height: 5.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "${(prog * 100).toStringAsFixed(2)}% complete",
-                    style:
-                        GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
-                  ),
-                  Flexible(
-                    child: Text(
-                      statusText,
-                      style: GoogleFonts.inter(
-                        color: statusColor,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    });
-  }
-
-  // ─── Boost Info Section ─────────────────────────────────────────────────────
-  Widget _buildBoostInfoSection() {
-    return Obx(() {
-      final multiplier = controller.boostMultiplier.value;
-      final amount     = controller.boostAmount.value;
-      return GlassmorphicContainer(
-        width: double.infinity,
-        height: 72.h,
-        borderRadius: 16.r,
-        blur: 10,
-        alignment: Alignment.center,
-        border: 0.5,
-        linearGradient: LinearGradient(colors: [
-          AppColors.accentPurple.withOpacity(0.08),
-          Colors.white.withOpacity(0.02),
-        ]),
-        borderGradient: LinearGradient(colors: [
-          AppColors.accentPurple.withOpacity(0.4),
-          Colors.transparent,
-        ]),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(children: [
-                    Icon(CupertinoIcons.rocket_fill,
-                        color: AppColors.accentPurple, size: 10.sp),
-                    SizedBox(width: 4.w),
-                    Text(
-                      "BOOST ACTIVE  |  \$${amount.toStringAsFixed(0)} invested",
-                      style: GoogleFonts.inter(
-                          color: AppColors.accentPurple,
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8),
-                    ),
-                  ]),
-                  Text(
-                    "${multiplier.toStringAsFixed(2)}x speed",
-                    style:
-                        GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              LinearPercentIndicator(
-                lineHeight: 5.h,
-                percent: ((multiplier - 1.0) /
-                        (MiningController.normalDays /
-                                MiningController.boostDays -
-                            1.0))
-                    .clamp(0.0, 1.0),
-                backgroundColor: Colors.white10,
-                linearGradient: const LinearGradient(
-                    colors: [AppColors.accentPurple, Color(0xFFCC44FF)]),
-                barRadius: const Radius.circular(10),
-                padding: EdgeInsets.zero,
-              ),
-              SizedBox(height: 5.h),
-              Text(
-                "360 days → ${MiningController.boostDays} days  |  AI multiplier: ${controller.aiMultiplier.value.toStringAsFixed(2)}x",
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: 82.h,
+      borderRadius: 16.r,
+      blur: 10,
+      alignment: Alignment.center,
+      border: 0.5,
+      linearGradient: LinearGradient(colors: [
+        AppColors.accentGreen.withOpacity(0.06),
+        Colors.white.withOpacity(0.02),
+      ]),
+      borderGradient: LinearGradient(colors: [
+        AppColors.accentGreen.withOpacity(0.35),
+        Colors.transparent,
+      ]),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              Icon(CupertinoIcons.chart_bar_fill,
+                  color: AppColors.accentGreen, size: 10.sp),
+              SizedBox(width: 4.w),
+              Text("\$18 → \$100 CYCLE",
+                  style: GoogleFonts.inter(
+                      color: AppColors.accentGreen, fontSize: 9.sp,
+                      fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+            ]),
+            Flexible(
+              child: Text(
+                "\$${_liveEarning.toStringAsFixed(3)} / \$${kUsdTarget.toStringAsFixed(0)}",
                 style:
-                    GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+                    GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
+          ]),
+          SizedBox(height: 6.h),
+          LinearPercentIndicator(
+            lineHeight: 5.h,
+            percent: _cycleProgress.clamp(0.0, 1.0),
+            backgroundColor: Colors.white10,
+            linearGradient: const LinearGradient(
+                colors: [AppColors.accentGreen, AppColors.accentPurple]),
+            barRadius: const Radius.circular(10),
+            padding: EdgeInsets.zero,
           ),
-        ),
-      );
-    });
+          SizedBox(height: 5.h),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text("${(_cycleProgress * 100).toStringAsFixed(2)}% complete",
+                style:
+                    GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
+            Flexible(
+              child: Text(statusText,
+                  style: GoogleFonts.inter(
+                      color: statusColor, fontSize: 9.sp,
+                      fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ]),
+        ]),
+      ),
+    );
   }
 
-  // ─── Withdrawable Section ───────────────────────────────────────────────────
+  Widget _buildBoostInfoSection() {
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: 72.h,
+      borderRadius: 16.r,
+      blur: 10,
+      alignment: Alignment.center,
+      border: 0.5,
+      linearGradient: LinearGradient(colors: [
+        AppColors.accentPurple.withOpacity(0.08),
+        Colors.white.withOpacity(0.02),
+      ]),
+      borderGradient: LinearGradient(colors: [
+        AppColors.accentPurple.withOpacity(0.4),
+        Colors.transparent,
+      ]),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              Icon(CupertinoIcons.rocket_fill,
+                  color: AppColors.accentPurple, size: 10.sp),
+              SizedBox(width: 4.w),
+              Text(
+                  "BOOST ACTIVE  |  \$${_boostAmount.toStringAsFixed(0)} invested",
+                  style: GoogleFonts.inter(
+                      color: AppColors.accentPurple, fontSize: 9.sp,
+                      fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+            ]),
+            Text("${_boostMultiplier.toStringAsFixed(2)}x speed",
+                style:
+                    GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp)),
+          ]),
+          SizedBox(height: 6.h),
+          LinearPercentIndicator(
+            lineHeight: 5.h,
+            percent: ((_boostMultiplier - 1.0) /
+                    (kNormalDays / kBoostDays - 1.0))
+                .clamp(0.0, 1.0),
+            backgroundColor: Colors.white10,
+            linearGradient: const LinearGradient(
+                colors: [AppColors.accentPurple, Color(0xFFCC44FF)]),
+            barRadius: const Radius.circular(10),
+            padding: EdgeInsets.zero,
+          ),
+          SizedBox(height: 5.h),
+          Text(
+            "360 days → $kBoostDays days  |  AI: ${_aiMultiplier.toStringAsFixed(2)}x",
+            style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _buildWithdrawableSection() {
-    return Obx(() {
-      final w = controller.withdrawable.value;
-      if (w <= 0) return const SizedBox.shrink();
-      return GlassmorphicContainer(
-        width: double.infinity,
-        height: 58.h,
-        borderRadius: 14.r,
-        blur: 10,
-        alignment: Alignment.center,
-        border: 0.5,
-        linearGradient: LinearGradient(colors: [
-          AppColors.accentLeaf.withOpacity(0.08),
-          Colors.white.withOpacity(0.02),
-        ]),
-        borderGradient: LinearGradient(colors: [
-          AppColors.accentLeaf.withOpacity(0.4),
-          Colors.transparent,
-        ]),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14.w),
-          child: Row(
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: 58.h,
+      borderRadius: 14.r,
+      blur: 10,
+      alignment: Alignment.center,
+      border: 0.5,
+      linearGradient: LinearGradient(colors: [
+        AppColors.accentLeaf.withOpacity(0.08),
+        Colors.white.withOpacity(0.02),
+      ]),
+      borderGradient: LinearGradient(colors: [
+        AppColors.accentLeaf.withOpacity(0.4),
+        Colors.transparent,
+      ]),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w),
+        child: Row(children: [
+          Icon(CupertinoIcons.checkmark_seal_fill,
+              color: AppColors.accentLeaf, size: 16.sp),
+          SizedBox(width: 8.w),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(CupertinoIcons.checkmark_seal_fill,
-                  color: AppColors.accentLeaf, size: 16.sp),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("WITHDRAWABLE BALANCE",
-                        style: GoogleFonts.inter(
-                            color: AppColors.accentLeaf,
-                            fontSize: 8.sp,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8)),
-                    Text("\$${w.toStringAsFixed(2)} USD",
-                        style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
+              Text("WITHDRAWABLE BALANCE",
+                  style: GoogleFonts.inter(
+                      color: AppColors.accentLeaf, fontSize: 8.sp,
+                      fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+              Text("\$${_withdrawableUSD.toStringAsFixed(2)} USD",
+                  style: GoogleFonts.inter(
+                      color: Colors.white, fontSize: 13.sp,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
-      );
-    });
+        ]),
+      ),
+    );
   }
 
-  // ─── Mining Orb ─────────────────────────────────────────────────────────────
   Widget _buildMiningOrb() {
-    return Obx(() {
-      final active  = controller.isMining.value;
-      final started = controller.dayStarted.value;
-      final boosted = controller.boostActive.value;
-      final isPaused = started && !active;
+    final isPaused = _dayStarted && !_isMining;
 
-      IconData    orbIcon;
-      String      orbLabel;
-      String      orbSubLabel = '';
-      Color       orbIconColor;
-      List<Color> borderColors;
+    IconData    orbIcon;
+    String      orbLabel;
+    String      orbSub = '';
+    Color       orbIconColor;
+    List<Color> borderColors;
 
-      if (active && boosted) {
-        orbIcon      = CupertinoIcons.rocket_fill;
-        orbLabel     = "BOOSTED";
-        orbSubLabel  = "MINING";
-        orbIconColor = AppColors.accentPurple;
-        borderColors = [AppColors.accentPurple, AppColors.accentGreen];
-      } else if (active) {
-        orbIcon      = CupertinoIcons.hammer_fill;
-        orbLabel     = "MINING";
-        orbIconColor = AppColors.accentGreen;
-        borderColors = [AppColors.accentGreen, AppColors.accentPurple];
-      } else if (isPaused) {
-        orbIcon      = CupertinoIcons.pause_fill;
-        orbLabel     = "PAUSED";
-        orbSubLabel  = "Tap to resume";
-        orbIconColor = Colors.orange;
-        borderColors = [Colors.orange.withOpacity(0.6), Colors.white10];
-      } else {
-        orbIcon      = CupertinoIcons.bolt_fill;
-        orbLabel     = "START";
-        orbSubLabel  = "Tap to mine";
-        orbIconColor = Colors.white70;
-        borderColors = [Colors.white38, Colors.white10];
-      }
+    if (_isMining && _boostActive) {
+      orbIcon      = CupertinoIcons.rocket_fill;
+      orbLabel     = "BOOSTED";
+      orbSub       = "MINING";
+      orbIconColor = AppColors.accentPurple;
+      borderColors = [AppColors.accentPurple, AppColors.accentGreen];
+    } else if (_isMining) {
+      orbIcon      = CupertinoIcons.hammer_fill;
+      orbLabel     = "MINING";
+      orbIconColor = AppColors.accentGreen;
+      borderColors = [AppColors.accentGreen, AppColors.accentPurple];
+    } else if (isPaused) {
+      orbIcon      = CupertinoIcons.pause_fill;
+      orbLabel     = "PAUSED";
+      orbSub       = "Tap to resume";
+      orbIconColor = Colors.orange;
+      borderColors = [Colors.orange.withOpacity(0.6), Colors.white10];
+    } else {
+      orbIcon      = CupertinoIcons.bolt_fill;
+      orbLabel     = "START";
+      orbSub       = "Tap to mine";
+      orbIconColor = Colors.white70;
+      borderColors = [Colors.white38, Colors.white10];
+    }
 
-      return GestureDetector(
-        onTap: controller.toggleMining,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (active)
-              Container(
-                width: 160.w,
-                height: 160.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: (boosted
-                            ? AppColors.accentPurple
-                            : AppColors.accentGreen)
-                        .withOpacity(0.5),
-                    width: 2,
-                  ),
+    return GestureDetector(
+      onTap: _toggleMining,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (_isMining)
+            Container(
+              width: 160.w,
+              height: 160.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: (_boostActive
+                          ? AppColors.accentPurple
+                          : AppColors.accentGreen)
+                      .withOpacity(0.5),
+                  width: 2,
                 ),
-              )
-                  .animate(onPlay: (c) => c.repeat())
-                  .rotate(duration: const Duration(seconds: 3))
-                  .scale(
-                      begin: const Offset(1, 1),
-                      end: const Offset(1.1, 1.1),
-                      curve: Curves.easeInOutSine)
-                  .then()
-                  .scale(begin: const Offset(1.1, 1.1), end: const Offset(1, 1)),
-            GlassmorphicContainer(
-              width: 140.w,
-              height: 140.w,
-              borderRadius: 70.w,
-              blur: 15,
-              alignment: Alignment.center,
-              border: 1,
-              linearGradient: LinearGradient(colors: [
-                Colors.black.withOpacity(0.6),
-                Colors.black.withOpacity(0.3),
-              ]),
-              borderGradient: LinearGradient(colors: borderColors),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(orbIcon, color: orbIconColor, size: 35.sp),
-                  SizedBox(height: 5.h),
-                  Text(
-                    orbLabel,
-                    style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w900),
-                  ),
-                  if (orbSubLabel.isNotEmpty) ...[
-                    SizedBox(height: 2.h),
-                    Text(orbSubLabel,
-                        style: GoogleFonts.inter(
-                            color: Colors.white38, fontSize: 8.sp)),
-                  ],
-                ],
               ),
-            ).animate(target: active ? 1 : 0).shimmer(
-                duration: const Duration(milliseconds: 1500),
-                color: Colors.white24),
-          ],
-        ),
-      );
-    });
+            )
+                .animate(onPlay: (c) => c.repeat())
+                .rotate(duration: const Duration(seconds: 3))
+                .scale(
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.1, 1.1),
+                    curve: Curves.easeInOutSine)
+                .then()
+                .scale(
+                    begin: const Offset(1.1, 1.1),
+                    end: const Offset(1, 1)),
+          GlassmorphicContainer(
+            width: 140.w,
+            height: 140.w,
+            borderRadius: 70.w,
+            blur: 15,
+            alignment: Alignment.center,
+            border: 1,
+            linearGradient: LinearGradient(colors: [
+              Colors.black.withOpacity(0.6),
+              Colors.black.withOpacity(0.3),
+            ]),
+            borderGradient: LinearGradient(colors: borderColors),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(orbIcon, color: orbIconColor, size: 35.sp),
+                SizedBox(height: 5.h),
+                Text(orbLabel,
+                    style: GoogleFonts.inter(
+                        color: Colors.white, fontSize: 12.sp,
+                        fontWeight: FontWeight.w900)),
+                if (orbSub.isNotEmpty) ...[
+                  SizedBox(height: 2.h),
+                  Text(orbSub,
+                      style: GoogleFonts.inter(
+                          color: Colors.white38, fontSize: 8.sp)),
+                ],
+              ],
+            ),
+          ).animate(target: _isMining ? 1 : 0).shimmer(
+              duration: const Duration(milliseconds: 1500),
+              color: Colors.white24),
+        ],
+      ),
+    );
   }
 
   Widget _buildCycleProgressBar() {
-    return Obx(() => LinearPercentIndicator(
-          lineHeight: 6.h,
-          percent: controller.cycleProgress.value.clamp(0.0, 1.0),
-          backgroundColor: Colors.white10,
-          linearGradient: const LinearGradient(
-              colors: [AppColors.accentPurple, AppColors.accentGreen]),
-          barRadius: const Radius.circular(10),
-          padding: EdgeInsets.zero,
-        ));
+    return LinearPercentIndicator(
+      lineHeight: 6.h,
+      percent: _cycleProgress.clamp(0.0, 1.0),
+      backgroundColor: Colors.white10,
+      linearGradient: const LinearGradient(
+          colors: [AppColors.accentPurple, AppColors.accentGreen]),
+      barRadius: const Radius.circular(10),
+      padding: EdgeInsets.zero,
+    );
   }
 
-  // ─── Action Buttons ─────────────────────────────────────────────────────────
   Widget _buildActionButtons() {
-    return Obx(() {
-      final claimable = controller.canClaim;
-      return Row(
-        children: [
-          Expanded(child: _claimButton(claimable)),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: _smallButton("REFRESH", CupertinoIcons.arrow_clockwise,
-                AppColors.accentLeaf, () => controller.refreshStatus()),
-          ),
-        ],
-      );
-    });
+    final claimable = _dayStarted && _isMining;
+    return Row(children: [
+      Expanded(child: _claimButton(claimable)),
+      SizedBox(width: 8.w),
+      Expanded(
+        child: _smallButton("REFRESH", CupertinoIcons.arrow_clockwise,
+            AppColors.accentLeaf, _fetchStatus),
+      ),
+    ]);
   }
 
   Widget _claimButton(bool active) {
@@ -1014,20 +765,16 @@ class _MiningScreenState extends State<MiningScreen>
           active ? AppColors.accentGreen : Colors.white24,
           Colors.transparent,
         ]),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(CupertinoIcons.drop_fill,
-                color: active ? AppColors.accentGreen : Colors.white38,
-                size: 16.sp),
-            SizedBox(width: 5.w),
-            Text("CLAIM",
-                style: GoogleFonts.inter(
-                    color: active ? AppColors.accentGreen : Colors.white38,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(CupertinoIcons.drop_fill,
+              color: active ? AppColors.accentGreen : Colors.white38,
+              size: 16.sp),
+          SizedBox(width: 5.w),
+          Text("CLAIM",
+              style: GoogleFonts.inter(
+                  color: active ? AppColors.accentGreen : Colors.white38,
+                  fontSize: 11.sp, fontWeight: FontWeight.bold)),
+        ]),
       ),
     );
   }
@@ -1047,48 +794,32 @@ class _MiningScreenState extends State<MiningScreen>
             colors: [Colors.white.withOpacity(0.05), Colors.transparent]),
         borderGradient:
             LinearGradient(colors: [Colors.white24, Colors.transparent]),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 16.sp),
-            SizedBox(width: 5.w),
-            Text(label,
-                style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, color: color, size: 16.sp),
+          SizedBox(width: 5.w),
+          Text(label,
+              style: GoogleFonts.inter(
+                  color: Colors.white, fontSize: 11.sp,
+                  fontWeight: FontWeight.bold)),
+        ]),
       ),
     );
   }
 
-  // ─── Stats Grid ─────────────────────────────────────────────────────────────
   Widget _buildStatsGrid() {
-    return Obx(() => Row(
-          children: [
-            Expanded(
-                child: _statBox(
-              "BOOST",
-              "${controller.boostMultiplier.value.toStringAsFixed(2)}x",
-              AppColors.accentPurple,
-            )),
-            SizedBox(width: 8.w),
-            Expanded(
-                child: _statBox(
-              "AI MULT",
-              "${controller.aiMultiplier.value.toStringAsFixed(2)}x",
-              Colors.orangeAccent,
-            )),
-            SizedBox(width: 8.w),
-            Expanded(
-                child: _statBox(
-              "WITHDRAW",
-              "\$${controller.withdrawable.value.toStringAsFixed(2)}",
-              AppColors.accentLeaf,
-            )),
-          ],
-        ));
+    return Row(children: [
+      Expanded(
+          child: _statBox("BOOST",
+              "${_boostMultiplier.toStringAsFixed(2)}x", AppColors.accentPurple)),
+      SizedBox(width: 8.w),
+      Expanded(
+          child: _statBox("AI MULT",
+              "${_aiMultiplier.toStringAsFixed(2)}x", Colors.orangeAccent)),
+      SizedBox(width: 8.w),
+      Expanded(
+          child: _statBox("WITHDRAW",
+              "\$${_withdrawableUSD.toStringAsFixed(2)}", AppColors.accentLeaf)),
+    ]);
   }
 
   Widget _statBox(String label, String value, Color color) {
@@ -1098,32 +829,25 @@ class _MiningScreenState extends State<MiningScreen>
         color: Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(15.r),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                color: Colors.white38, fontSize: 9.sp,
+                fontWeight: FontWeight.bold)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value,
               style: GoogleFonts.inter(
-                  color: Colors.white38,
-                  fontSize: 9.sp,
-                  fontWeight: FontWeight.bold)),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(value,
-                style: GoogleFonts.inter(
-                    color: color,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+                  color: color, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+        ),
+      ]),
     );
   }
 
-  // ===================== DIALOGS =====================
+  // ============================================================ DIALOGS =====
 
   void _showClaimDialog() {
-    final currentEarned = controller.liveEarning.value;
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
@@ -1162,16 +886,14 @@ class _MiningScreenState extends State<MiningScreen>
                     SizedBox(height: 10.h),
                     Text("CLAIM REWARD",
                         style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1)),
+                            color: Colors.white, fontSize: 16.sp,
+                            fontWeight: FontWeight.w900, letterSpacing: 1)),
                     SizedBox(height: 6.h),
                     Text(
-                      "Claim your earned USD to withdrawable balance.\nWhen you reach \$100 it becomes withdrawable.",
+                      "Claim your earned USD.\nReach \$100 to complete a cycle.",
                       textAlign: TextAlign.center,
-                      style:
-                          GoogleFonts.inter(color: Colors.white60, fontSize: 11.sp),
+                      style: GoogleFonts.inter(
+                          color: Colors.white60, fontSize: 11.sp),
                     ),
                     SizedBox(height: 16.h),
                     Container(
@@ -1183,87 +905,75 @@ class _MiningScreenState extends State<MiningScreen>
                         border: Border.all(
                             color: AppColors.accentGreen.withOpacity(0.3)),
                       ),
-                      child: Column(
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                                "\$${currentEarned.toStringAsFixed(4)} USD",
-                                style: GoogleFonts.inter(
-                                    color: AppColors.accentGreen,
-                                    fontSize: 26.sp,
-                                    fontWeight: FontWeight.w900)),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text("Current session earnings",
+                      child: Column(children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                              "\$${_liveEarning.toStringAsFixed(4)} USD",
                               style: GoogleFonts.inter(
-                                  color: Colors.white54, fontSize: 11.sp)),
-                        ],
-                      ),
+                                  color: AppColors.accentGreen,
+                                  fontSize: 26.sp,
+                                  fontWeight: FontWeight.w900)),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text("Current session earnings",
+                            style: GoogleFonts.inter(
+                                color: Colors.white54, fontSize: 11.sp)),
+                      ]),
                     ),
                     SizedBox(height: 18.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
-                            child: Container(
-                              height: 46.h,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.07),
-                                borderRadius: BorderRadius.circular(13.r),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text("Cancel",
-                                  style: GoogleFonts.inter(
-                                      color: Colors.white60, fontSize: 13.sp)),
+                    Row(children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(13.r),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text("Cancel",
+                                style: GoogleFonts.inter(
+                                    color: Colors.white60, fontSize: 13.sp)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _doClaim();
+                          },
+                          child: Container(
+                            height: 46.h,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                AppColors.accentGreen,
+                                AppColors.accentGreen.withOpacity(0.75),
+                              ]),
+                              borderRadius: BorderRadius.circular(13.r),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CupertinoIcons.drop_fill,
+                                    color: Colors.black, size: 14.sp),
+                                SizedBox(width: 6.w),
+                                Text("Claim Now",
+                                    style: GoogleFonts.inter(
+                                        color: Colors.black,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold)),
+                              ],
                             ),
                           ),
                         ),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () async {
-                              Navigator.pop(ctx);
-                              final data = await controller.claimReward();
-                              if (data != null) {
-                                _showClaimSuccessDialog(
-                                  // ✅ FIXED: using our remapped keys
-                                  data['earned'] as double,
-                                  data['withdrawableAdded'] as double,
-                                  data['totalWithdrawable'] as double,
-                                );
-                              }
-                            },
-                            child: Container(
-                              height: 46.h,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [
-                                  AppColors.accentGreen,
-                                  AppColors.accentGreen.withOpacity(0.75),
-                                ]),
-                                borderRadius: BorderRadius.circular(13.r),
-                              ),
-                              alignment: Alignment.center,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(CupertinoIcons.drop_fill,
-                                      color: Colors.black, size: 14.sp),
-                                  SizedBox(width: 6.w),
-                                  Text("Claim Now",
-                                      style: GoogleFonts.inter(
-                                          color: Colors.black,
-                                          fontSize: 13.sp,
-                                          fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ]),
                   ],
                 ),
               ),
@@ -1276,6 +986,7 @@ class _MiningScreenState extends State<MiningScreen>
 
   void _showClaimSuccessDialog(
       double earned, double withdrawableAdded, double totalWithdrawable) {
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
@@ -1314,21 +1025,17 @@ class _MiningScreenState extends State<MiningScreen>
                     SizedBox(height: 12.h),
                     Text("Claim Successful!",
                         style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16.sp,
+                            color: Colors.white, fontSize: 16.sp,
                             fontWeight: FontWeight.w900)),
                     SizedBox(height: 8.h),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        "Earned: \$${earned.toStringAsFixed(4)} USD",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                            color: AppColors.accentLeaf,
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                            height: 1.4),
-                      ),
+                          "Earned: \$${earned.toStringAsFixed(4)} USD",
+                          style: GoogleFonts.inter(
+                              color: AppColors.accentLeaf,
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold)),
                     ),
                     if (withdrawableAdded > 0) ...[
                       SizedBox(height: 4.h),
@@ -1355,15 +1062,14 @@ class _MiningScreenState extends State<MiningScreen>
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(colors: [
                             AppColors.accentLeaf,
-                            Color(0xFF2E8B00)
+                            Color(0xFF2E8B00),
                           ]),
                           borderRadius: BorderRadius.circular(13.r),
                         ),
                         alignment: Alignment.center,
                         child: Text("OK",
                             style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 14.sp,
+                                color: Colors.white, fontSize: 14.sp,
                                 fontWeight: FontWeight.bold)),
                       ),
                     ),
@@ -1378,9 +1084,7 @@ class _MiningScreenState extends State<MiningScreen>
   }
 
   void _showClaimNotReadyDialog() {
-    final earned = controller.liveEarning.value;
-    final pct =
-        (earned / MiningController.usdTarget * 100).clamp(0.0, 100.0);
+    final pct = (_liveEarning / kUsdTarget * 100).clamp(0.0, 100.0);
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
@@ -1419,8 +1123,7 @@ class _MiningScreenState extends State<MiningScreen>
                     SizedBox(height: 12.h),
                     Text("Mining Not Active",
                         style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 16.sp,
+                            color: Colors.white, fontSize: 16.sp,
                             fontWeight: FontWeight.w900)),
                     SizedBox(height: 8.h),
                     Text(
@@ -1441,7 +1144,7 @@ class _MiningScreenState extends State<MiningScreen>
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      "${pct.toStringAsFixed(1)}%  |  \$${(MiningController.usdTarget - earned).toStringAsFixed(2)} remaining to \$100",
+                      "${pct.toStringAsFixed(1)}%  |  \$${(kUsdTarget - _liveEarning).toStringAsFixed(2)} remaining",
                       style: GoogleFonts.inter(
                           color: Colors.white38, fontSize: 9.sp),
                     ),
@@ -1459,8 +1162,7 @@ class _MiningScreenState extends State<MiningScreen>
                         alignment: Alignment.center,
                         child: Text("OK",
                             style: GoogleFonts.inter(
-                                color: Colors.white60,
-                                fontSize: 14.sp,
+                                color: Colors.white60, fontSize: 14.sp,
                                 fontWeight: FontWeight.bold)),
                       ),
                     ),
@@ -1471,6 +1173,30 @@ class _MiningScreenState extends State<MiningScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.cloud_off_rounded, color: Colors.white30, size: 48.sp),
+        SizedBox(height: 12.h),
+        Text("Could not load mining data",
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 14.sp)),
+        SizedBox(height: 16.h),
+        ElevatedButton.icon(
+          onPressed: _fetchStatus,
+          icon: const Icon(Icons.refresh_rounded, color: Colors.black),
+          label: Text("Retry",
+              style: GoogleFonts.inter(
+                  color: Colors.black, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.accentGreen,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14.r)),
+          ),
+        ),
+      ]),
     );
   }
 }
