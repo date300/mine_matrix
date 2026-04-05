@@ -1,27 +1,24 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+// আপনার লেআউট, প্রোভাইডার এবং স্প্ল্যাশ স্ক্রিন ইমপোর্ট
 import 'layout/layout.dart';
 import 'providers/auth_provider.dart';
-import 'providers/connectivity_provider.dart';
+import 'providers/connectivity_provider.dart';     // ← নতুন যোগ করা হয়েছে
 import 'pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
 
-  // App খোলার আগেই token load + verify করো
-  final authProvider = AuthProvider();
-  await authProvider.initTokenOnly();
-
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: authProvider), // আগে তৈরি instance pass করো
-        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()), // ← এই লাইনটা যোগ করা হয়েছে
       ],
       child: const MiningApp(),
     ),

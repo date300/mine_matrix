@@ -1,4 +1,3 @@
- 
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -32,13 +31,18 @@ class AuthProvider extends ChangeNotifier {
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
 
+  // ✅ FIX: wallet address সবসময় database থেকে আসবে (JWT token থাকলে)
+  // Session থেকে আর নেওয়া হবে না
   String? get address => _userData?['wallet_address']?.toString();
 
+  // ✅ FIX: session identifier - database address প্রথমে, তারপর session fallback
   String? get _sessionIdentifier {
+    // JWT আছে এবং database-এ wallet address আছে → সেটাই ব্যবহার করো
     if (_userData?['wallet_address'] != null) {
       return _userData!['wallet_address'].toString();
     }
 
+    // fallback: session থেকে নাও (login হওয়ার আগে)
     final session = _appKitModal?.session;
     if (session == null) return null;
 
@@ -58,15 +62,16 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT TOKEN ONLY (main থেকে call করো — context লাগে না)
+  // INIT
   // =========================
-  Future<void> initTokenOnly() async {
+  Future<void> initAuth(BuildContext context) async {
     _setLoading(true);
 
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
 
     if (_token != null) {
+      // ✅ Token valid হলে database থেকে fresh user data আনো
       final valid = await verifyTokenAndFetchUser();
 
       if (valid) {
@@ -75,18 +80,10 @@ class AuthProvider extends ChangeNotifier {
         await prefs.remove('token');
         await prefs.remove('user');
         _token = null;
-        _isLoggedIn = false;
       }
     }
 
     _setLoading(false);
-  }
-
-  // =========================
-  // INIT FULL (পুরনো method — প্রয়োজনে রাখা হলো)
-  // =========================
-  Future<void> initAuth(BuildContext context) async {
-    await initTokenOnly();
     await initWallet(context);
   }
 
@@ -105,7 +102,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Token verify + user data fetch
+  // ✅ NEW: Token verify করো + database থেকে user data আনো
   Future<bool> verifyTokenAndFetchUser() async {
     try {
       final res = await http.get(
@@ -116,16 +113,19 @@ class AuthProvider extends ChangeNotifier {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
 
+        // API response-এ user data থাকলে সেটা save করো
         if (data['user'] != null) {
           _userData = data['user'];
         } else if (data['data'] != null) {
           _userData = data['data'];
         } else {
+          // Response নিজেই user object হলে
           _userData = data;
         }
 
         _referralCode = _userData?['referral_code'];
 
+        // SharedPreferences আপডেট করো
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user', jsonEncode(_userData));
 
@@ -135,7 +135,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Token verify failed: $e");
 
-      // Network error হলে cached data ব্যবহার করো
+      // Network error হলে cached data থেকে লোড করো
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
       if (userStr != null) {
@@ -170,7 +170,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT (SplashScreen থেকে call করো)
+  // WALLET INIT
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -223,6 +223,7 @@ class AuthProvider extends ChangeNotifier {
 
     if (isConnected && currentIdentifier != null) {
 
+      // ✅ FIX: database-এর wallet address দিয়ে wallet change চেক করো
       final dbWalletAddress = _userData?['wallet_address'];
       if (dbWalletAddress != null) {
         final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
@@ -235,11 +236,13 @@ class AuthProvider extends ChangeNotifier {
         }
       }
 
+      // Duplicate login block
       if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentIdentifier;
         _setLoading(true);
 
+        // Login করো session address দিয়ে
         final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
             _appKitModal?.session?.getAddress('eip155') ??
             _appKitModal?.session?.getAddress('email') ??
@@ -298,6 +301,9 @@ class AuthProvider extends ChangeNotifier {
           await prefs.setString('user', jsonEncode(data['user']));
 
           _token = data['token'];
+
+          // ✅ _userData সবসময় database response থেকে সেট হয়
+          // এখান থেকেই address getter কাজ করবে
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
