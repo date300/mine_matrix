@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-
+import '../ads/ad_manager.dart';
 import '../layout/layout.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    AdManager.loadInterstitial();
     _handleNavigation();
   }
 
@@ -31,6 +32,10 @@ class _SplashScreenState extends State<SplashScreen> {
     _loadingStatus.value = "SYNCING YOUR WALLET...";
 
     await Future.delayed(const Duration(milliseconds: 800));
+     
+   Future.delayed(const Duration(milliseconds: 300), () {
+  AdManager.showInterstitial();
+});
 
     // initWallet() এখানে call করা হচ্ছে না
     // AppLayout এ গিয়ে fresh context দিয়ে init হবে
@@ -129,3 +134,4 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+

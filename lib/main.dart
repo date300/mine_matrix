@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'layout/layout.dart';
 import 'providers/auth_provider.dart';
@@ -12,6 +13,7 @@ import 'pages/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
+  await MobileAds.instance.initialize();
 
   // App খোলার আগেই token load + verify করো
   final authProvider = AuthProvider();
