@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:reown_appkit/reown_appkit.dart';
 
 import 'layout/layout.dart';
 import 'providers/auth_provider.dart';
@@ -13,14 +14,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
 
-  // App খোলার আগেই token load + verify করো
   final authProvider = AuthProvider();
   await authProvider.initTokenOnly();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: authProvider), // আগে তৈরি instance pass করো
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
       ],
       child: const MiningApp(),
@@ -47,9 +47,18 @@ class MiningApp extends StatelessWidget {
             scaffoldBackgroundColor: const Color(0xFF0D0D12),
             textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
           ),
+          // ReownAppKit এর জন্য navigatorKey আবশ্যক
+          navigatorKey: ReownAppKitModalTheme.key,
+          // ReownAppKit এর modal overlay দেখানোর জন্য builder আবশ্যক
+          builder: (context, child) {
+            return ReownAppKitModalTheme(
+              child: child!,
+            );
+          },
           home: const SplashScreen(),
         );
       },
     );
   }
 }
+
