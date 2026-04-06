@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-
+import '../ads/ad_manager.dart';
 import '../layout/layout.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    AdManager.loadInterstitial();
     _handleNavigation();
   }
 
@@ -32,8 +33,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // initWallet() এখানে call করা হচ্ছে না
-    // AppLayout এ গিয়ে fresh context দিয়ে init হবে
+    // Ad show করো (void function, await নেই)
+    AdManager.showInterstitial();
+
+    // Ad দেখানোর জন্য একটু সময় দাও তারপর navigate
+    await Future.delayed(const Duration(milliseconds: 500));
+
     Get.off(
       () => const AppLayout(),
       transition: Transition.fadeIn,
@@ -129,3 +134,4 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+

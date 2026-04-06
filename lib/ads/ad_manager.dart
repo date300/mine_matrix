@@ -6,7 +6,7 @@ class AdManager {
   static void loadInterstitial() {
     InterstitialAd.load(
       adUnitId: "ca-app-pub-9354625065393218/3977151520",
-      request: AdRequest(),
+      request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           interstitialAd = ad;
@@ -19,10 +19,21 @@ class AdManager {
   }
 
   static void showInterstitial() {
-    if (interstitialAd != null) {
-      interstitialAd!.show();
-      interstitialAd = null;
-      loadInterstitial(); // আবার load করে রাখবে
-    }
+    if (interstitialAd == null) return;
+
+    interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        interstitialAd = null;
+        loadInterstitial(); // dismiss হওয়ার পর reload
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        interstitialAd = null;
+        loadInterstitial();
+      },
+    );
+
+    interstitialAd!.show();
   }
 }
