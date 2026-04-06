@@ -1,4 +1,4 @@
-import 'dart:ui';
+ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -16,9 +16,15 @@ class TopBar extends StatefulWidget {
 class _TopBarState extends State<TopBar> {
   final Color accentGreen = const Color(0xFF14F195);
 
-  // initState থেকে initWallet() সরিয়ে দেওয়া হয়েছে
-  // SplashScreen ইতোমধ্যে initWallet() করে ফেলে,
-  // এখানে আবার call করলে পুরনো context আটকে যায়
+  @override
+  void initState() {
+    super.initState();
+    // AuthProvider এ if (_isInitialized) return; আছে
+    // তাই দুইবার call হলেও double init হবে না — safe
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).initWallet(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +89,7 @@ class _TopBarState extends State<TopBar> {
 
   Widget _buildWalletBtn(AuthProvider auth, String addr, BuildContext context) {
     return GestureDetector(
-      onTap: () => auth.openModal(context), // fresh context পাস হচ্ছে
+      onTap: () => auth.openModal(context),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.r),
         child: BackdropFilter(
@@ -141,3 +147,4 @@ class _TopBarState extends State<TopBar> {
     );
   }
 }
+
