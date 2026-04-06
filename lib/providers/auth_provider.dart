@@ -58,7 +58,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT TOKEN ONLY (main থেকে call করো — context লাগে না)
+  // INIT TOKEN ONLY (main ???? call ??? ? context ???? ??)
   // =========================
   Future<void> initTokenOnly() async {
     _setLoading(true);
@@ -83,7 +83,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT FULL (পুরনো method — প্রয়োজনে রাখা হলো)
+  // INIT FULL (????? method ? ????????? ???? ???)
   // =========================
   Future<void> initAuth(BuildContext context) async {
     await initTokenOnly();
@@ -135,7 +135,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Token verify failed: $e");
 
-      // Network error হলে cached data ব্যবহার করো
+      // Network error ??? cached data ??????? ???
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
       if (userStr != null) {
@@ -170,7 +170,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT (SplashScreen থেকে call করো)
+  // WALLET INIT (SplashScreen ???? call ???)
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -301,7 +301,7 @@ class AuthProvider extends ChangeNotifier {
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
-          debugPrint("✅ DB wallet address: ${_userData?['wallet_address']}");
+          debugPrint("? DB wallet address: ${_userData?['wallet_address']}");
 
           return true;
         }
@@ -320,7 +320,7 @@ class AuthProvider extends ChangeNotifier {
   // =========================
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
-      _appKitModal!.openModalView();
+      _appKitModal!.openModal(context: context);
     }
   }
 
@@ -363,3 +363,4 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+
