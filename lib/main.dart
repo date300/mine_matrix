@@ -38,27 +38,22 @@ class MiningApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return GetMaterialApp(
-          title: 'Mine Matrix',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            brightness: Brightness.dark,
-            primaryColor: const Color(0xFF14F195),
-            scaffoldBackgroundColor: const Color(0xFF0D0D12),
-            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        // ReownAppKitModalTheme দিয়ে GetMaterialApp কে wrap করতে হবে
+        return ReownAppKitModalTheme(
+          isDarkMode: true,
+          child: GetMaterialApp(
+            title: 'Mine Matrix',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              brightness: Brightness.dark,
+              primaryColor: const Color(0xFF14F195),
+              scaffoldBackgroundColor: const Color(0xFF0D0D12),
+              textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+            ),
+            home: const SplashScreen(),
           ),
-          // ReownAppKit এর জন্য navigatorKey আবশ্যক
-          navigatorKey: ReownAppKitModalTheme.key,
-          // ReownAppKit এর modal overlay দেখানোর জন্য builder আবশ্যক
-          builder: (context, child) {
-            return ReownAppKitModalTheme(
-              child: child!,
-            );
-          },
-          home: const SplashScreen(),
         );
       },
     );
   }
 }
-
