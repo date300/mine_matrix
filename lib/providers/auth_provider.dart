@@ -320,7 +320,7 @@ class AuthProvider extends ChangeNotifier {
   // =========================
   void openModal(BuildContext context) {
     if (_isInitialized && _appKitModal != null) {
-      _appKitModal!.openModal(context: context);
+      _appKitModal!.openModalView(ReownAppKitModalMainWalletConnectPage());
     }
   }
 
@@ -363,4 +363,3 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-
