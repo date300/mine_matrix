@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '../layout/layout.dart';
+import '../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,13 +29,17 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 1));
     _loadingStatus.value = "CONNECTING TO NODES...";
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    // Wallet init করো (token আগেই main() এ ready হয়ে গেছে)
+    if (mounted) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.initWallet(context);
+    }
+
+    if (!mounted) return;
     _loadingStatus.value = "SYNCING YOUR WALLET...";
 
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // initWallet() এখানে call করা হচ্ছে না
-    // AppLayout এ গিয়ে fresh context দিয়ে init হবে
     Get.off(
       () => const AppLayout(),
       transition: Transition.fadeIn,
