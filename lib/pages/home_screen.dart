@@ -1,4 +1,4 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
@@ -591,4 +591,3 @@ class _SparklinePainter extends CustomPainter {
   bool shouldRepaint(_SparklinePainter old) =>
       old.points != points || old.color != color;
 }
-
