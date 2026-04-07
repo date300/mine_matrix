@@ -9,7 +9,7 @@ import 'layout/layout.dart';
 import 'providers/auth_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'pages/splash_screen.dart';
-import 'ad_manager.dart';
+import 'ads/ad_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
