@@ -1,5 +1,5 @@
 // mining_screen.dart
-// Token নেওয়া হয় Provider<AuthProvider> থেকে — ReferScreen এর মতো।
+// Upgraded: real-time SOL mining counter, boostMultiplier/aiMultiplier from API
 
 import 'dart:async';
 import 'dart:convert';
@@ -18,20 +18,22 @@ import '../providers/auth_provider.dart';
 // ─── Colors ──────────────────────────────────────────────────────────────────
 class AppColors {
   static const Color background   = Color(0xFF0D0D12);
-  static const Color accentGreen  = Color(0xFF14F195);
-  static const Color accentPurple = Color(0xFF9945FF);
+  static const Color accentGreen  = Color(0xFF14F195); // Solana green
+  static const Color accentPurple = Color(0xFF9945FF); // Solana purple
   static const Color accentLeaf   = Color(0xFF76C442);
   static const Color bgCard       = Color(0xFF1B1B22);
+  static const Color solanaGold   = Color(0xFFDC9C30);
 }
 
-// ─── Constants (mirrors backend mining.routes.js) ────────────────────────────
+// ─── Constants (mirrors backend) ─────────────────────────────────────────────
 const double kEntryFee    = 18.0;
 const double kUsdTarget   = 100.0;
 const double kCoinsPerUsd = 1000.0;
 const int    kNormalDays  = 360;
 const int    kBoostDays   = 80;
-// BASE earning rate USD/second = $100 / (360days * 86400sec)
-const double kBasePerSec  = kUsdTarget / (kNormalDays * 24 * 60 * 60);
+
+// Fallback rate (used only before first API response)
+const double kBaseUsdPerSec = kUsdTarget / (kNormalDays * 24 * 60 * 60);
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 class MiningScreen extends StatefulWidget {
@@ -43,36 +45,47 @@ class MiningScreen extends StatefulWidget {
 class _MiningScreenState extends State<MiningScreen>
     with TickerProviderStateMixin {
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── Loading / error ────────────────────────────────────────────────────────
   bool _isLoading = true;
   bool _hasError  = false;
 
-  // From GET /api/mining/status
+  // ── From GET /api/mining/status ───────────────────────────────────────────
   bool   _miningActive    = false;
   double _minedCoins      = 0.0;
   double _equivalentUSD   = 0.0;
   double _withdrawableUSD = 0.0;
 
-  // Multipliers (default 1.0 — backend /status doesn't expose these yet)
+  // Multipliers (now comes from API)
   double _boostMultiplier = 1.0;
   double _aiMultiplier    = 1.0;
   bool   _boostActive     = false;
-  double _boostAmount     = 0.0;
+  double _boostAmount     = 0.0;   // boostUSD from API
 
-  // Local UI state
-  bool   _dayStarted    = false;
-  bool   _isMining      = false;
+  // Live rate fields (from API)
+  double _usdPerSec  = kBaseUsdPerSec; // USD earned per second
+  double _solPerSec  = 0.0;            // SOL earned per second
+  double _solPrice   = 150.0;          // current SOL/USD price
+  double _minedSOL   = 0.0;            // total SOL mined so far (server side)
 
-  // Live earning (local estimate, synced from server)
-  double   _liveEarning   = 0.0;
-  double   _cycleProgress = 0.0;
-  double   _baseUsdAtSync = 0.0;
+  // ── Local UI state ────────────────────────────────────────────────────────
+  bool   _dayStarted = false;
+  bool   _isMining   = false;
+
+  // Live counters (local estimate, resynced every 30 s)
+  double    _liveUSD      = 0.0;   // USD counter (ticks every 100 ms)
+  double    _liveSOL      = 0.0;   // SOL counter (ticks every 100 ms)
+  double    _cycleProgress = 0.0;
+  double    _baseUsdAtSync = 0.0;
+  double    _baseSolAtSync = 0.0;
   DateTime? _lastSyncTime;
 
-  Timer? _liveTimer;
-  Timer? _syncTimer;
+  // SOL per-second display (formatted, updated every second)
+  String    _solPerSecDisplay = "0.00000000";
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  Timer? _liveTimer;   // 100 ms — smooth counter
+  Timer? _syncTimer;   // 30 s  — re-fetch from server
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -86,11 +99,9 @@ class _MiningScreenState extends State<MiningScreen>
     super.dispose();
   }
 
-  // ── Token helper — exactly like ReferScreen ────────────────────────────────
-  String? _getToken() {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    return auth.token;
-  }
+  // ── Token helper ──────────────────────────────────────────────────────────
+  String? _getToken() =>
+      Provider.of<AuthProvider>(context, listen: false).token;
 
   Map<String, String> _headers(String token) => {
     'Content-Type': 'application/json',
@@ -106,7 +117,6 @@ class _MiningScreenState extends State<MiningScreen>
     setState(() { _isLoading = true; _hasError = false; });
 
     try {
-      // ✅ Same as ReferScreen — get token from AuthProvider
       final token = _getToken();
       if (token == null) {
         if (mounted) setState(() { _isLoading = false; _hasError = true; });
@@ -132,21 +142,33 @@ class _MiningScreenState extends State<MiningScreen>
     }
   }
 
-  // Backend returns: { miningActive, minedCoins, equivalentUSD, withdrawableUSD }
+  // Apply full status from server response
   void _applyStatus(Map<String, dynamic> data) {
     _miningActive    = data['miningActive'] == true;
     _minedCoins      = _toDouble(data['minedCoins']);
     _equivalentUSD   = _toDouble(data['equivalentUSD']);
     _withdrawableUSD = _toDouble(data['withdrawableUSD']);
 
+    // Multipliers (now returned by upgraded backend)
     _boostMultiplier = _toDouble(data['boostMultiplier'] ?? 1.0);
-    _aiMultiplier    = _toDouble(data['aiMultiplier'] ?? 1.0);
+    _aiMultiplier    = _toDouble(data['aiMultiplier']    ?? 1.0);
     _boostActive     = _boostMultiplier > 1.0;
+    _boostAmount     = _toDouble(data['boostUSD']        ?? 0.0);
 
-    _baseUsdAtSync = _equivalentUSD;
-    _lastSyncTime  = DateTime.now();
-    _liveEarning   = _equivalentUSD;
-    _cycleProgress = (_equivalentUSD / kUsdTarget).clamp(0.0, 1.0);
+    // Live rate data (NEW from backend)
+    _usdPerSec = _toDouble(data['usdPerSec'] ?? kBaseUsdPerSec);
+    _solPerSec = _toDouble(data['solPerSec'] ?? 0.0);
+    _solPrice  = _toDouble(data['solPriceUSD'] ?? 150.0);
+    _minedSOL  = _toDouble(data['minedSOL']  ?? 0.0);
+
+    // Seed live counters from server values
+    _baseUsdAtSync  = _equivalentUSD;
+    _baseSolAtSync  = _minedSOL;
+    _lastSyncTime   = DateTime.now();
+    _liveUSD        = _equivalentUSD;
+    _liveSOL        = _minedSOL;
+    _cycleProgress  = (_equivalentUSD / kUsdTarget).clamp(0.0, 1.0);
+    _solPerSecDisplay = _formatSol(_solPerSec);
 
     if (_miningActive) {
       _dayStarted = true;
@@ -163,6 +185,7 @@ class _MiningScreenState extends State<MiningScreen>
     });
   }
 
+  // 100 ms ticker — updates live USD & SOL counters smoothly
   void _startLiveTimer() {
     _liveTimer?.cancel();
     _liveTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
@@ -171,19 +194,21 @@ class _MiningScreenState extends State<MiningScreen>
               .difference(_lastSyncTime!)
               .inMilliseconds /
           1000.0;
-      final earned =
-          (_baseUsdAtSync + secs * kBasePerSec * _boostMultiplier * _aiMultiplier)
-              .clamp(0.0, kUsdTarget);
+
+      final newUSD = (_baseUsdAtSync + secs * _usdPerSec)
+          .clamp(0.0, kUsdTarget);
+      final newSOL = _baseSolAtSync + secs * _solPerSec;
+
       setState(() {
-        _liveEarning   = earned;
-        _cycleProgress = (earned / kUsdTarget).clamp(0.0, 1.0);
+        _liveUSD      = newUSD;
+        _liveSOL      = newSOL;
+        _cycleProgress = (newUSD / kUsdTarget).clamp(0.0, 1.0);
       });
     });
   }
 
   // ── POST /api/mining/start-day ────────────────────────────────────────────
   Future<void> _startDay() async {
-    // ✅ Same pattern as ReferScreen
     final token = _getToken();
     if (token == null) return;
 
@@ -198,21 +223,20 @@ class _MiningScreenState extends State<MiningScreen>
       setState(() => _isLoading = false);
 
       if (res.statusCode == 200) {
-        // Backend returns: { message: "Mining started" }
         setState(() {
           _dayStarted    = true;
           _isMining      = true;
           _baseUsdAtSync = _equivalentUSD;
+          _baseSolAtSync = _liveSOL;
           _lastSyncTime  = DateTime.now();
         });
         _startLiveTimer();
         _startAutoSync();
-        _showSnack('⛏ Mining Started', 'Earn \$100 to complete a cycle!',
-            AppColors.accentGreen, Colors.black);
+        _showSnack('⚡ Mining Started',
+            'Earn \$100 to complete a cycle!', AppColors.accentGreen, Colors.black);
       } else {
-        // Backend returns: { error: "Already active" | "Need $18 balance" }
         final body = jsonDecode(res.body);
-        final msg = body['error'] ?? body['message'] ?? 'Could not start mining';
+        final msg  = body['error'] ?? body['message'] ?? 'Could not start mining';
         _showSnack('❌ Error', msg, Colors.red, Colors.white);
       }
     } catch (_) {
@@ -232,7 +256,8 @@ class _MiningScreenState extends State<MiningScreen>
     } else {
       setState(() {
         _isMining      = true;
-        _baseUsdAtSync = _liveEarning;
+        _baseUsdAtSync = _liveUSD;
+        _baseSolAtSync = _liveSOL;
         _lastSyncTime  = DateTime.now();
       });
       _startLiveTimer();
@@ -241,7 +266,6 @@ class _MiningScreenState extends State<MiningScreen>
 
   // ── POST /api/mining/claim ────────────────────────────────────────────────
   Future<void> _doClaim() async {
-    // ✅ Same pattern as ReferScreen
     final token = _getToken();
     if (token == null) return;
 
@@ -256,12 +280,10 @@ class _MiningScreenState extends State<MiningScreen>
       setState(() => _isLoading = false);
 
       if (res.statusCode == 200) {
-        // Backend returns: { message, coins, usd, withdrawable }
-        final data = jsonDecode(res.body);
-
+        final data       = jsonDecode(res.body);
         final double prevW   = _withdrawableUSD;
         final double newW    = _toDouble(data['withdrawable']);
-        final double earned  = _liveEarning;
+        final double earned  = _liveUSD;
         final double added   = (newW - prevW).clamp(0.0, double.infinity);
         final bool complete  = (data['message'] ?? '')
             .toString().toLowerCase().contains('complete');
@@ -277,14 +299,13 @@ class _MiningScreenState extends State<MiningScreen>
         await _fetchStatus();
 
         if (mounted) {
-          _showClaimSuccessDialog(earned, added, newW);
+          _showClaimSuccessDialog(earned, _liveSOL, added, newW);
           if (complete) {
             _showSnack('🎉 Cycle Complete!', '\$100 added to withdrawable!',
                 AppColors.accentGreen, Colors.black);
           }
         }
       } else {
-        // Backend returns: { error: "No active session" | "Wait before claim" }
         final body = jsonDecode(res.body);
         final msg  = body['error'] ?? body['message'] ?? 'Claim failed';
         if (msg.toLowerCase().contains('wait')) {
@@ -307,6 +328,7 @@ class _MiningScreenState extends State<MiningScreen>
     }
   }
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
   void _showSnack(String title, String msg, Color bg, Color textColor) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('$title  $msg',
@@ -318,6 +340,12 @@ class _MiningScreenState extends State<MiningScreen>
     ));
   }
 
+  String _formatSol(double v) {
+    if (v >= 0.001)    return v.toStringAsFixed(6);
+    if (v >= 0.000001) return v.toStringAsFixed(8);
+    return v.toStringAsFixed(10);
+  }
+
   double _dw(BuildContext ctx,
           {double pct = 0.84, double min = 260, double max = 340}) =>
       (MediaQuery.of(ctx).size.width * pct).clamp(min, max);
@@ -325,13 +353,14 @@ class _MiningScreenState extends State<MiningScreen>
           {double pct = 0.45, double min = 240, double max = 360}) =>
       (MediaQuery.of(ctx).size.height * pct).clamp(min, max);
 
-  // ============================================================ BUILD ========
+  // ═══════════════════════════════════════════════════════════════ BUILD ═════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          // Particle background
           AnimatedBackground(
             vsync: this,
             behaviour: RandomParticleBehaviour(
@@ -343,11 +372,11 @@ class _MiningScreenState extends State<MiningScreen>
             ),
             child: Container(),
           ),
+
           SafeArea(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.accentGreen))
+                    child: CircularProgressIndicator(color: AppColors.accentGreen))
                 : _hasError
                     ? _buildError()
                     : RefreshIndicator(
@@ -360,8 +389,10 @@ class _MiningScreenState extends State<MiningScreen>
                           child: Column(
                             children: [
                               SizedBox(height: 15.h),
-                              _buildBalanceSection(),
-                              SizedBox(height: 10.h),
+                              _buildLiveEarningsCard(),          // USD counter
+                              SizedBox(height: 8.h),
+                              _buildSolanaLiveCard(),            // ★ NEW SOL counter
+                              SizedBox(height: 8.h),
                               _buildCycleProgressSection(),
                               SizedBox(height: 8.h),
                               if (_boostActive) ...[
@@ -391,7 +422,8 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  Widget _buildBalanceSection() {
+  // ─── USD live earnings card (existing, kept) ──────────────────────────────
+  Widget _buildLiveEarningsCard() {
     return GlassmorphicContainer(
       width: double.infinity,
       height: 115.h,
@@ -419,7 +451,7 @@ class _MiningScreenState extends State<MiningScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text("\$${_liveEarning.toStringAsFixed(4)}",
+              Text("\$${_liveUSD.toStringAsFixed(4)}",
                   style: GoogleFonts.inter(
                       color: Colors.white, fontSize: 28.sp,
                       fontWeight: FontWeight.bold)),
@@ -436,7 +468,7 @@ class _MiningScreenState extends State<MiningScreen>
           SizedBox(height: 5.h),
           Text(
             "Withdrawable: \$${_withdrawableUSD.toStringAsFixed(2)}"
-            "  |  ${(_liveEarning / kUsdTarget * 100).clamp(0, 100).toStringAsFixed(1)}% to \$100",
+            "  |  ${(_cycleProgress * 100).clamp(0, 100).toStringAsFixed(1)}% to \$100",
             style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
           ),
         ],
@@ -444,6 +476,158 @@ class _MiningScreenState extends State<MiningScreen>
     ).animate().fadeIn().slideY(begin: -0.1);
   }
 
+  // ─── ★ NEW: Solana live mining card ──────────────────────────────────────
+  Widget _buildSolanaLiveCard() {
+    final bool active = _isMining;
+
+    return GlassmorphicContainer(
+      width: double.infinity,
+      height: 130.h,
+      borderRadius: 20.r,
+      blur: 20,
+      alignment: Alignment.center,
+      border: active ? 1.0 : 0.5,
+      linearGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.accentPurple.withOpacity(active ? 0.12 : 0.04),
+          AppColors.accentGreen.withOpacity(active ? 0.06 : 0.02),
+        ],
+      ),
+      borderGradient: LinearGradient(colors: [
+        AppColors.accentPurple.withOpacity(active ? 0.5 : 0.15),
+        AppColors.accentGreen.withOpacity(active ? 0.3 : 0.08),
+      ]),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row
+            Row(
+              children: [
+                // Solana logo placeholder (circle)
+                Container(
+                  width: 22.w,
+                  height: 22.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.accentPurple, AppColors.accentGreen],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text("◎",
+                        style: TextStyle(
+                            color: Colors.white, fontSize: 11.sp,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                SizedBox(width: 7.w),
+                Text("SOLANA MINING",
+                    style: GoogleFonts.inter(
+                        color: AppColors.accentPurple,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0)),
+                const Spacer(),
+                // SOL price badge
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentPurple.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(
+                        color: AppColors.accentPurple.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    "1 SOL = \$${_solPrice.toStringAsFixed(2)}",
+                    style: GoogleFonts.inter(
+                        color: AppColors.accentPurple,
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 10.h),
+
+            // Big SOL counter
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _formatSol(_liveSOL),
+                      style: GoogleFonts.spaceMono(
+                          color: active ? AppColors.accentGreen : Colors.white38,
+                          fontSize: 26.sp,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 2.h),
+                  child: Text("SOL",
+                      style: GoogleFonts.inter(
+                          color: AppColors.accentGreen,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 6.h),
+
+            // Per-second rate + pulse dot
+            Row(
+              children: [
+                if (active)
+                  _PulseDot(color: AppColors.accentGreen)
+                else
+                  Container(
+                    width: 7.w, height: 7.w,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white24,
+                    ),
+                  ),
+                SizedBox(width: 6.w),
+                Text(
+                  active
+                      ? "+${_formatSol(_solPerSec)} SOL/sec"
+                      : "Start mining to earn SOL",
+                  style: GoogleFonts.spaceMono(
+                      color: active ? Colors.white60 : Colors.white24,
+                      fontSize: 9.sp),
+                ),
+                const Spacer(),
+                // USD equivalent of live SOL
+                if (active)
+                  Text(
+                    "≈ \$${(_liveSOL * _solPrice).toStringAsFixed(4)}",
+                    style: GoogleFonts.inter(
+                        color: Colors.white38, fontSize: 9.sp),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate(target: active ? 1.0 : 0.0)
+        .shimmer(
+            duration: const Duration(milliseconds: 2000),
+            color: AppColors.accentGreen.withOpacity(0.06));
+  }
+
+  // ─── Cycle progress section ───────────────────────────────────────────────
   Widget _buildCycleProgressSection() {
     String statusText;
     Color  statusColor;
@@ -451,7 +635,7 @@ class _MiningScreenState extends State<MiningScreen>
       statusText  = "Mining in progress...";
       statusColor = AppColors.accentGreen;
     } else if (_dayStarted) {
-      statusText  = "Paused — tap ORB to resume";
+      statusText  = "Paused – tap ORB to resume";
       statusColor = Colors.orange;
     } else {
       statusText  = "Tap ORB to start mining";
@@ -488,9 +672,8 @@ class _MiningScreenState extends State<MiningScreen>
             ]),
             Flexible(
               child: Text(
-                "\$${_liveEarning.toStringAsFixed(3)} / \$${kUsdTarget.toStringAsFixed(0)}",
-                style:
-                    GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
+                "\$${_liveUSD.toStringAsFixed(3)} / \$${kUsdTarget.toStringAsFixed(0)}",
+                style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -508,8 +691,7 @@ class _MiningScreenState extends State<MiningScreen>
           SizedBox(height: 5.h),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text("${(_cycleProgress * 100).toStringAsFixed(2)}% complete",
-                style:
-                    GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
+                style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp)),
             Flexible(
               child: Text(statusText,
                   style: GoogleFonts.inter(
@@ -523,6 +705,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Boost info ───────────────────────────────────────────────────────────
   Widget _buildBoostInfoSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -548,14 +731,13 @@ class _MiningScreenState extends State<MiningScreen>
                   color: AppColors.accentPurple, size: 10.sp),
               SizedBox(width: 4.w),
               Text(
-                  "BOOST ACTIVE  |  \$${_boostAmount.toStringAsFixed(0)} invested",
-                  style: GoogleFonts.inter(
-                      color: AppColors.accentPurple, fontSize: 9.sp,
-                      fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                "BOOST ACTIVE  |  \$${_boostAmount.toStringAsFixed(0)} invested",
+                style: GoogleFonts.inter(
+                    color: AppColors.accentPurple, fontSize: 9.sp,
+                    fontWeight: FontWeight.w800, letterSpacing: 0.8)),
             ]),
             Text("${_boostMultiplier.toStringAsFixed(2)}x speed",
-                style:
-                    GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp)),
+                style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.sp)),
           ]),
           SizedBox(height: 6.h),
           LinearPercentIndicator(
@@ -579,6 +761,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Withdrawable section ─────────────────────────────────────────────────
   Widget _buildWithdrawableSection() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -620,6 +803,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Mining ORB ───────────────────────────────────────────────────────────
   Widget _buildMiningOrb() {
     final isPaused = _dayStarted && !_isMining;
 
@@ -711,6 +895,16 @@ class _MiningScreenState extends State<MiningScreen>
                       style: GoogleFonts.inter(
                           color: Colors.white38, fontSize: 8.sp)),
                 ],
+                // Show per-second SOL inside ORB when mining
+                if (_isMining) ...[
+                  SizedBox(height: 4.h),
+                  Text(
+                    "+${_formatSol(_solPerSec)}/s",
+                    style: GoogleFonts.spaceMono(
+                        color: AppColors.accentGreen.withOpacity(0.8),
+                        fontSize: 7.sp),
+                  ),
+                ],
               ],
             ),
           ).animate(target: _isMining ? 1 : 0).shimmer(
@@ -721,6 +915,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Cycle progress bar ───────────────────────────────────────────────────
   Widget _buildCycleProgressBar() {
     return LinearPercentIndicator(
       lineHeight: 6.h,
@@ -733,6 +928,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Action buttons ───────────────────────────────────────────────────────
   Widget _buildActionButtons() {
     final claimable = _dayStarted && _isMining;
     return Row(children: [
@@ -806,6 +1002,7 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
+  // ─── Stats grid ───────────────────────────────────────────────────────────
   Widget _buildStatsGrid() {
     return Row(children: [
       Expanded(
@@ -845,15 +1042,14 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ============================================================ DIALOGS =====
-
+  // ─── Dialogs ──────────────────────────────────────────────────────────────
   void _showClaimDialog() {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
       builder: (ctx) {
         final dw = _dw(ctx, pct: 0.84, min: 260, max: 340);
-        final dh = _dh(ctx, pct: 0.44, min: 260, max: 310);
+        final dh = _dh(ctx, pct: 0.50, min: 280, max: 340);
         return Center(
           child: Material(
             color: Colors.transparent,
@@ -896,9 +1092,10 @@ class _MiningScreenState extends State<MiningScreen>
                           color: Colors.white60, fontSize: 11.sp),
                     ),
                     SizedBox(height: 16.h),
+                    // USD amount
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
                       decoration: BoxDecoration(
                         color: AppColors.accentGreen.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12.r),
@@ -909,16 +1106,25 @@ class _MiningScreenState extends State<MiningScreen>
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                              "\$${_liveEarning.toStringAsFixed(4)} USD",
+                              "\$${_liveUSD.toStringAsFixed(4)} USD",
                               style: GoogleFonts.inter(
                                   color: AppColors.accentGreen,
-                                  fontSize: 26.sp,
+                                  fontSize: 24.sp,
                                   fontWeight: FontWeight.w900)),
                         ),
-                        SizedBox(height: 4.h),
+                        SizedBox(height: 2.h),
+                        // SOL equivalent
+                        Text(
+                          "◎ ${_formatSol(_liveSOL)} SOL",
+                          style: GoogleFonts.spaceMono(
+                              color: AppColors.accentPurple,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 2.h),
                         Text("Current session earnings",
                             style: GoogleFonts.inter(
-                                color: Colors.white54, fontSize: 11.sp)),
+                                color: Colors.white54, fontSize: 10.sp)),
                       ]),
                     ),
                     SizedBox(height: 18.h),
@@ -985,14 +1191,14 @@ class _MiningScreenState extends State<MiningScreen>
   }
 
   void _showClaimSuccessDialog(
-      double earned, double withdrawableAdded, double totalWithdrawable) {
+      double earnedUSD, double earnedSOL, double withdrawableAdded, double totalWithdrawable) {
     if (!mounted) return;
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
       builder: (ctx) {
         final dw = _dw(ctx, pct: 0.78, min: 250, max: 310);
-        final dh = _dh(ctx, pct: 0.42, min: 240, max: 290);
+        final dh = _dh(ctx, pct: 0.48, min: 260, max: 320);
         return Center(
           child: Material(
             color: Colors.transparent,
@@ -1031,11 +1237,20 @@ class _MiningScreenState extends State<MiningScreen>
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                          "Earned: \$${earned.toStringAsFixed(4)} USD",
+                          "Earned: \$${earnedUSD.toStringAsFixed(4)} USD",
                           style: GoogleFonts.inter(
                               color: AppColors.accentLeaf,
                               fontSize: 15.sp,
                               fontWeight: FontWeight.bold)),
+                    ),
+                    SizedBox(height: 4.h),
+                    // SOL earned line (NEW)
+                    Text(
+                      "◎ ${_formatSol(earnedSOL)} SOL",
+                      style: GoogleFonts.spaceMono(
+                          color: AppColors.accentPurple,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold),
                     ),
                     if (withdrawableAdded > 0) ...[
                       SizedBox(height: 4.h),
@@ -1084,7 +1299,7 @@ class _MiningScreenState extends State<MiningScreen>
   }
 
   void _showClaimNotReadyDialog() {
-    final pct = (_liveEarning / kUsdTarget * 100).clamp(0.0, 100.0);
+    final pct = (_liveUSD / kUsdTarget * 100).clamp(0.0, 100.0);
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.75),
@@ -1144,7 +1359,7 @@ class _MiningScreenState extends State<MiningScreen>
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      "${pct.toStringAsFixed(1)}%  |  \$${(kUsdTarget - _liveEarning).toStringAsFixed(2)} remaining",
+                      "${pct.toStringAsFixed(1)}%  |  \$${(kUsdTarget - _liveUSD).toStringAsFixed(2)} remaining",
                       style: GoogleFonts.inter(
                           color: Colors.white38, fontSize: 9.sp),
                     ),
@@ -1200,3 +1415,57 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 }
+
+// ─── Pulsing green dot widget (shows live status) ─────────────────────────────
+class _PulseDot extends StatefulWidget {
+  final Color color;
+  const _PulseDot({required this.color});
+
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.4, end: 1.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) => Opacity(
+        opacity: _anim.value,
+        child: Container(
+          width: 7.w,
+          height: 7.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: widget.color,
+            boxShadow: [
+              BoxShadow(color: widget.color.withOpacity(0.6), blurRadius: 6),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:animated_background/animated_background.dart';
 import 'topbar.dart';
 import 'nevbar.dart';
-import '../pages/home_screen.dart';
-import '../pages/mining_screen.dart';
-import '../pages/wallet_screen.dart';
-import '../pages/refer_screen.dart';
-import '../pages/Withdraw_scren.dart';
+import '../pages/home/home_screen.dart';
+import '../pages/mining/mining_screen.dart';
+import '../pages/wallet/wallet_screen.dart';
+import '../pages/refer/refer_screen.dart';
+import '../pages/withdraw/Withdraw_scren.dart';
 
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
