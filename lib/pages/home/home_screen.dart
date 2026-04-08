@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../layout/layout.dart';
+import '../../layout/layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
