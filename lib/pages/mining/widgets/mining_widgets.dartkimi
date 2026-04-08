@@ -10,7 +10,6 @@ import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import '../constants/mining_constants.dart';
 import '../controllers/mining_controller.dart';
-import '../../widgets/custom_error_widget.dart'; // ✅ CustomErrorWidget import
 
 // NOTE: AppColors is imported from mining_constants.dart
 // Do NOT define AppColors here to avoid conflict
@@ -30,182 +29,6 @@ class AppLottie {
   static const String chart       = 'https://assets10.lottiefiles.com/packages/lf20_qmfs6c3i.json';
   static const String shield      = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
   static const String hammer      = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
-}
-
-// --- Mining Screen with Error Handling --------------------------------------------------------------
-class MiningScreen extends StatefulWidget {
-  const MiningScreen({super.key});
-
-  @override
-  State<MiningScreen> createState() => _MiningScreenState();
-}
-
-class _MiningScreenState extends State<MiningScreen> {
-  bool _isLoading = true;
-  bool _hasError = false;
-  late MiningController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMiningData();
-  }
-
-  Future<void> _loadMiningData() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
-
-    try {
-      // Simulate loading mining data
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // Initialize controller
-      _controller = MiningController();
-      
-      // Check if data loaded successfully
-      if (_controller.hasError) { // Assuming MiningController has error state
-        setState(() {
-          _isLoading = false;
-          _hasError = true;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: _isLoading
-            ? _buildSkeletonLoading()
-            : _hasError
-                ? CustomErrorWidget(onRetry: _loadMiningData) // ✅ CustomErrorWidget ব্যবহার
-                : _buildMiningContent(),
-      ),
-    );
-  }
-
-  Widget _buildSkeletonLoading() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.bgCard,
-      highlightColor: AppColors.bgCard.withOpacity(0.5),
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Column(
-          children: [
-            SizedBox(height: 20.h),
-            Container(
-              width: double.infinity,
-              height: 150.h,
-              decoration: BoxDecoration(
-                color: AppColors.bgCard,
-                borderRadius: BorderRadius.circular(24.r),
-              ),
-            ),
-            SizedBox(height: 20.h),
-            Container(
-              width: 150.w,
-              height: 150.h,
-              decoration: BoxDecoration(
-                color: AppColors.bgCard,
-                shape: BoxShape.circle,
-              ),
-            ),
-            SizedBox(height: 20.h),
-            Container(
-              width: double.infinity,
-              height: 100.h,
-              decoration: BoxDecoration(
-                color: AppColors.bgCard,
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiningContent() {
-    return RefreshIndicator(
-      color: AppColors.accentGreen,
-      backgroundColor: AppColors.bgCard,
-      onRefresh: _loadMiningData,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        child: Column(
-          children: [
-            SizedBox(height: 20.h),
-            
-            // Live Earnings Card
-            LiveEarningsCard(c: _controller),
-            
-            SizedBox(height: 20.h),
-            
-            // Solana Live Card
-            SolanaLiveCard(c: _controller),
-            
-            SizedBox(height: 20.h),
-            
-            // Mining Orb
-            Center(
-              child: MiningOrb(
-                c: _controller,
-                onTap: () => _controller.toggleMining(),
-              ),
-            ),
-            
-            SizedBox(height: 20.h),
-            
-            // Cycle Progress
-            CycleProgressSection(c: _controller),
-            
-            SizedBox(height: 20.h),
-            
-            // Boost Info
-            BoostInfoSection(
-              c: _controller,
-              onBuyBoost: () => showBuyBoostSheet(
-                context,
-                _controller,
-                (amount) async => await _controller.buyBoost(amount),
-              ),
-            ),
-            
-            SizedBox(height: 20.h),
-            
-            // Auto Mining Card
-            AutoMiningCard(
-              c: _controller,
-              onBuyAuto: () => showBuyAutoMiningSheet(
-                context,
-                _controller,
-                () async => await _controller.buyAutoMining(),
-              ),
-            ),
-            
-            SizedBox(height: 20.h),
-            
-            // Withdrawable Section
-            WithdrawableSection(c: _controller),
-            
-            SizedBox(height: 40.h),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // --- Pulse Dot with Lottie --------------------------------------------------------------
@@ -280,7 +103,7 @@ class LiveEarningsCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             AppColors.accentGreen.withOpacity(0.15),
-            AppColors.accentPurple.withOpacity(0.05),
+            AppColors.accentPurple.withOpacity(0.05), // FIX: accentBlue -> accentPurple
             AppColors.bgCard,
           ],
         ),
@@ -583,7 +406,7 @@ class CycleProgressSection extends StatelessWidget {
       statusColor = Colors.orange;
     } else {
       statusText = "Tap ORB to start mining";
-      statusColor = AppColors.accentPurple;
+      statusColor = AppColors.accentPurple; // FIX: accentBlue -> accentPurple
     }
 
     return Container(
