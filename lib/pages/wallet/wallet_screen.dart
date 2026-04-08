@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/error_widget.dart'; // ✅ ইমপোর্ট করা হয়েছে
+import '../../widgets/custom_error_widget.dart'; // ✅ নতুন নামে import
 
 // --- Colors ------------------------------------------------------------------
 class AppColors {
@@ -222,7 +222,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       body: _isLoading
           ? _buildSkeletonLoading()
           : _hasError
-              ? ErrorWidget(onRetry: _loadAll) // ✅ আলাদা widget ব্যবহার
+              ? CustomErrorWidget(onRetry: _loadAll) // ✅ নতুন নামে ব্যবহার
               : RefreshIndicator(
                   color: AppColors.accentGreen,
                   backgroundColor: AppColors.surface,
@@ -259,8 +259,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 ),
     );
   }
-
-  // ✅ _buildErrorState() রিমুভ করা হয়েছে - এখন আলাদা ফাইলে
 
   Widget _buildSkeletonLoading() {
     return Shimmer.fromColors(

@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 
-// --- Colors (আপনার wallet_screen এর মতোই) ---
+// --- Colors ---
 class AppColors {
   static const Color background   = Color(0xFF0A0A0F);
   static const Color surface      = Color(0xFF12121A);
@@ -11,7 +11,6 @@ class AppColors {
   static const Color accentBlue   = Color(0xFF00D4FF);
   static const Color textPrimary  = Color(0xFFFFFFFF);
   static const Color textSecondary= Color(0xFF8B8B9E);
-  static const Color border       = Color(0xFF2A2A3A);
 }
 
 // Lottie URLs
@@ -21,10 +20,11 @@ class AppLottie {
 }
 
 /// Reusable Error Widget - Wallet Screen থেকে বের করা
-class ErrorWidget extends StatelessWidget {
+/// নাম পরিবর্তন: ErrorWidget → CustomErrorWidget (Flutter SDK conflict এড়াতে)
+class CustomErrorWidget extends StatelessWidget {
   final VoidCallback onRetry;
 
-  const ErrorWidget({
+  const CustomErrorWidget({
     super.key,
     required this.onRetry,
   });
