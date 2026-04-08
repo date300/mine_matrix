@@ -12,8 +12,8 @@ import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/error_screen.dart';
 
-// --- Colors ------------------------------------------------------------------
 class AppColors {
   static const Color background   = Color(0xFF0A0A0F);
   static const Color surface      = Color(0xFF12121A);
@@ -29,7 +29,6 @@ class AppColors {
   static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie Network URLs - No local assets needed!
 class AppLottie {
   static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
   static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
@@ -53,7 +52,6 @@ class AppLottie {
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// --- Main Screen --------------------------------------------------------------
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
@@ -164,7 +162,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
       setState(() => _isLoading = false);
     } on Exception catch (e) {
-      // Web compatible error handling - catches all exceptions including timeout
       if (mounted) {
         setState(() { _isLoading = false; _hasError = true; });
         String errorMsg = 'Connection error. Please retry.';
@@ -222,7 +219,10 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       body: _isLoading
           ? _buildSkeletonLoading()
           : _hasError
-              ? _buildErrorState()
+              ? ErrorScreen.oops(
+                  subtitle: 'Failed to load wallet data',
+                  onRetry: () => _loadAll(),
+                )
               : RefreshIndicator(
                   color: AppColors.accentGreen,
                   backgroundColor: AppColors.surface,
@@ -588,7 +588,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           ],
         ),
       ),
-    ).animate().fadeIn(delay: 200.ms).slideX(begin: label == 'Deposit' ? -0.2 : 0.2, end: 0);
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2, end: 0);
   }
 
   Widget _buildHistoryHeader() {
@@ -596,7 +596,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Recent Transactions',
+          'Recent Deposits',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 18.sp,
@@ -607,7 +607,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           GestureDetector(
             onTap: () {},
             child: Text(
-              'View All',
+              'See All',
               style: GoogleFonts.inter(
                 color: AppColors.accentGreen,
                 fontSize: 13.sp,
@@ -622,120 +622,86 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   Widget _buildHistoryList() {
     if (_history.isEmpty) {
       return SliverToBoxAdapter(
-        child: _buildEmptyState(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Column(
+            children: [
+              SizedBox(height: 40.h),
+              SizedBox(
+                width: 150.w,
+                height: 150.h,
+                child: Lottie.network(AppLottie.emptyHistory),
+              ),
+              SizedBox(height: 20.h),
+              Text(
+                'No deposits yet',
+                style: GoogleFonts.inter(
+                  color: AppColors.textSecondary,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Your deposit history will appear here',
+                style: GoogleFonts.inter(
+                  color: AppColors.textMuted,
+                  fontSize: 13.sp,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          final item = _history[index];
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
-            child: _buildTransactionItem(item, index),
-          );
+          final tx = _history[index];
+          return _buildHistoryItem(tx, index);
         },
         childCount: _history.length,
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 40.h),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: 120.w,
-            height: 120.h,
-            child: Lottie.network(AppLottie.emptyHistory),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'No transactions yet',
-            style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Your deposit history will appear here',
-            style: GoogleFonts.inter(
-              color: AppColors.textSecondary,
-              fontSize: 13.sp,
-            ),
-          ),
-          SizedBox(height: 20.h),
-          GestureDetector(
-            onTap: () => _showDepositSheet(),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: AppColors.accentGreen.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: AppColors.accentGreen.withOpacity(0.3)),
-              ),
-              child: Text(
-                'Make First Deposit',
-                style: GoogleFonts.inter(
-                  color: AppColors.accentGreen,
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
-    final sol = double.tryParse(data['sol_amount']?.toString() ?? '0') ?? 0;
-    final usd = double.tryParse(data['usd_amount']?.toString() ?? '0') ?? 0;
-    final status = data['status']?.toString() ?? 'pending';
-    final sig = data['tx_signature']?.toString() ?? '';
-    final date = data['created_at']?.toString() ?? '';
+  Widget _buildHistoryItem(Map<String, dynamic> tx, int index) {
+    final status = tx['status']?.toString().toLowerCase() ?? 'pending';
+    final amount = double.tryParse(tx['amount']?.toString() ?? '0') ?? 0;
+    final timestamp = tx['createdAt'] ?? DateTime.now().toIso8601String();
     
-    final bool isSuccess = status == 'confirmed';
-    final bool isFailed = status == 'failed';
-    final bool isPending = !isSuccess && !isFailed;
-
     Color statusColor;
-    String statusLottie;
     String statusText;
+    String lottieAsset;
 
-    if (isSuccess) {
-      statusColor = AppColors.accentGreen;
-      statusLottie = AppLottie.txSuccess;
-      statusText = 'Completed';
-    } else if (isFailed) {
-      statusColor = AppColors.accentRed;
-      statusLottie = AppLottie.txFailed;
-      statusText = 'Failed';
-    } else {
-      statusColor = AppColors.accentOrange;
-      statusLottie = AppLottie.txPending;
-      statusText = 'Pending';
+    switch (status) {
+      case 'completed':
+      case 'success':
+        statusColor = AppColors.accentGreen;
+        statusText = 'Completed';
+        lottieAsset = AppLottie.txSuccess;
+        break;
+      case 'failed':
+      case 'error':
+        statusColor = AppColors.accentRed;
+        statusText = 'Failed';
+        lottieAsset = AppLottie.txFailed;
+        break;
+      case 'pending':
+      default:
+        statusColor = AppColors.accentOrange;
+        statusText = 'Pending';
+        lottieAsset = AppLottie.txPending;
+        break;
     }
 
-    return GestureDetector(
-      onTap: () {
-        Clipboard.setData(ClipboardData(text: sig));
-        _showCopiedSnackBar();
-      },
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: AppColors.border),
         ),
@@ -745,14 +711,14 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
               width: 48.w,
               height: 48.h,
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15),
+                color: statusColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Center(
                 child: SizedBox(
                   width: 28.w,
                   height: 28.h,
-                  child: Lottie.network(statusLottie, repeat: isPending),
+                  child: Lottie.network(lottieAsset),
                 ),
               ),
             ),
@@ -762,7 +728,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SOL Deposit',
+                    '${amount.toStringAsFixed(4)} SOL',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
                       fontSize: 15.sp,
@@ -771,1038 +737,232 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    _formatSignature(sig),
-                    style: GoogleFonts.spaceMono(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    _formatDate(date),
+                    _formatDate(timestamp),
                     style: GoogleFonts.inter(
-                      color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '+\$${usd.toStringAsFixed(2)}',
-                  style: GoogleFonts.inter(
-                    color: AppColors.accentGreen,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Text(
+                statusText,
+                style: GoogleFonts.inter(
+                  color: statusColor,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  '${sol.toStringAsFixed(4)} SOL',
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: GoogleFonts.inter(
-                      color: statusColor,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
+    ).animate().fadeIn(duration: 400.ms, delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
   }
 
-  String _formatSignature(String sig) {
-    if (sig.length < 20) return sig;
-    return '${sig.substring(0, 8)}...${sig.substring(sig.length - 8)}';
-  }
-
-  String _formatDate(String date) {
+  String _formatDate(String isoDate) {
     try {
-      final dt = DateTime.parse(date);
-      return '${dt.day}/${dt.month}/${dt.year} • ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+      final date = DateTime.parse(isoDate);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      return date;
+      return isoDate;
     }
-  }
-
-  void _showCopiedSnackBar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20.w,
-              height: 20.h,
-              child: Lottie.network(AppLottie.copy, repeat: false),
-            ),
-            SizedBox(width: 10.w),
-            Text(
-              'Transaction hash copied!',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 13.sp,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.accentGreen.withOpacity(0.9),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        margin: EdgeInsets.all(16.w),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 150.w,
-              height: 150.h,
-              child: Lottie.network(AppLottie.errorCloud),
-            ),
-            SizedBox(height: 24.h),
-            Text(
-              'Oops! Something went wrong',
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              "We couldn't load your wallet data. Please check your connection and try again.",
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 14.sp,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32.h),
-            GestureDetector(
-              onTap: _loadAll,
-              child: Container(
-                width: double.infinity,
-                height: 56.h,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.accentGreen, AppColors.accentBlue],
-                  ),
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: Lottie.network(AppLottie.refresh),
-                    ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      'Try Again',
-                      style: GoogleFonts.inter(
-                        color: Colors.black,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showDepositSheet() {
+    if (_platformWallet.isEmpty) return;
+
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => DepositSheet(
-        platformWallet: _platformWallet,
-        solPrice: _solPrice,
-        headers: _headers(),
-        onSuccess: () {
-          Navigator.pop(context);
-          _loadAll(silent: true);
-        },
-      ),
-    );
-  }
-}
-
-// --- Deposit Sheet Widget ------------------------------------------------------
-class DepositSheet extends StatefulWidget {
-  final String platformWallet;
-  final double solPrice;
-  final Map<String, String> headers;
-  final VoidCallback onSuccess;
-
-  const DepositSheet({
-    super.key,
-    required this.platformWallet,
-    required this.solPrice,
-    required this.headers,
-    required this.onSuccess,
-  });
-
-  @override
-  State<DepositSheet> createState() => _DepositSheetState();
-}
-
-class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMixin {
-  int _step = 0;
-  final _sigController = TextEditingController();
-  bool _verifying = false;
-  String _verifyError = '';
-  bool _copied = false;
-  
-  late AnimationController _confettiController;
-
-  @override
-  void initState() {
-    super.initState();
-    _confettiController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
+      isScrollControlled: true,
+      builder: (context) => _buildDepositSheet(),
     );
   }
 
-  @override
-  void dispose() {
-    _sigController.dispose();
-    _confettiController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _verifyDeposit() async {
-    final sig = _sigController.text.trim();
-    if (sig.length < 50) {
-      setState(() => _verifyError = 'Invalid transaction signature');
-      return;
-    }
-
-    setState(() { _verifying = true; _verifyError = ''; });
-
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/api/deposit/verify'),
-        headers: widget.headers,
-        body: jsonEncode({'signature': sig}),
-      ).timeout(const Duration(seconds: 20));
-
-      if (!mounted) return;
-      final data = jsonDecode(res.body);
-
-      if (res.statusCode == 200 && data['success'] == true) {
-        setState(() => _verifying = false);
-        _confettiController.forward();
-        _showSuccessDialog(data);
-      } else {
-        setState(() {
-          _verifying = false;
-          _verifyError = data['error'] ?? 'Verification failed';
-        });
-      }
-    } on Exception catch (e) {
-      // Web compatible error handling
-      if (mounted) {
-        setState(() {
-          _verifying = false;
-          _verifyError = e.toString().contains('timeout') 
-              ? 'Connection timeout. Try again.' 
-              : 'Connection error. Try again.';
-        });
-      }
-    }
-  }
-
-  void _showSuccessDialog(Map data) {
-    final usd = data['usdAmount']?.toString() ?? '0';
-    final sol = data['solAmount']?.toString() ?? '0';
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Stack(
-        children: [
-          Center(
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: MediaQuery.of(ctx).size.width * 0.85,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.2),
-                      blurRadius: 40,
-                      offset: const Offset(0, 20),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(24.w),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.accentGreen.withOpacity(0.2),
-                            Colors.transparent,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                      ),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            width: 80.w,
-                            height: 80.h,
-                            child: Lottie.network(
-                              AppLottie.txSuccess,
-                              repeat: false,
-                              controller: _confettiController,
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'Deposit Successful!',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textPrimary,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(24.w),
-                      child: Column(
-                        children: [
-                          Text(
-                            '+\$$usd',
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
-                              fontSize: 36.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 16.w,
-                                height: 16.h,
-                                child: Lottie.network(AppLottie.solCoin),
-                              ),
-                              SizedBox(width: 6.w),
-                              Text(
-                                '$sol SOL deposited',
-                                style: GoogleFonts.spaceMono(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24.h),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              widget.onSuccess();
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              height: 52.h,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
-                                ),
-                                borderRadius: BorderRadius.circular(14.r),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Awesome!',
-                                style: GoogleFonts.inter(
-                                  color: Colors.black,
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Lottie.network(
-                AppLottie.confetti,
-                controller: _confettiController,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildDepositSheet() {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      margin: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24.r),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(height: 12.h),
           Container(
+            margin: EdgeInsets.only(top: 12.h),
             width: 40.w,
             height: 4.h,
             decoration: BoxDecoration(
               color: AppColors.textMuted,
-              borderRadius: BorderRadius.circular(10.r),
+              borderRadius: BorderRadius.circular(2.r),
             ),
           ),
-          SizedBox(height: 20.h),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Row(
-              children: [
-                Container(
-                  width: 48.w,
-                  height: 48.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(14.r),
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      width: 28.w,
-                      height: 28.h,
-                      child: Lottie.network(AppLottie.solCoin),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Deposit SOL',
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '1 SOL = \$${widget.solPrice.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(
-                          color: AppColors.accentPurple,
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 24.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Row(
-              children: [
-                _buildStepIndicator(0, 'Send SOL', Icons.send),
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    margin: EdgeInsets.symmetric(horizontal: 12.w),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: _step >= 1
-                            ? [AppColors.accentGreen, AppColors.accentBlue]
-                            : [AppColors.border, AppColors.border],
-                      ),
-                    ),
-                  ),
-                ),
-                _buildStepIndicator(1, 'Verify', Icons.verified),
-              ],
-            ),
-          ),
-          SizedBox(height: 32.h),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: _step == 0 ? _buildStep0() : _buildStep1(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepIndicator(int step, String label, IconData icon) {
-    final bool isActive = _step >= step;
-    final bool isCurrent = _step == step;
-
-    return Column(
-      children: [
-        Container(
-          width: 44.w,
-          height: 44.h,
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? LinearGradient(
-                    colors: [AppColors.accentGreen, AppColors.accentBlue],
-                  )
-                : null,
-            color: isActive ? null : AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? Colors.transparent : AppColors.border,
-              width: 2,
-            ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: isActive
-                ? Icon(icon, color: Colors.black, size: 20)
-                : Text(
-                    '${step + 1}',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textMuted,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-          ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: isActive ? AppColors.accentGreen : AppColors.textMuted,
-            fontSize: 12.sp,
-            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStep0() {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(20.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentPurple.withOpacity(0.2),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: QrImageView(
-            data: widget.platformWallet,
-            version: QrVersions.auto,
-            size: 180.w,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-          ),
-        ),
-        SizedBox(height: 24.h),
-        Text(
-          'Send SOL to this address',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 16.h),
-        GestureDetector(
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: widget.platformWallet));
-            setState(() => _copied = true);
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) setState(() => _copied = false);
-            });
-          },
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: _copied ? AppColors.accentGreen : AppColors.border,
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.platformWallet,
-                    style: GoogleFonts.spaceMono(
-                      color: AppColors.textPrimary,
-                      fontSize: 12.sp,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: _copied
-                        ? AppColors.accentGreen.withOpacity(0.2)
-                        : AppColors.accentPurple.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: _copied
-                      ? Icon(Icons.check, color: AppColors.accentGreen, size: 18)
-                      : SizedBox(
-                          width: 18.w,
-                          height: 18.h,
-                          child: Lottie.network(AppLottie.copy),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(height: 20.h),
-        _buildInfoCard(
-          AppLottie.info,
-          'Minimum Deposit',
-          '0.001 SOL required',
-          AppColors.accentOrange,
-        ),
-        SizedBox(height: 10.h),
-        _buildInfoCard(
-          AppLottie.warning,
-          'Network',
-          'Only Solana Mainnet',
-          AppColors.accentRed,
-        ),
-        SizedBox(height: 10.h),
-        _buildInfoCard(
-          AppLottie.secure,
-          'Confirmation',
-          'Usually takes 5-30 seconds',
-          AppColors.accentGreen,
-        ),
-        SizedBox(height: 32.h),
-        GestureDetector(
-          onTap: () => setState(() => _step = 1),
-          child: Container(
-            width: double.infinity,
-            height: 56.h,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.accentGreen, AppColors.accentBlue],
-              ),
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentGreen.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: EdgeInsets.all(24.w),
+            child: Column(
               children: [
                 Text(
-                  "I've Sent SOL",
+                  'Deposit SOL',
                   style: GoogleFonts.inter(
-                    color: Colors.black,
-                    fontSize: 16.sp,
+                    color: AppColors.textPrimary,
+                    fontSize: 20.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10.w),
-                SizedBox(
-                  width: 20.w,
-                  height: 20.h,
-                  child: Lottie.network(AppLottie.arrowRight),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SizedBox(height: 24.h),
-      ],
-    );
-  }
-
-  Widget _buildStep1() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Enter Transaction Signature',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          'Paste the transaction hash from your wallet to verify and credit your deposit.',
-          style: GoogleFonts.inter(
-            color: AppColors.textSecondary,
-            fontSize: 13.sp,
-            height: 1.5,
-          ),
-        ),
-        SizedBox(height: 20.h),
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: AppColors.accentBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: Lottie.network(AppLottie.question),
+                SizedBox(height: 8.h),
+                Text(
+                  'Send SOL to this address',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
                   ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'How to find your signature?',
-                    style: GoogleFonts.inter(
-                      color: AppColors.accentBlue,
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                'Phantom/Solflare: Activity → Tap transaction → Copy Signature',
-                style: GoogleFonts.inter(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.sp,
                 ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 24.h),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: _verifyError.isNotEmpty
-                  ? AppColors.accentRed
-                  : _sigController.text.isNotEmpty
-                      ? AppColors.accentGreen
-                      : AppColors.border,
-              width: _sigController.text.isNotEmpty ? 2 : 1,
-            ),
-          ),
-          child: TextField(
-            controller: _sigController,
-            style: GoogleFonts.spaceMono(
-              color: AppColors.textPrimary,
-              fontSize: 12.sp,
-            ),
-            maxLines: 3,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'Paste transaction signature here...',
-              hintStyle: GoogleFonts.inter(
-                color: AppColors.textMuted,
-                fontSize: 13.sp,
-              ),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16.w),
-              suffixIcon: GestureDetector(
-                onTap: () async {
-                  final data = await Clipboard.getData('text/plain');
-                  if (data?.text != null) {
-                    _sigController.text = data!.text!.trim();
-                    setState(() {});
-                  }
-                },
-                child: Container(
-                  margin: EdgeInsets.all(12.w),
-                  padding: EdgeInsets.all(8.w),
+                SizedBox(height: 24.h),
+                Container(
+                  padding: EdgeInsets.all(20.w),
                   decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8.r),
+                    color: AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  child: SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: Lottie.network(AppLottie.copy),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (_verifyError.isNotEmpty) ...[
-          SizedBox(height: 12.h),
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: AppColors.accentRed.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 18.w,
-                  height: 18.h,
-                  child: Lottie.network(AppLottie.txFailed, repeat: false),
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Text(
-                    _verifyError,
-                    style: GoogleFonts.inter(
-                      color: AppColors.accentRed,
-                      fontSize: 12.sp,
+                  child: QrImageView(
+                    data: _platformWallet,
+                    version: QrVersions.auto,
+                    size: 180.w,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Colors.black,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
-        SizedBox(height: 32.h),
-        GestureDetector(
-          onTap: _verifying ? null : _verifyDeposit,
-          child: Container(
-            width: double.infinity,
-            height: 56.h,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: _verifying
-                    ? [AppColors.textMuted, AppColors.textMuted]
-                    : [AppColors.accentGreen, AppColors.accentBlue],
-              ),
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: _verifying
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: AppColors.accentGreen.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-            ),
-            alignment: Alignment.center,
-            child: _verifying
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                SizedBox(height: 24.h),
+                Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
                     children: [
-                      SizedBox(
-                        width: 24.w,
-                        height: 24.h,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      Expanded(
+                        child: Text(
+                          _platformWallet,
+                          style: GoogleFonts.spaceMono(
+                            color: AppColors.textPrimary,
+                            fontSize: 12.sp,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        'Verifying...',
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: _platformWallet));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 20.w,
+                                    height: 20.h,
+                                    child: Lottie.network(AppLottie.copy, repeat: false),
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Text(
+                                    'Address copied!',
+                                    style: GoogleFonts.inter(color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: AppColors.accentGreen.withOpacity(0.9),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                              margin: EdgeInsets.all(16.w),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            Icons.copy_rounded,
+                            color: AppColors.accentGreen,
+                            size: 18.sp,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 20.w,
+                        height: 20.h,
+                        child: Lottie.network(AppLottie.warning),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Text(
+                          'Only send SOL to this address. Other tokens will be lost.',
+                          style: GoogleFonts.inter(
+                            color: AppColors.accentOrange,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: double.infinity,
+                    height: 52.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Close',
                         style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 16.sp,
+                          color: AppColors.textPrimary,
+                          fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  )
-                : Text(
-                    'Verify & Credit',
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-          ),
-        ),
-        SizedBox(height: 16.h),
-        GestureDetector(
-          onTap: () => setState(() {
-            _step = 0;
-            _verifyError = '';
-          }),
-          child: Container(
-            width: double.infinity,
-            height: 48.h,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: AppColors.border),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'Back',
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: 32.h),
-      ],
-    );
-  }
-
-  Widget _buildInfoCard(String lottieUrl, String title, String subtitle, Color color) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36.w,
-            height: 36.h,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Center(
-              child: SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: Lottie.network(lottieUrl),
-              ),
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    color: AppColors.textPrimary,
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    color: color,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
