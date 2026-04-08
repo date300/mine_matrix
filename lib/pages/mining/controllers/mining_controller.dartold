@@ -12,10 +12,10 @@ class MiningController {
   MiningController({required this.context, required this.setState});
 
   // ─── State ────────────────────────────────────────────────────────────────
-  bool autoMining    = false; // এটি যোগ করা হয়েছে
-  bool isLoading     = true;
-  bool hasError      = false;
-  bool miningActive  = false;
+  bool autoMining = false;
+  bool   isLoading       = true;
+  bool   hasError        = false;
+  bool   miningActive    = false;
   double minedCoins      = 0.0;
   double equivalentUSD   = 0.0;
   double withdrawableUSD = 0.0;
@@ -59,7 +59,6 @@ class MiningController {
   // ─── Apply status from server ─────────────────────────────────────────────
   void applyStatus(Map<String, dynamic> data) {
     miningActive    = data['miningActive'] == true;
-    autoMining      = data['autoMining'] == true; // সার্ভার থেকে আপডেট নিন
     minedCoins      = _toDouble(data['minedCoins']);
     equivalentUSD   = _toDouble(data['equivalentUSD']);
     withdrawableUSD = _toDouble(data['withdrawableUSD']);
@@ -89,36 +88,7 @@ class MiningController {
     }
   }
 
-  // ─── New Features: Purchase Logic ─────────────────────────────────────────
-  
-  // বুস্ট কেনার ফাংশন (UI থেকে কল করার জন্য)
-  Future<bool> purchaseBoost(double amount) async {
-    final token = _getToken();
-    if (token == null) return false;
-    try {
-      // আপনার MiningService-এ এই মেথডটি থাকতে হবে
-      await MiningService(token: token).buyBoost(amount);
-      await fetchStatus(); // আপডেট ডাটা নিয়ে আসা
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // অটো-মাইনিং কেনার ফাংশন
-  Future<bool> purchaseAutoMining() async {
-    final token = _getToken();
-    if (token == null) return false;
-    try {
-      await MiningService(token: token).buyAutoMining();
-      await fetchStatus();
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // ─── API Methods ──────────────────────────────────────────────────────────
+  // ─── Fetch status ─────────────────────────────────────────────────────────
   Future<void> fetchStatus() async {
     setState(() { isLoading = true; hasError = false; });
     try {
@@ -137,6 +107,97 @@ class MiningController {
     }
   }
 
-  // বাকি মেথডগুলো (startDay, doClaim, toggleMining) আপনার কোড অনুযায়ী ঠিক আছে...
-  // [startDay, doClaim, toggleMining, startLiveTimer, startAutoSync, dispose ইত্যাদি এখানে থাকবে]
+  // ─── Start day ────────────────────────────────────────────────────────────
+  Future<void> startDay() async {
+    final token = _getToken();
+    if (token == null) return;
+
+    setState(() => isLoading = true);
+    try {
+      await MiningService(token: token).startDay();
+      setState(() {
+        isLoading     = false;
+        dayStarted    = true;
+        isMining      = true;
+        baseUsdAtSync = equivalentUSD;
+        baseSolAtSync = liveSOL;
+        lastSyncTime  = DateTime.now();
+      });
+      startLiveTimer();
+      startAutoSync();
+    } catch (e) {
+      setState(() => isLoading = false);
+      rethrow;
+    }
+  }
+
+  // ─── Claim ────────────────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> doClaim() async {
+    final token = _getToken();
+    if (token == null) throw Exception('No token');
+
+    setState(() => isLoading = true);
+    try {
+      final data = await MiningService(token: token).claim();
+      liveTimer?.cancel();
+      syncTimer?.cancel();
+      setState(() {
+        isLoading     = false;
+        dayStarted    = false;
+        isMining      = false;
+        lastSyncTime  = null;
+      });
+      return data;
+    } catch (e) {
+      setState(() => isLoading = false);
+      rethrow;
+    }
+  }
+
+  // ─── Toggle mining ────────────────────────────────────────────────────────
+  Future<void> toggleMining() async {
+    if (!dayStarted) {
+      await startDay();
+    } else if (isMining) {
+      liveTimer?.cancel();
+      setState(() => isMining = false);
+    } else {
+      setState(() {
+        isMining      = true;
+        baseUsdAtSync = liveUSD;
+        baseSolAtSync = liveSOL;
+        lastSyncTime  = DateTime.now();
+      });
+      startLiveTimer();
+    }
+  }
+
+  // ─── Timers ───────────────────────────────────────────────────────────────
+  void startLiveTimer() {
+    liveTimer?.cancel();
+    liveTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!isMining || lastSyncTime == null) return;
+      final secs =
+          DateTime.now().difference(lastSyncTime!).inMilliseconds / 1000.0;
+      final newUSD = (baseUsdAtSync + secs * usdPerSec).clamp(0.0, kUsdTarget);
+      final newSOL = baseSolAtSync + secs * solPerSec;
+      setState(() {
+        liveUSD       = newUSD;
+        liveSOL       = newSOL;
+        cycleProgress = (newUSD / kUsdTarget).clamp(0.0, 1.0);
+      });
+    });
+  }
+
+  void startAutoSync() {
+    syncTimer?.cancel();
+    syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (isMining) fetchStatus();
+    });
+  }
+
+  void dispose() {
+    liveTimer?.cancel();
+    syncTimer?.cancel();
+  }
 }
