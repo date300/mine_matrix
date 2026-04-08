@@ -1250,18 +1250,18 @@ class _BuyBoostSheetState extends State<BuyBoostSheet> {
               child: Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: AppColors.accentRed.withOpacity(0.1),
+                  color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(CupertinoIcons.exclamationmark_circle, color: AppColors.accentRed, size: 18.sp),
+                    Icon(CupertinoIcons.exclamationmark_circle, color: Colors.red, size: 18.sp),
                     SizedBox(width: 8.w),
                     Expanded(
                       child: Text(
                         _error!,
-                        style: GoogleFonts.inter(color: AppColors.accentRed, fontSize: 12.sp),
+                        style: GoogleFonts.inter(color: Colors.red, fontSize: 12.sp),
                       ),
                     ),
                   ],
@@ -1484,18 +1484,18 @@ class _BuyAutoMiningSheetState extends State<BuyAutoMiningSheet> {
               child: Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: AppColors.accentRed.withOpacity(0.1),
+                  color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(CupertinoIcons.exclamationmark_circle, color: AppColors.accentRed, size: 18.sp),
+                    Icon(CupertinoIcons.exclamationmark_circle, color: Colors.red, size: 18.sp),
                     SizedBox(width: 8.w),
                     Expanded(
                       child: Text(
                         _error!,
-                        style: GoogleFonts.inter(color: AppColors.accentRed, fontSize: 12.sp),
+                        style: GoogleFonts.inter(color: Colors.red, fontSize: 12.sp),
                       ),
                     ),
                   ],
