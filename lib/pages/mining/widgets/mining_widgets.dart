@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,28 +8,13 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
-import 'dart:ui';
 import '../constants/mining_constants.dart';
 import '../controllers/mining_controller.dart';
 
-// --- Colors ------------------------------------------------------------------
-class AppColors {
-  static const Color background   = Color(0xFF0A0A0F);
-  static const Color surface      = Color(0xFF12121A);
-  static const Color accentGreen  = Color(0xFF00FFA3);
-  static const Color accentPurple = Color(0xFFB829F7);
-  static const Color accentBlue   = Color(0xFF00D4FF);
-  static const Color accentOrange = Color(0xFFFF9500);
-  static const Color accentRed    = Color(0xFFFF4D4D);
-  static const Color accentLeaf   = Color(0xFF4ADE80);
-  static const Color textPrimary  = Color(0xFFFFFFFF);
-  static const Color textSecondary= Color(0xFF8B8B9E);
-  static const Color textMuted    = Color(0xFF4A4A5A);
-  static const Color border       = Color(0xFF2A2A3A);
-  static const Color cardBg       = Color(0xFF161620);
-}
+// NOTE: AppColors is imported from mining_constants.dart
+// Do NOT define AppColors here to avoid conflict
 
-// Lottie Network URLs - No local assets needed!
+// --- Lottie Network URLs --------------------------------------------------------------
 class AppLottie {
   static const String mining      = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
   static const String rocket      = 'https://assets10.lottiefiles.com/packages/lf20_96bovdur.json';
@@ -118,7 +104,7 @@ class LiveEarningsCard extends StatelessWidget {
           colors: [
             AppColors.accentGreen.withOpacity(0.15),
             AppColors.accentBlue.withOpacity(0.05),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
@@ -235,7 +221,7 @@ class SolanaLiveCard extends StatelessWidget {
           colors: [
             AppColors.accentPurple.withOpacity(active ? 0.2 : 0.08),
             AppColors.accentGreen.withOpacity(active ? 0.1 : 0.04),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
@@ -295,7 +281,7 @@ class SolanaLiveCard extends StatelessWidget {
                           Text(
                             "1 SOL = \$${c.solPrice.toStringAsFixed(2)}",
                             style: GoogleFonts.inter(
-                              color: AppColors.textSecondary,
+                              color: Colors.white54,
                               fontSize: 10.sp,
                             ),
                           ),
@@ -430,7 +416,7 @@ class CycleProgressSection extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.accentGreen.withOpacity(0.1),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
@@ -542,7 +528,7 @@ class BoostInfoSection extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.accentPurple.withOpacity(0.15),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
@@ -674,7 +660,7 @@ class AutoMiningCard extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             (active ? AppColors.accentGreen : Colors.white).withOpacity(active ? 0.15 : 0.05),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
@@ -818,7 +804,7 @@ class WithdrawableSection extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppColors.accentLeaf.withOpacity(0.15),
-            AppColors.surface,
+            AppColors.bgCard,
           ],
         ),
         border: Border.all(
