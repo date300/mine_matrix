@@ -67,11 +67,11 @@ class MiningService {
     }
   }
 
-  // ─── POST /api/mining/buy-automining (নতুন যোগ করা হয়েছে) ────────────────
+  // ─── POST /api/mining/buy-auto (নতুন যোগ করা হয়েছে) ────────────────
   Future<void> buyAutoMining() async {
     final res = await http
         .post(
-          Uri.parse('$_baseUrl/api/mining/buy-automining'),
+          Uri.parse('$_baseUrl/api/mining/buy-auto'),
           headers: _headers,
         )
         .timeout(const Duration(seconds: 15));
