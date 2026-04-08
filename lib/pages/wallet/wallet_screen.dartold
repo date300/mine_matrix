@@ -1,23 +1,10 @@
-আমি বুঝতে পেরেছি! আপনি চাচ্ছেন Lottie অ্যানিমেশনের .json ফাইলগুলো আলাদা করে ডাউনলোড করে ফোল্ডারে রাখার ঝামেলায় না যেতে। অর্থাৎ, শুধু pubspec.yaml-এ প্যাকেজের ভার্সনটা বসাবেন আর কোড রান করলেই যেন সব কাজ করে।
-এর সবচেয়ে ভালো এবং সহজ সমাধান হলো **Lottie.network** ব্যবহার করা। এতে অ্যানিমেশনগুলো সরাসরি ইন্টারনেট (লাইভ লিংক) থেকে লোড হবে। আপনাকে প্রজেক্টে আলাদা করে কোনো assets/lottie ফোল্ডার বানাতে হবে না।
-শুধু আপনার pubspec.yaml ফাইলে এই লাইনটা যোগ করুন:
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  lottie: ^3.1.0   # শুধু এই প্যাকেজটি যোগ করবেন
-
-```
-এরপর নিচের কোডটি সরাসরি কপি-পেস্ট করে দিন। আমি সব Lottie.asset পরিবর্তন করে Lottie.network করে দিয়েছি এবং ডেমো হিসেবে কিছু লাইভ অ্যানিমেশন লিংক দিয়ে দিয়েছি, যাতে আপনি পেস্ট করার সাথে সাথেই কোডটি রান করে দেখতে পারেন। (পরবর্তীতে আপনি চাইলে lottiefiles.com থেকে আপনার পছন্দের লিংক বসিয়ে নিতে পারবেন)।
-```dart
 // wallet_screen.dart
-// Real Solana Deposit System
-// Background: Transparent | Icons: Lottie (Network)
+// Real Solana Deposit System — Reown auto transaction + manual verify
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart'; 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:glassmorphism/glassmorphism.dart';
@@ -26,40 +13,21 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:lottie/lottie.dart'; // Lottie প্যাকেজ
 import '../../providers/auth_provider.dart';
 
-// --- Colors ------------------------------------------------------------------
+// ─── Colors ───────────────────────────────────────────────────────────────────
 class AppColors {
   static const Color background   = Color(0xFF0D0D12);
   static const Color accentGreen  = Color(0xFF14F195);
   static const Color accentPurple = Color(0xFF9945FF);
+  static const Color accentLeaf   = Color(0xFF76C442);
   static const Color blue         = Color(0xFF3B82F6);
   static const Color bgCard       = Color(0xFF1B1B22);
 }
 
-// Lottie Network URLs (কোনো লোকাল ফাইলের দরকার নেই)
-class AppLottie {
-  // ডেমো হিসেবে পাবলিক লিংক ব্যবহার করা হয়েছে, আপনি চাইলে এগুলো পরিবর্তন করতে পারেন
-  static const String solCoin      = 'https://lottie.host/9c336dc4-9a3c-41c3-88bc-2f9ec67bc94e/sS9t5j2N7V.json'; 
-  static const String rightArrow   = 'https://lottie.host/f0a4f5f5-8d5f-4a0b-8d0f-48d6b8b0e8b1/O7D1zXW0A6.json'; 
-  static const String refresh      = 'https://lottie.host/7e008d7c-bb2c-4a34-bb67-6cdcc81f7cb8/JkUqX2B2aP.json';      
-  static const String emptyHistory = 'https://lottie.host/5b11c9f3-4c91-4e4b-97e3-0d33e5c98260/7M8T8U9Qh3.json';
-  static const String txPending    = 'https://lottie.host/7e008d7c-bb2c-4a34-bb67-6cdcc81f7cb8/JkUqX2B2aP.json';   
-  static const String txSuccess    = 'https://lottie.host/1b5cb1de-17f1-4b72-8821-2e6ecaf8eb3b/M8p4zO9j9X.json';   
-  static const String txFailed     = 'https://lottie.host/6a51d9e2-632b-4530-ab0f-155e8fb8c335/Y9L2R0a7k5.json';    
-  static const String errorCloud   = 'https://lottie.host/2a3e6807-6b45-4228-874e-5e3e117498c8/7P3oX0c2V9.json';  
-  static const String copy         = 'https://lottie.host/d1f99c0a-0c7f-43b6-96b4-2b6b5536e2f1/K0M7Z8L3B5.json';         
-  static const String info         = 'https://lottie.host/c5c1655b-4b24-4f81-a3f1-45a828e833b7/R8T5V0D2X3.json';         
-  static const String warning      = 'https://lottie.host/a4387d70-388a-45c1-8409-5c1a8db8c04d/Q6P4S9F1W2.json';      
-  static const String secure       = 'https://lottie.host/e2d27453-9a3d-4226-8968-3c3b018510f2/E2X7C9Z0N4.json';       
-  static const String question     = 'https://lottie.host/b7e45293-61a8-4251-8720-379e9eb10a18/Z5B2V8M1L7.json';     
-  static const String verifyLoading= 'https://lottie.host/80e922b9-e160-44ec-b44c-db7d4ffab1be/B201b1Q6dK.json';
-}
-
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// --- Main Screen --------------------------------------------------------------
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
@@ -99,10 +67,23 @@ class _WalletScreenState extends State<WalletScreen> {
       final token = _getToken();
       if (token == null) { setState(() { _isLoading = false; _hasError = true; }); return; }
 
-      // API Calls
-      final infoRes = await http.get(Uri.parse('$_baseUrl/api/deposit/info'), headers: _headers()).timeout(const Duration(seconds: 15));
-      final statusRes = await http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _headers()).timeout(const Duration(seconds: 15));
-      final histRes = await http.get(Uri.parse('$_baseUrl/api/deposit/history'), headers: _headers()).timeout(const Duration(seconds: 15));
+      // Deposit info
+      final infoRes = await http.get(
+        Uri.parse('$_baseUrl/api/deposit/info'),
+        headers: _headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      // Mining status (balance এর জন্য)
+      final statusRes = await http.get(
+        Uri.parse('$_baseUrl/api/mining/status'),
+        headers: _headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      // History
+      final histRes = await http.get(
+        Uri.parse('$_baseUrl/api/deposit/history'),
+        headers: _headers(),
+      ).timeout(const Duration(seconds: 15));
 
       if (!mounted) return;
 
@@ -131,9 +112,9 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       body: _isLoading
-          ? Center(child: Lottie.network(AppLottie.verifyLoading, width: 60.w)) // Lottie Network
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accentGreen))
           : _hasError
               ? _buildError()
               : RefreshIndicator(
@@ -159,7 +140,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  // --- Balance Card -------------------------------------------------------------
+  // ─── Balance Card ────────────────────────────────────────────────────────────
   Widget _buildBalanceCard() {
     return GlassmorphicContainer(
       width: double.infinity,
@@ -212,7 +193,7 @@ class _WalletScreenState extends State<WalletScreen> {
     ).animate().fadeIn().scale();
   }
 
-  // --- Deposit Button -----------------------------------------------------------
+  // ─── Deposit Button ──────────────────────────────────────────────────────────
   Widget _buildDepositButton() {
     return GestureDetector(
       onTap: () => _showDepositSheet(),
@@ -234,10 +215,21 @@ class _WalletScreenState extends State<WalletScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
+            Container(
               width: 32.w,
               height: 32.w,
-              child: Lottie.network(AppLottie.solCoin, repeat: true), // Lottie Network
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                    colors: [AppColors.accentPurple, AppColors.accentGreen]),
+              ),
+              child: Center(
+                child: Text("◎",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold)),
+              ),
             ),
             SizedBox(width: 10.w),
             Text("DEPOSIT SOL",
@@ -247,18 +239,15 @@ class _WalletScreenState extends State<WalletScreen> {
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1)),
             SizedBox(width: 8.w),
-            SizedBox(
-              width: 18.w,
-              height: 18.w,
-              child: Lottie.network(AppLottie.rightArrow), // Lottie Network
-            ),
+            Icon(CupertinoIcons.chevron_right,
+                color: AppColors.accentGreen, size: 16.sp),
           ],
         ),
       ),
     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1);
   }
 
-  // --- History Section -----------------------------------------------------------
+  // ─── History Section ──────────────────────────────────────────────────────────
   Widget _buildHistorySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,11 +262,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     fontWeight: FontWeight.bold)),
             GestureDetector(
               onTap: _loadAll,
-              child: SizedBox(
-                width: 20.w,
-                height: 20.w,
-                child: Lottie.network(AppLottie.refresh, repeat: false), // Lottie Network
-              ),
+              child: Icon(CupertinoIcons.refresh,
+                  color: AppColors.accentGreen, size: 18.sp),
             ),
           ],
         ),
@@ -291,7 +277,8 @@ class _WalletScreenState extends State<WalletScreen> {
               borderRadius: BorderRadius.circular(18.r),
             ),
             child: Column(children: [
-              Lottie.network(AppLottie.emptyHistory, width: 80.w, height: 80.h), // Lottie Network
+              Icon(CupertinoIcons.tray,
+                  color: Colors.white24, size: 32.sp),
               SizedBox(height: 8.h),
               Text("No deposits yet",
                   style: GoogleFonts.inter(
@@ -311,22 +298,22 @@ class _WalletScreenState extends State<WalletScreen> {
     final sig    = d['tx_signature']?.toString() ?? '';
     final date   = d['created_at']?.toString().substring(0, 10) ?? '';
 
-    String statusLottie;
     Color statusColor;
-    
+    IconData statusIcon;
     if (status == 'confirmed') {
       statusColor = AppColors.accentGreen;
-      statusLottie = AppLottie.txSuccess;
+      statusIcon  = CupertinoIcons.checkmark_circle_fill;
     } else if (status == 'failed') {
       statusColor = Colors.redAccent;
-      statusLottie = AppLottie.txFailed;
+      statusIcon  = CupertinoIcons.xmark_circle_fill;
     } else {
       statusColor = Colors.orange;
-      statusLottie = AppLottie.txPending;
+      statusIcon  = CupertinoIcons.clock_fill;
     }
 
     return GestureDetector(
       onTap: () {
+        // Signature copy
         Clipboard.setData(ClipboardData(text: sig));
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('TX hash copied!',
@@ -346,10 +333,21 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
         child: Row(
           children: [
-            SizedBox(
+            Container(
               width: 40.w,
               height: 40.w,
-              child: Lottie.network(AppLottie.solCoin), // Lottie Network
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                    colors: [AppColors.accentPurple, AppColors.accentGreen]),
+              ),
+              child: Center(
+                child: Text("◎",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold)),
+              ),
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -363,7 +361,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           fontSize: 13.sp)),
                   SizedBox(height: 2.h),
                   Text(
-                    sig.length > 20 ? "${sig.substring(0, 12)}...${sig.substring(sig.length - 6)}" : sig,
+                    "${sig.substring(0, 12)}...${sig.substring(sig.length - 6)}",
                     style: GoogleFonts.spaceMono(
                         color: Colors.white38, fontSize: 9.sp),
                   ),
@@ -388,11 +386,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         color: Colors.white54, fontSize: 10.sp)),
                 SizedBox(height: 3.h),
                 Row(children: [
-                  SizedBox(
-                    width: 12.w,
-                    height: 12.w,
-                    child: Lottie.network(statusLottie), // Lottie Network
-                  ),
+                  Icon(statusIcon, color: statusColor, size: 10.sp),
                   SizedBox(width: 3.w),
                   Text(status,
                       style: GoogleFonts.inter(
@@ -406,18 +400,18 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  // --- Error Widget -------------------------------------------------------------
+  // ─── Error ────────────────────────────────────────────────────────────────────
   Widget _buildError() {
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Lottie.network(AppLottie.errorCloud, width: 100.w), // Lottie Network
+        Icon(Icons.cloud_off_rounded, color: Colors.white30, size: 48.sp),
         SizedBox(height: 12.h),
         Text("Could not load wallet data",
             style: GoogleFonts.inter(color: Colors.white54, fontSize: 14.sp)),
         SizedBox(height: 16.h),
         ElevatedButton.icon(
           onPressed: _loadAll,
-          icon: SizedBox(width: 16.w, height: 16.w, child: Lottie.network(AppLottie.refresh)), // Lottie Network
+          icon: const Icon(Icons.refresh_rounded, color: Colors.black),
           label: Text("Retry",
               style: GoogleFonts.inter(
                   color: Colors.black, fontWeight: FontWeight.bold)),
@@ -431,12 +425,12 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  // --------------------------------------- DEPOSIT BOTTOM SHEET ----------------
+  // ═══════════════════════════════════════ DEPOSIT BOTTOM SHEET ════════════════
   void _showDepositSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, 
+      backgroundColor: Colors.transparent,
       builder: (_) => _DepositSheet(
         platformWallet: _platformWallet,
         solPrice:       _solPrice,
@@ -450,7 +444,7 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
-// ------------------------------------------- DEPOSIT SHEET -------------------
+// ═══════════════════════════════════════════ DEPOSIT SHEET ═══════════════════
 class _DepositSheet extends StatefulWidget {
   final String platformWallet;
   final double solPrice;
@@ -469,7 +463,8 @@ class _DepositSheet extends StatefulWidget {
 }
 
 class _DepositSheetState extends State<_DepositSheet> {
-  int _step = 0; // Steps: 0=address, 1=verify
+  // Steps: 0=address, 1=verify
+  int _step = 0;
 
   final _sigController = TextEditingController();
   bool _verifying      = false;
@@ -483,7 +478,7 @@ class _DepositSheetState extends State<_DepositSheet> {
 
   Future<void> _verifyDeposit() async {
     final sig = _sigController.text.trim();
-    if (sig.length < 50) { 
+    if (sig.length < 80) {
       setState(() => _verifyError = 'Invalid transaction signature');
       return;
     }
@@ -498,6 +493,7 @@ class _DepositSheetState extends State<_DepositSheet> {
       ).timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
+
       final data = jsonDecode(res.body);
 
       if (res.statusCode == 200 && data['success'] == true) {
@@ -531,7 +527,7 @@ class _DepositSheetState extends State<_DepositSheet> {
           color: Colors.transparent,
           child: GlassmorphicContainer(
             width: MediaQuery.of(ctx).size.width * 0.82,
-            height: 320.h,
+            height: 300.h,
             borderRadius: 24.r,
             blur: 22,
             alignment: Alignment.center,
@@ -549,7 +545,8 @@ class _DepositSheetState extends State<_DepositSheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Lottie.network(AppLottie.txSuccess, width: 80.w, height: 80.h, repeat: false), // Lottie Network
+                  Icon(CupertinoIcons.checkmark_seal_fill,
+                      color: AppColors.accentGreen, size: 50.sp),
                   SizedBox(height: 14.h),
                   Text("Deposit Confirmed!",
                       style: GoogleFonts.inter(
@@ -563,13 +560,9 @@ class _DepositSheetState extends State<_DepositSheet> {
                           fontSize: 26.sp,
                           fontWeight: FontWeight.bold)),
                   SizedBox(height: 4.h),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    SizedBox(width: 14.w, height: 14.w, child: Lottie.network(AppLottie.solCoin)), // Lottie Network
-                    SizedBox(width: 4.w),
-                    Text("$sol SOL deposited",
+                  Text("◎ $sol SOL deposited",
                       style: GoogleFonts.spaceMono(
                           color: AppColors.accentPurple, fontSize: 12.sp)),
-                  ]),
                   SizedBox(height: 20.h),
                   GestureDetector(
                     onTap: () {
@@ -608,7 +601,7 @@ class _DepositSheetState extends State<_DepositSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
-        color: const Color(0xCC0F0F18), 
+        color: const Color(0xFF0F0F18),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
         border: Border.all(color: AppColors.accentPurple.withOpacity(0.2)),
       ),
@@ -631,10 +624,21 @@ class _DepositSheetState extends State<_DepositSheet> {
             padding: EdgeInsets.symmetric(horizontal: 20.w),
             child: Row(
               children: [
-                SizedBox(
+                Container(
                   width: 36.w,
                   height: 36.w,
-                  child: Lottie.network(AppLottie.solCoin), // Lottie Network
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                        colors: [AppColors.accentPurple, AppColors.accentGreen]),
+                  ),
+                  child: Center(
+                    child: Text("◎",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold)),
+                  ),
                 ),
                 SizedBox(width: 10.w),
                 Column(
@@ -653,11 +657,8 @@ class _DepositSheetState extends State<_DepositSheet> {
                 const Spacer(),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: EdgeInsets.all(4.w),
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white12),
-                    child: const Icon(Icons.close, color: Colors.white54, size: 16),
-                  ),
+                  child: Icon(CupertinoIcons.xmark_circle_fill,
+                      color: Colors.white24, size: 24.sp),
                 ),
               ],
             ),
@@ -715,7 +716,7 @@ class _DepositSheetState extends State<_DepositSheet> {
     ]);
   }
 
-  // -- Step 0: Show Address + QR ------------------------------------------------
+  // ── Step 0: Show Address + QR ─────────────────────────────────────────────
   Widget _buildStep0() {
     return Column(
       children: [
@@ -774,11 +775,8 @@ class _DepositSheetState extends State<_DepositSheet> {
                   ),
                 ),
                 SizedBox(width: 8.w),
-                SizedBox(
-                  width: 18.w,
-                  height: 18.w,
-                  child: Lottie.network(AppLottie.copy), // Lottie Network
-                ),
+                Icon(CupertinoIcons.doc_on_doc,
+                    color: AppColors.accentPurple, size: 18.sp),
               ],
             ),
           ),
@@ -786,16 +784,19 @@ class _DepositSheetState extends State<_DepositSheet> {
 
         SizedBox(height: 14.h),
 
-        // Info boxes with Lottie
-        _infoBox(AppLottie.info, "Minimum deposit: 0.001 SOL", Colors.orange),
+        // Info boxes
+        _infoBox(CupertinoIcons.info_circle,
+            "Minimum deposit: 0.001 SOL", Colors.orange),
         SizedBox(height: 8.h),
-        _infoBox(AppLottie.warning, "Only send SOL on Solana Mainnet", Colors.redAccent),
+        _infoBox(CupertinoIcons.exclamationmark_shield,
+            "Only send SOL on Solana Mainnet", Colors.redAccent),
         SizedBox(height: 8.h),
-        _infoBox(AppLottie.secure, "Confirmation takes ~5-30 seconds", AppColors.accentGreen),
+        _infoBox(CupertinoIcons.clock,
+            "Confirmation takes ~5–30 seconds", AppColors.accentGreen),
 
         SizedBox(height: 24.h),
 
-        // Next button with arrow
+        // Next button
         GestureDetector(
           onTap: () => setState(() => _step = 1),
           child: Container(
@@ -807,18 +808,11 @@ class _DepositSheetState extends State<_DepositSheet> {
               borderRadius: BorderRadius.circular(16.r),
             ),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("I've Sent SOL",
-                    style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold)),
-                SizedBox(width: 8.w),
-                SizedBox(width: 16.w, height: 16.w, child: Lottie.network(AppLottie.rightArrow)), // Lottie Network
-              ],
-            ),
+            child: Text("I've Sent SOL →",
+                style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold)),
           ),
         ),
 
@@ -827,7 +821,7 @@ class _DepositSheetState extends State<_DepositSheet> {
     );
   }
 
-  // -- Step 1: Enter TX Signature -----------------------------------------------
+  // ── Step 1: Enter TX Signature ────────────────────────────────────────────
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,7 +833,7 @@ class _DepositSheetState extends State<_DepositSheet> {
                 fontWeight: FontWeight.w700)),
         SizedBox(height: 6.h),
         Text(
-          "After sending SOL, copy the transaction hash (signature) from your wallet and paste below.",
+          "After sending SOL, copy the transaction hash from your wallet and paste below.",
           style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.sp),
         ),
 
@@ -857,7 +851,8 @@ class _DepositSheetState extends State<_DepositSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                SizedBox(width: 14.w, height: 14.w, child: Lottie.network(AppLottie.question)), // Lottie Network
+                Icon(CupertinoIcons.question_circle,
+                    color: AppColors.blue, size: 14.sp),
                 SizedBox(width: 6.w),
                 Text("How to find TX hash?",
                     style: GoogleFonts.inter(
@@ -867,7 +862,7 @@ class _DepositSheetState extends State<_DepositSheet> {
               ]),
               SizedBox(height: 6.h),
               Text(
-                "Phantom/Solflare: Activity/History -> Tap transaction -> Copy Signature/ID",
+                "Phantom: Activity → tap transaction → Copy TX ID\nSolflare: History → tap transaction → Share icon",
                 style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.sp),
               ),
             ],
@@ -890,26 +885,21 @@ class _DepositSheetState extends State<_DepositSheet> {
           child: TextField(
             controller: _sigController,
             style: GoogleFonts.spaceMono(color: Colors.white, fontSize: 11.sp),
-            maxLines: 2,
+            maxLines: 3,
             decoration: InputDecoration(
               hintText: 'Paste transaction signature here...',
               hintStyle: GoogleFonts.inter(color: Colors.white24, fontSize: 11.sp),
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(14.w),
-              suffixIcon: GestureDetector(
-                onTap: () async {
+              suffixIcon: IconButton(
+                icon: Icon(CupertinoIcons.doc_on_clipboard,
+                    color: AppColors.accentGreen, size: 18.sp),
+                onPressed: () async {
                   final data = await Clipboard.getData('text/plain');
                   if (data?.text != null) {
                     _sigController.text = data!.text!.trim();
                   }
                 },
-                child: UnconstrainedBox(
-                  child: SizedBox(
-                    width: 20.w,
-                    height: 20.w,
-                    child: Lottie.network(AppLottie.copy), // Lottie Network
-                  ),
-                ),
               ),
             ),
           ),
@@ -918,7 +908,8 @@ class _DepositSheetState extends State<_DepositSheet> {
         if (_verifyError.isNotEmpty) ...[
           SizedBox(height: 8.h),
           Row(children: [
-            SizedBox(width: 14.w, height: 14.w, child: Lottie.network(AppLottie.txFailed)), // Lottie Network
+            Icon(CupertinoIcons.xmark_circle,
+                color: Colors.redAccent, size: 14.sp),
             SizedBox(width: 6.w),
             Expanded(
               child: Text(_verifyError,
@@ -945,10 +936,11 @@ class _DepositSheetState extends State<_DepositSheet> {
             ),
             alignment: Alignment.center,
             child: _verifying
-                ? SizedBox(
-                    width: 24.w,
-                    height: 24.w,
-                    child: Lottie.network(AppLottie.verifyLoading)) // Lottie Network
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
                 : Text("Verify & Credit Balance",
                     style: GoogleFonts.inter(
                         color: Colors.white,
@@ -971,16 +963,8 @@ class _DepositSheetState extends State<_DepositSheet> {
               border: Border.all(color: Colors.white12),
             ),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.rotate(angle: 3.14159, 
-                 child: SizedBox(width: 14.w, height: 14.w, child: Lottie.network(AppLottie.rightArrow, delegates: LottieDelegates(values: [ValueDelegate.colorFilter(['**'], value: const ColorFilter.mode(Colors.white54, BlendMode.srcIn))])))), // Lottie Network
-                SizedBox(width: 6.w),
-                Text("Back",
-                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 13.sp)),
-              ],
-            ),
+            child: Text("← Back",
+                style: GoogleFonts.inter(color: Colors.white54, fontSize: 13.sp)),
           ),
         ),
 
@@ -989,7 +973,7 @@ class _DepositSheetState extends State<_DepositSheet> {
     );
   }
 
-  Widget _infoBox(String lottieAsset, String text, Color color) {
+  Widget _infoBox(IconData icon, String text, Color color) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 9.h),
       decoration: BoxDecoration(
@@ -998,11 +982,7 @@ class _DepositSheetState extends State<_DepositSheet> {
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(children: [
-        SizedBox(
-          width: 14.w,
-          height: 14.w,
-          child: Lottie.network(lottieAsset), // Lottie Network
-        ),
+        Icon(icon, color: color, size: 13.sp),
         SizedBox(width: 8.w),
         Expanded(
           child: Text(text,
@@ -1012,5 +992,3 @@ class _DepositSheetState extends State<_DepositSheet> {
     );
   }
 }
-
-```

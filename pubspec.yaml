@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
   google_mobile_ads: ^5.0.0
   qr_flutter: ^4.1.0 
   connectivity_plus: ^7.1.0
