@@ -87,163 +87,7 @@ class _PulseDotState extends State<PulseDot> with SingleTickerProviderStateMixin
   }
 }
 
-// --- Withdrawable Section (UPPER - সবার উপরে) --------------------------------------------------------------
-class WithdrawableSection extends StatelessWidget {
-  final MiningController c;
-  final VoidCallback? onClaimTap; // Claim করার জন্য কলব্যাক
-  const WithdrawableSection({super.key, required this.c, this.onClaimTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool canClaim = c.withdrawableUSD >= 100.0; // Minimum $100 to claim
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r),
-        gradient: LinearGradient(
-          colors: [
-            canClaim ? AppColors.accentGreen.withOpacity(0.25) : AppColors.accentLeaf.withOpacity(0.15),
-            AppColors.bgCard,
-          ],
-        ),
-        border: Border.all(
-          color: canClaim ? AppColors.accentGreen.withOpacity(0.5) : AppColors.accentLeaf.withOpacity(0.3),
-          width: canClaim ? 2 : 1,
-        ),
-        boxShadow: canClaim
-            ? [
-                BoxShadow(
-                  color: AppColors.accentGreen.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : null,
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Row(
-          children: [
-            Container(
-              width: 50.w,
-              height: 50.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: canClaim
-                    ? const LinearGradient(
-                        colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                      )
-                    : null,
-                color: canClaim ? null : AppColors.accentLeaf.withOpacity(0.2),
-              ),
-              child: Center(
-                child: canClaim
-                    ? SizedBox(
-                        width: 30.w,
-                        height: 30.h,
-                        child: Lottie.network(AppLottie.success, repeat: true),
-                      )
-                    : Icon(
-                        CupertinoIcons.checkmark_seal_fill,
-                        color: AppColors.accentLeaf,
-                        size: 26.sp,
-                      ),
-              ),
-            ),
-            SizedBox(width: 14.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "WITHDRAWABLE BALANCE",
-                    style: GoogleFonts.inter(
-                      color: canClaim ? AppColors.accentGreen : AppColors.accentLeaf,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    "\$${c.withdrawableUSD.toStringAsFixed(2)} USD",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (canClaim) ...[
-                    SizedBox(height: 4.h),
-                    Text(
-                      "Ready to claim! 🎉",
-                      style: GoogleFonts.inter(
-                        color: AppColors.accentGreen,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (canClaim)
-              GestureDetector(
-                onTap: onClaimTap,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                    ),
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accentGreen.withOpacity(0.4),
-                        blurRadius: 15,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    "CLAIM",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              )
-            else
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Text(
-                  "Min \$100",
-                  style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    ).animate().fadeIn().shake(
-          hz: canClaim ? 2 : 0,
-          duration: const Duration(milliseconds: 1000),
-        );
-  }
-}
-
-// --- Live Earnings Card (2nd) --------------------------------------------------------------
+// --- Live Earnings Card with Lottie --------------------------------------------------------------
 class LiveEarningsCard extends StatelessWidget {
   final MiningController c;
   const LiveEarningsCard({super.key, required this.c});
@@ -259,7 +103,7 @@ class LiveEarningsCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             AppColors.accentGreen.withOpacity(0.15),
-            AppColors.accentPurple.withOpacity(0.05),
+            AppColors.accentPurple.withOpacity(0.05), // FIX: accentBlue -> accentPurple
             AppColors.bgCard,
           ],
         ),
@@ -358,7 +202,7 @@ class LiveEarningsCard extends StatelessWidget {
   }
 }
 
-// --- Solana Live Card (3rd) --------------------------------------------------------------
+// --- Solana Live Card with Lottie --------------------------------------------------------------
 class SolanaLiveCard extends StatelessWidget {
   final MiningController c;
   const SolanaLiveCard({super.key, required this.c});
@@ -544,7 +388,7 @@ class SolanaLiveCard extends StatelessWidget {
   }
 }
 
-// --- Cycle Progress Section (4th) --------------------------------------------------------------
+// --- Cycle Progress Section with Lottie --------------------------------------------------------------
 class CycleProgressSection extends StatelessWidget {
   final MiningController c;
   const CycleProgressSection({super.key, required this.c});
@@ -562,7 +406,7 @@ class CycleProgressSection extends StatelessWidget {
       statusColor = Colors.orange;
     } else {
       statusText = "Tap ORB to start mining";
-      statusColor = AppColors.accentPurple;
+      statusColor = AppColors.accentPurple; // FIX: accentBlue -> accentPurple
     }
 
     return Container(
@@ -664,7 +508,7 @@ class CycleProgressSection extends StatelessWidget {
   }
 }
 
-// --- Boost Info Section (5th) --------------------------------------------------------------
+// --- Boost Info Section with Lottie --------------------------------------------------------------
 class BoostInfoSection extends StatelessWidget {
   final MiningController c;
   final VoidCallback onBuyBoost;
@@ -799,7 +643,7 @@ class BoostInfoSection extends StatelessWidget {
   }
 }
 
-// --- Auto Mining Card (6th) --------------------------------------------------------------
+// --- Auto Mining Card with Lottie --------------------------------------------------------------
 class AutoMiningCard extends StatelessWidget {
   final MiningController c;
   final VoidCallback onBuyAuto;
@@ -946,7 +790,81 @@ class AutoMiningCard extends StatelessWidget {
   }
 }
 
-// --- Mining Orb (Last - সবার নিচে) --------------------------------------------------------------
+// --- Withdrawable Section --------------------------------------------------------------
+class WithdrawableSection extends StatelessWidget {
+  final MiningController c;
+  const WithdrawableSection({super.key, required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.accentLeaf.withOpacity(0.15),
+            AppColors.bgCard,
+          ],
+        ),
+        border: Border.all(
+          color: AppColors.accentLeaf.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Row(
+          children: [
+            Container(
+              width: 44.w,
+              height: 44.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accentLeaf.withOpacity(0.2),
+              ),
+              child: Center(
+                child: Icon(
+                  CupertinoIcons.checkmark_seal_fill,
+                  color: AppColors.accentLeaf,
+                  size: 24.sp,
+                ),
+              ),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "WITHDRAWABLE BALANCE",
+                    style: GoogleFonts.inter(
+                      color: AppColors.accentLeaf,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    "\$${c.withdrawableUSD.toStringAsFixed(2)} USD",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn();
+  }
+}
+
+// --- Mining Orb with Lottie --------------------------------------------------------------
 class MiningOrb extends StatelessWidget {
   final MiningController c;
   final VoidCallback onTap;
@@ -1122,374 +1040,7 @@ class MiningOrb extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CLAIM WIDGET MODULE - পপআপ না, সরাসরি Widget হিসেবে
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// --- Claim Success Widget (পপআপ না, সরাসরি UI তে দেখাবে) --------------------------------------------------------------
-class ClaimSuccessWidget extends StatelessWidget {
-  final double amount;
-  final String currency;
-  final VoidCallback onClose;
-  final VoidCallback? onViewHistory;
-
-  const ClaimSuccessWidget({
-    super.key,
-    required this.amount,
-    this.currency = "USD",
-    required this.onClose,
-    this.onViewHistory,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF1A1A2E),
-            const Color(0xFF0F0F1A),
-          ],
-        ),
-        border: Border.all(
-          color: AppColors.accentGreen.withOpacity(0.4),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentGreen.withOpacity(0.3),
-            blurRadius: 40,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28.r),
-        child: Stack(
-          children: [
-            // Background confetti effect
-            Positioned.fill(
-              child: Lottie.network(
-                AppLottie.confetti,
-                repeat: true,
-                fit: BoxFit.cover,
-              ),
-            ),
-            
-            // Content
-            Padding(
-              padding: EdgeInsets.all(28.w),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Success icon
-                  Container(
-                    width: 100.w,
-                    height: 100.h,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.accentGreen.withOpacity(0.4),
-                          blurRadius: 30,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: 60.w,
-                        height: 60.h,
-                        child: Lottie.network(
-                          AppLottie.success,
-                          repeat: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  
-                  // Title
-                  Text(
-                    "CLAIM SUCCESSFUL! 🎉",
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  
-                  // Subtitle
-                  Text(
-                    "Your earnings have been transferred",
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  
-                  // Amount card
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(20.w),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.accentGreen.withOpacity(0.15),
-                          AppColors.accentGreen.withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(
-                        color: AppColors.accentGreen.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          "YOU CLAIMED",
-                          style: GoogleFonts.inter(
-                            color: AppColors.accentGreen,
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          "\$${amount.toStringAsFixed(2)}",
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 42.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        Text(
-                          currency,
-                          style: GoogleFonts.inter(
-                            color: AppColors.accentGreen,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  
-                  // Transaction ID
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          CupertinoIcons.doc_text,
-                          color: Colors.white38,
-                          size: 16.sp,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          "TXN: ${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}",
-                          style: GoogleFonts.spaceMono(
-                            color: Colors.white38,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 28.h),
-                  
-                  // Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: onViewHistory,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white10,
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: Text(
-                              "HISTORY",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: Colors.white70,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: onClose,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16.h),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                              ),
-                              borderRadius: BorderRadius.circular(16.r),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accentGreen.withOpacity(0.3),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              "AWESOME!",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).animate().scale(
-          begin: const Offset(0.8, 0.8),
-          end: const Offset(1, 1),
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.elasticOut,
-        );
-  }
-}
-
-// --- Claim Processing Widget (লোডিং স্টেট) --------------------------------------------------------------
-class ClaimProcessingWidget extends StatelessWidget {
-  final String message;
-  const ClaimProcessingWidget({
-    super.key,
-    this.message = "Processing your claim...",
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 40.w),
-      padding: EdgeInsets.all(32.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
-        color: const Color(0xFF1A1A2E),
-        border: Border.all(
-          color: AppColors.accentPurple.withOpacity(0.3),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 80.w,
-            height: 80.h,
-            child: Lottie.network(
-              AppLottie.loading,
-              repeat: true,
-            ),
-          ),
-          SizedBox(height: 24.h),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            "Please wait while we verify",
-            style: GoogleFonts.inter(
-              color: Colors.white54,
-              fontSize: 12.sp,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- Inline Claim Widget (সরাসরি UI তে দেখানোর জন্য) --------------------------------------------------------------
-class InlineClaimWidget extends StatelessWidget {
-  final MiningController c;
-  final VoidCallback onClaim;
-  final bool isProcessing;
-  final bool showSuccess;
-  final double? lastClaimedAmount;
-  final VoidCallback onSuccessClose;
-
-  const InlineClaimWidget({
-    super.key,
-    required this.c,
-    required this.onClaim,
-    this.isProcessing = false,
-    this.showSuccess = false,
-    this.lastClaimedAmount,
-    required this.onSuccessClose,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Show success state
-    if (showSuccess && lastClaimedAmount != null) {
-      return ClaimSuccessWidget(
-        amount: lastClaimedAmount!,
-        onClose: onSuccessClose,
-      );
-    }
-
-    // Show processing state
-    if (isProcessing) {
-      return const ClaimProcessingWidget();
-    }
-
-    // Show default claim button (integrated with WithdrawableSection)
-    return const SizedBox.shrink(); // WithdrawableSection already has claim button
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// BOTTOM SHEETS (Boost & Auto Mining)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// --- Buy Boost Bottom Sheet --------------------------------------------------------------
+// --- Buy Boost Bottom Sheet with Lottie --------------------------------------------------------------
 class BuyBoostSheet extends StatefulWidget {
   final MiningController c;
   final Future<bool> Function(double amount) onConfirm;
@@ -1811,7 +1362,7 @@ class _BuyBoostSheetState extends State<BuyBoostSheet> {
       );
 }
 
-// --- Buy Auto Mining Sheet --------------------------------------------------------------
+// --- Buy Auto Mining Sheet with Lottie --------------------------------------------------------------
 class BuyAutoMiningSheet extends StatefulWidget {
   final MiningController c;
   final Future<bool> Function() onConfirm;
@@ -2064,41 +1615,5 @@ void showBuyAutoMiningSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (_) => BuyAutoMiningSheet(c: controller, onConfirm: onConfirm),
-  );
-}
-
-// --- Claim Widget Helpers --------------------------------------------------------------
-void showClaimSuccess({
-  required BuildContext context,
-  required double amount,
-  String currency = "USD",
-  VoidCallback? onViewHistory,
-}) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: ClaimSuccessWidget(
-        amount: amount,
-        currency: currency,
-        onClose: () => Navigator.pop(context),
-        onViewHistory: onViewHistory,
-      ),
-    ),
-  );
-}
-
-void showClaimProcessing({
-  required BuildContext context,
-  String message = "Processing your claim...",
-}) {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: ClaimProcessingWidget(message: message),
-    ),
   );
 }
