@@ -50,35 +50,5 @@ class MiningService {
     final body = jsonDecode(res.body);
     throw Exception(body['error'] ?? body['message'] ?? 'Claim failed');
   }
-
-  // ─── POST /api/mining/buy-boost (নতুন যোগ করা হয়েছে) ─────────────────────
-  Future<void> buyBoost(double amount) async {
-    final res = await http
-        .post(
-          Uri.parse('$_baseUrl/api/mining/buy-boost'),
-          headers: _headers,
-          body: jsonEncode({'amount': amount}),
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (res.statusCode != 200) {
-      final body = jsonDecode(res.body);
-      throw Exception(body['error'] ?? body['message'] ?? 'Boost purchase failed');
-    }
-  }
-
-  // ─── POST /api/mining/buy-automining (নতুন যোগ করা হয়েছে) ────────────────
-  Future<void> buyAutoMining() async {
-    final res = await http
-        .post(
-          Uri.parse('$_baseUrl/api/mining/buy-automining'),
-          headers: _headers,
-        )
-        .timeout(const Duration(seconds: 15));
-
-    if (res.statusCode != 200) {
-      final body = jsonDecode(res.body);
-      throw Exception(body['error'] ?? body['message'] ?? 'Auto-mining unlock failed');
-    }
-  }
 }
+
