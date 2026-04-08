@@ -5,7 +5,6 @@ import 'package:glassmorphism/glassmorphism.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../layout/layout.dart';
-import '../../widgets/error_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,8 +15,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedTab = 0;
-  bool _hasError = false; // Error state added
-  bool _isLoading = false; // Loading state added
 
   final List<String> _tabs = [
     'Announcements',
@@ -95,25 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
-  // Simulate error for demo
-  void _simulateError() {
-    setState(() => _hasError = true);
-  }
-
-  // Retry loading
-  void _retryLoad() {
-    setState(() {
-      _hasError = false;
-      _isLoading = true;
-    });
-    // Simulate loading then success
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    });
-  }
-
+  // Simple sparkline path data
   List<Offset> _getSparklinePoints(bool isPositive, double width, double height) {
     if (isPositive) {
       return [
@@ -138,16 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Show Error Screen when _hasError is true
-    if (_hasError) {
-      return ErrorScreen.oops(
-        title: 'Oops!',
-        subtitle: 'Failed to load dashboard data',
-        onRetry: _retryLoad,
-        showBackButton: false,
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
@@ -158,30 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SizedBox(height: 20.h),
 
-            // Demo Error Button (remove in production)
-            GestureDetector(
-              onTap: _simulateError,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: Colors.red.withOpacity(0.5)),
-                ),
-                child: Text(
-                  'Test Error Screen',
-                  style: GoogleFonts.rajdhani(
-                    color: Colors.red,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-
-            SizedBox(height: 16.h),
-
-            // Header
+            // ── Header ──────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -225,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SizedBox(height: 24.h),
 
-            // Top Coins
+            // ── Top Coins ────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -270,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SizedBox(height: 28.h),
 
-            // Feed Tabs
+            // ── Feed Tabs ────────────────────────────────
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -314,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SizedBox(height: 16.h),
 
-            // Announcement Feed
+            // ── Announcement Feed ────────────────────────
             ..._buildFeedContent(),
 
             SizedBox(height: 100.h),
@@ -324,6 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Coin Card ──────────────────────────────────────────────────────────────
   Widget _buildCoinCard(Map<String, dynamic> coin, int index) {
     final isPositive = coin['isPositive'] as bool;
     final accentColor = coin['color'] as Color;
@@ -358,6 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Coin icon + arrow
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -411,6 +359,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const Spacer(),
 
+            // Price
             Text(
               coin['price'] as String,
               style: GoogleFonts.rajdhani(
@@ -422,6 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SizedBox(height: 4.h),
 
+            // Change % + sparkline
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -451,8 +401,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Feed Content (tab-dependent) ──────────────────────────────────────────
   List<Widget> _buildFeedContent() {
     if (_selectedTab == 0) {
+      // Announcements
       return _announcements.asMap().entries.map((entry) {
         final i = entry.key;
         final item = entry.value;
@@ -463,6 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
 
+    // Placeholder for other tabs
     return [
       SizedBox(height: 40.h),
       Center(
@@ -484,6 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
+  // ── Announcement Item ─────────────────────────────────────────────────────
   Widget _buildAnnouncementItem(Map<String, dynamic> item, int index) {
     return Container(
       margin: EdgeInsets.only(bottom: 14.h),
@@ -495,6 +449,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header row ──
           Container(
             padding:
                 EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
@@ -507,6 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Row(
               children: [
+                // Avatar
                 Container(
                   width: 38.w,
                   height: 38.w,
@@ -569,6 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
+          // ── Message body ──
           Padding(
             padding:
                 EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
@@ -576,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${item['message']}  •  ${item['date']}',
+                  '${item['message']}  – ${item['date']}',
                   style: GoogleFonts.inter(
                     color: Colors.white70,
                     fontSize: 12.sp,
@@ -601,6 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// ── Sparkline Painter ─────────────────────────────────────────────────────────
 class _SparklinePainter extends CustomPainter {
   final List<Offset> points;
   final Color color;
