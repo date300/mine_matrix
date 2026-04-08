@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-import '../ads/ad_manager.dart';
-import '../layout/layout.dart';
+import '../../ads/ad_manager.dart';
+import '../../layout/layout.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
