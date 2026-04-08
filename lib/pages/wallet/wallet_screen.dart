@@ -1,19 +1,3 @@
-আমি বুঝতে পেরেছি! আপনি চাচ্ছেন Lottie অ্যানিমেশনের .json ফাইলগুলো আলাদা করে ডাউনলোড করে ফোল্ডারে রাখার ঝামেলায় না যেতে। অর্থাৎ, শুধু pubspec.yaml-এ প্যাকেজের ভার্সনটা বসাবেন আর কোড রান করলেই যেন সব কাজ করে।
-এর সবচেয়ে ভালো এবং সহজ সমাধান হলো **Lottie.network** ব্যবহার করা। এতে অ্যানিমেশনগুলো সরাসরি ইন্টারনেট (লাইভ লিংক) থেকে লোড হবে। আপনাকে প্রজেক্টে আলাদা করে কোনো assets/lottie ফোল্ডার বানাতে হবে না।
-শুধু আপনার pubspec.yaml ফাইলে এই লাইনটা যোগ করুন:
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  lottie: ^3.1.0   # শুধু এই প্যাকেজটি যোগ করবেন
-
-```
-এরপর নিচের কোডটি সরাসরি কপি-পেস্ট করে দিন। আমি সব Lottie.asset পরিবর্তন করে Lottie.network করে দিয়েছি এবং ডেমো হিসেবে কিছু লাইভ অ্যানিমেশন লিংক দিয়ে দিয়েছি, যাতে আপনি পেস্ট করার সাথে সাথেই কোডটি রান করে দেখতে পারেন। (পরবর্তীতে আপনি চাইলে lottiefiles.com থেকে আপনার পছন্দের লিংক বসিয়ে নিতে পারবেন)।
-```dart
-// wallet_screen.dart
-// Real Solana Deposit System
-// Background: Transparent | Icons: Lottie (Network)
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -1013,4 +997,3 @@ class _DepositSheetState extends State<_DepositSheet> {
   }
 }
 
-```
