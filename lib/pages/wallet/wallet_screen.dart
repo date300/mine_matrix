@@ -13,7 +13,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 class AppColors {

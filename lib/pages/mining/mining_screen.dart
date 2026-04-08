@@ -13,7 +13,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_background/animated_background.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 class AppColors {

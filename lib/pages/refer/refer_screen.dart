@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ReferScreen extends StatefulWidget {
   const ReferScreen({super.key});
