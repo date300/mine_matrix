@@ -103,7 +103,7 @@ class LiveEarningsCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             AppColors.accentGreen.withOpacity(0.15),
-            AppColors.accentBlue.withOpacity(0.05),
+            AppColors.accentPurple.withOpacity(0.05), // FIX: accentBlue -> accentPurple
             AppColors.bgCard,
           ],
         ),
@@ -406,7 +406,7 @@ class CycleProgressSection extends StatelessWidget {
       statusColor = Colors.orange;
     } else {
       statusText = "Tap ORB to start mining";
-      statusColor = AppColors.accentBlue;
+      statusColor = AppColors.accentPurple; // FIX: accentBlue -> accentPurple
     }
 
     return Container(
