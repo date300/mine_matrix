@@ -10,7 +10,7 @@ import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import '../constants/mining_constants.dart';
 import '../controllers/mining_controller.dart';
-import '../../widgets/custom_error_widget.dart'; // ✅ CustomErrorWidget import
+import '../../../widgets/custom_error_widget.dart'; // ✅ CustomErrorWidget import
 
 // NOTE: AppColors is imported from mining_constants.dart
 // Do NOT define AppColors here to avoid conflict
