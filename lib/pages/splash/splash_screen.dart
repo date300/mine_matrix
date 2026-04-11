@@ -33,10 +33,11 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     _loadingStatus.value = "SYNCING YOUR WALLET...";
 
-    // ✅ Deep link + token + wallet init — সব এখানে
+    // ✅ শুধু deep link init — token আগেই main.dart এ হয়েছে,
+    // wallet topbar.dart এ হবে — double init নেই
     if (mounted) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.initAuth(context);
+      await auth.initDeepLinks();
     }
 
     await Future.delayed(const Duration(milliseconds: 800));
