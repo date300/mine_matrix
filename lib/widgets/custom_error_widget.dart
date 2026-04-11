@@ -25,16 +25,16 @@ class CustomErrorWidget extends StatefulWidget {
   final VoidCallback onRetry;
   final String? title;
   final String? message;
-  final bool hasToken; // JWT token আছে কিনা
-  final int autoRetryDelaySeconds; // কত সেকেন্ড পর auto retry
+  final bool hasToken; // 🔥 Optional now - default false
+  final int autoRetryDelaySeconds;
 
   const CustomErrorWidget({
     super.key,
     required this.onRetry,
-    required this.hasToken,
     this.title,
     this.message,
-    this.autoRetryDelaySeconds = 3, // default 3 seconds
+    this.hasToken = false, // ✅ Default false - backward compatible
+    this.autoRetryDelaySeconds = 3,
   });
 
   @override
@@ -67,8 +67,6 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
       _isAutoRetrying = true;
       _countdown = widget.autoRetryDelaySeconds;
     });
-
-    // Countdown timer
     Future.delayed(const Duration(seconds: 1), _tick);
   }
 
@@ -76,12 +74,9 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     if (!mounted) return;
     
     if (_countdown > 1) {
-      setState(() {
-        _countdown--;
-      });
+      setState(() => _countdown--);
       Future.delayed(const Duration(seconds: 1), _tick);
     } else {
-      // Auto retry trigger
       widget.onRetry();
     }
   }
@@ -103,34 +98,32 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 20.h),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Compact height
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Small Lottie (compact)
+            // Compact Lottie
             SizedBox(
-              width: 100.w,  // ছোট করা হলো
+              width: 100.w,
               height: 100.h,
               child: Lottie.network(
                 AppLottie.errorCloud,
                 fit: BoxFit.contain,
                 controller: _controller,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.cloud_off_rounded,
-                    size: 60.w,
-                    color: AppColors.textSecondary,
-                  );
-                },
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.cloud_off_rounded,
+                  size: 60.w,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
-            SizedBox(height: 16.h), // ছোট gap
+            SizedBox(height: 16.h),
             
             // Compact Title
             Text(
               widget.title ?? 'Connection Issue',
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
-                fontSize: 16.sp, // ছোট font
+                fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
@@ -142,7 +135,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
               widget.message ?? "Couldn't load wallet data",
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
-                fontSize: 12.sp, // ছোট font
+                fontSize: 12.sp,
               ),
               textAlign: TextAlign.center,
             ),
@@ -162,7 +155,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.5), // Semi transparent
+        color: AppColors.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
           color: AppColors.accentGreen.withOpacity(0.3),
@@ -199,7 +192,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
       onTap: _manualRetry,
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h), // Compact
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [AppColors.accentGreen, AppColors.accentBlue],
@@ -214,21 +207,19 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min, // Wrap content
+          mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 16.w, // ছোট
+              width: 16.w,
               height: 16.h,
               child: Lottie.network(
                 AppLottie.refresh,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.refresh,
-                    size: 16.w,
-                    color: Colors.black,
-                  );
-                },
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.refresh,
+                  size: 16.w,
+                  color: Colors.black,
+                ),
               ),
             ),
             SizedBox(width: 8.w),
@@ -236,7 +227,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
               'Try Again',
               style: GoogleFonts.inter(
                 color: Colors.black,
-                fontSize: 13.sp, // ছোট font
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
