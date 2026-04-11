@@ -1,4 +1,3 @@
- 
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -34,6 +33,9 @@ class AuthProvider extends ChangeNotifier {
 
   String? get address => _userData?['wallet_address']?.toString();
 
+  // balance এখন API response-এ নেই, তাই null return করবে
+  String? get balance => _userData?['balance']?.toString();
+
   String? get _sessionIdentifier {
     if (_userData?['wallet_address'] != null) {
       return _userData!['wallet_address'].toString();
@@ -50,15 +52,13 @@ class AuthProvider extends ChangeNotifier {
         session.peer?.metadata.url;
   }
 
-  String? get balance => _userData?['balance']?.toString();
-
   String get myReferralLink {
     if (_referralCode == null) return "";
     return "https://web3.ltcminematrix.com?ref=$_referralCode";
   }
 
   // =========================
-  // INIT TOKEN ONLY (main থেকে call করো — context লাগে না)
+  // INIT TOKEN ONLY
   // =========================
   Future<void> initTokenOnly() async {
     _setLoading(true);
@@ -83,7 +83,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT FULL (পুরনো method — প্রয়োজনে রাখা হলো)
+  // INIT FULL
   // =========================
   Future<void> initAuth(BuildContext context) async {
     await initTokenOnly();
@@ -170,7 +170,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT (SplashScreen থেকে call করো)
+  // WALLET INIT
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -291,22 +291,28 @@ class AuthProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
+        // ✅ API এখন status: 'success' check করে
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
 
-          await prefs.setString('token', data['token']);
-          await prefs.setString('user', jsonEncode(data['user']));
-
           _token = data['token'];
+
+          // ✅ user object-এ এখন: id, wallet_address, referral_code, referred_by, created_at
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
+          await prefs.setString('token', _token!);
+          await prefs.setString('user', jsonEncode(_userData));
+
           debugPrint("✅ DB wallet address: ${_userData?['wallet_address']}");
+          debugPrint("✅ Referral code: $_referralCode");
 
           return true;
+        } else {
+          debugPrint("Login failed: status=${data['status']}, message=${data['message']}");
         }
       } else {
-        debugPrint("API ERROR: ${response.body}");
+        debugPrint("API ERROR ${response.statusCode}: ${response.body}");
       }
     } catch (e) {
       debugPrint("Login Failed: $e");
@@ -337,14 +343,30 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // LOGOUT
+  // LOGOUT — ✅ Backend token delete করে
   // =========================
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
+    // Backend-এ token delete করো
+    if (_token != null) {
+      try {
+        await http.post(
+          Uri.parse('https://web3.ltcminematrix.com/api/auth/logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+        );
+      } catch (e) {
+        debugPrint("Logout API call failed (ignoring): $e");
+      }
+    }
 
+    // Local data clear করো
+    final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('user');
 
+    // Wallet disconnect করো
     if (_appKitModal != null && isConnected) {
       await _appKitModal!.disconnect();
     }
