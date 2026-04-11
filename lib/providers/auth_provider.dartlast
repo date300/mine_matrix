@@ -1,6 +1,6 @@
- 
 import 'dart:convert';
 import 'dart:math';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
@@ -21,6 +21,8 @@ class AuthProvider extends ChangeNotifier {
 
   Map<String, dynamic>? _userData;
 
+  final _appLinks = AppLinks(); // ✅ deep link instance
+
   // --- Getters ---
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
@@ -33,6 +35,8 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? get userData => _userData;
 
   String? get address => _userData?['wallet_address']?.toString();
+
+  String? get balance => _userData?['balance']?.toString();
 
   String? get _sessionIdentifier {
     if (_userData?['wallet_address'] != null) {
@@ -50,15 +54,44 @@ class AuthProvider extends ChangeNotifier {
         session.peer?.metadata.url;
   }
 
-  String? get balance => _userData?['balance']?.toString();
-
   String get myReferralLink {
     if (_referralCode == null) return "";
     return "https://web3.ltcminematrix.com?ref=$_referralCode";
   }
 
   // =========================
-  // INIT TOKEN ONLY (main থেকে call করো — context লাগে না)
+  // DEEP LINK INIT ✅
+  // =========================
+  Future<void> initDeepLinks() async {
+    try {
+      // App বন্ধ থাকা অবস্থায় লিংক দিয়ে খুললে
+      final initialLink = await _appLinks.getInitialLink();
+      if (initialLink != null) {
+        debugPrint("🔗 Initial deep link: $initialLink");
+        _extractReferralFromLink(initialLink);
+      }
+
+      // App চালু থাকা অবস্থায় লিংক আসলে
+      _appLinks.uriLinkStream.listen((uri) {
+        debugPrint("🔗 Deep link received: $uri");
+        _extractReferralFromLink(uri);
+      });
+    } catch (e) {
+      debugPrint("Deep link init error: $e");
+    }
+  }
+
+  void _extractReferralFromLink(Uri uri) {
+    final ref = uri.queryParameters['ref'];
+    if (ref != null && ref.trim().isNotEmpty) {
+      _inputReferralCode = ref.trim().toUpperCase();
+      debugPrint("✅ Referral code from deep link: $_inputReferralCode");
+      notifyListeners();
+    }
+  }
+
+  // =========================
+  // INIT TOKEN ONLY
   // =========================
   Future<void> initTokenOnly() async {
     _setLoading(true);
@@ -83,9 +116,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT FULL (পুরনো method — প্রয়োজনে রাখা হলো)
+  // INIT FULL ✅ deep link আগে
   // =========================
   Future<void> initAuth(BuildContext context) async {
+    await initDeepLinks(); // ✅ সবার আগে deep link init
     await initTokenOnly();
     await initWallet(context);
   }
@@ -170,7 +204,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT (SplashScreen থেকে call করো)
+  // WALLET INIT
   // =========================
   Future<void> initWallet(BuildContext context) async {
     if (_isInitialized) return;
@@ -276,6 +310,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       debugPrint("Logging in with: $walletAddress");
+      debugPrint("Referred by: $_inputReferralCode"); // ✅ debug করার জন্য
 
       final response = await http.post(
         url,
@@ -294,19 +329,22 @@ class AuthProvider extends ChangeNotifier {
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
 
-          await prefs.setString('token', data['token']);
-          await prefs.setString('user', jsonEncode(data['user']));
-
           _token = data['token'];
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
+          await prefs.setString('token', _token!);
+          await prefs.setString('user', jsonEncode(_userData));
+
           debugPrint("✅ DB wallet address: ${_userData?['wallet_address']}");
+          debugPrint("✅ Referral code: $_referralCode");
 
           return true;
+        } else {
+          debugPrint("Login failed: status=${data['status']}, message=${data['message']}");
         }
       } else {
-        debugPrint("API ERROR: ${response.body}");
+        debugPrint("API ERROR ${response.statusCode}: ${response.body}");
       }
     } catch (e) {
       debugPrint("Login Failed: $e");
@@ -340,8 +378,21 @@ class AuthProvider extends ChangeNotifier {
   // LOGOUT
   // =========================
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
+    if (_token != null) {
+      try {
+        await http.post(
+          Uri.parse('https://web3.ltcminematrix.com/api/auth/logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_token',
+          },
+        );
+      } catch (e) {
+        debugPrint("Logout API call failed (ignoring): $e");
+      }
+    }
 
+    final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('user');
 
