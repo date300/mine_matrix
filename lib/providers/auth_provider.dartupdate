@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:reown_appkit/reown_appkit.dart';
@@ -21,8 +20,6 @@ class AuthProvider extends ChangeNotifier {
 
   Map<String, dynamic>? _userData;
 
-  final _appLinks = AppLinks(); // ✅ deep link instance
-
   // --- Getters ---
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
@@ -36,6 +33,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? get address => _userData?['wallet_address']?.toString();
 
+  // balance এখন API response-এ নেই, তাই null return করবে
   String? get balance => _userData?['balance']?.toString();
 
   String? get _sessionIdentifier {
@@ -57,37 +55,6 @@ class AuthProvider extends ChangeNotifier {
   String get myReferralLink {
     if (_referralCode == null) return "";
     return "https://web3.ltcminematrix.com?ref=$_referralCode";
-  }
-
-  // =========================
-  // DEEP LINK INIT ✅
-  // =========================
-  Future<void> initDeepLinks() async {
-    try {
-      // App বন্ধ থাকা অবস্থায় লিংক দিয়ে খুললে
-      final initialLink = await _appLinks.getInitialLink();
-      if (initialLink != null) {
-        debugPrint("🔗 Initial deep link: $initialLink");
-        _extractReferralFromLink(initialLink);
-      }
-
-      // App চালু থাকা অবস্থায় লিংক আসলে
-      _appLinks.uriLinkStream.listen((uri) {
-        debugPrint("🔗 Deep link received: $uri");
-        _extractReferralFromLink(uri);
-      });
-    } catch (e) {
-      debugPrint("Deep link init error: $e");
-    }
-  }
-
-  void _extractReferralFromLink(Uri uri) {
-    final ref = uri.queryParameters['ref'];
-    if (ref != null && ref.trim().isNotEmpty) {
-      _inputReferralCode = ref.trim().toUpperCase();
-      debugPrint("✅ Referral code from deep link: $_inputReferralCode");
-      notifyListeners();
-    }
   }
 
   // =========================
@@ -116,10 +83,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT FULL ✅ deep link আগে
+  // INIT FULL
   // =========================
   Future<void> initAuth(BuildContext context) async {
-    await initDeepLinks(); // ✅ সবার আগে deep link init
     await initTokenOnly();
     await initWallet(context);
   }
@@ -310,7 +276,6 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       debugPrint("Logging in with: $walletAddress");
-      debugPrint("Referred by: $_inputReferralCode"); // ✅ debug করার জন্য
 
       final response = await http.post(
         url,
@@ -326,10 +291,13 @@ class AuthProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
+        // ✅ API এখন status: 'success' check করে
         if (data['status'] == 'success') {
           final prefs = await SharedPreferences.getInstance();
 
           _token = data['token'];
+
+          // ✅ user object-এ এখন: id, wallet_address, referral_code, referred_by, created_at
           _userData = data['user'];
           _referralCode = _userData?['referral_code'];
 
@@ -375,9 +343,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // LOGOUT
+  // LOGOUT — ✅ Backend token delete করে
   // =========================
   Future<void> logout() async {
+    // Backend-এ token delete করো
     if (_token != null) {
       try {
         await http.post(
@@ -392,10 +361,12 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
+    // Local data clear করো
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('user');
 
+    // Wallet disconnect করো
     if (_appKitModal != null && isConnected) {
       await _appKitModal!.disconnect();
     }
