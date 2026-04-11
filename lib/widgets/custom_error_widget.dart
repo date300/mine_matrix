@@ -20,12 +20,12 @@ class AppLottie {
 }
 
 /// Compact Auto-Retry Error Widget
-/// JWT থাকলে auto retry, না থাকলে manual button
+/// JWT থাকলে IMMEDIATE auto retry - user কিছু করতে হবে না
 class CustomErrorWidget extends StatefulWidget {
   final VoidCallback onRetry;
   final String? title;
   final String? message;
-  final bool hasToken; // 🔥 Optional now - default false
+  final bool hasToken;
   final int autoRetryDelaySeconds;
 
   const CustomErrorWidget({
@@ -33,7 +33,7 @@ class CustomErrorWidget extends StatefulWidget {
     required this.onRetry,
     this.title,
     this.message,
-    this.hasToken = false, // ✅ Default false - backward compatible
+    this.hasToken = false,
     this.autoRetryDelaySeconds = 3,
   });
 
@@ -41,22 +41,15 @@ class CustomErrorWidget extends StatefulWidget {
   State<CustomErrorWidget> createState() => _CustomErrorWidgetState();
 }
 
-class _CustomErrorWidgetState extends State<CustomErrorWidget> 
-    with SingleTickerProviderStateMixin {
-  
-  late AnimationController _controller;
+class _CustomErrorWidgetState extends State<CustomErrorWidget> {
   int _countdown = 0;
   bool _isAutoRetrying = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-
-    // JWT থাকলে auto retry
+    
+    // 🔥 JWT থাকলে IMMEDIATELY auto retry শুরু
     if (widget.hasToken) {
       _startAutoRetry();
     }
@@ -67,29 +60,28 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
       _isAutoRetrying = true;
       _countdown = widget.autoRetryDelaySeconds;
     });
-    Future.delayed(const Duration(seconds: 1), _tick);
+    
+    // Countdown শুরু
+    _runCountdown();
   }
 
-  void _tick() {
+  void _runCountdown() {
     if (!mounted) return;
     
-    if (_countdown > 1) {
-      setState(() => _countdown--);
-      Future.delayed(const Duration(seconds: 1), _tick);
+    if (_countdown > 0) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (!mounted) return;
+        setState(() => _countdown--);
+        _runCountdown();
+      });
     } else {
+      // 🔥 Countdown শেষ - AUTO RETRY (user ক্লিক করতে হবে না!)
       widget.onRetry();
     }
   }
 
   void _manualRetry() {
-    _controller.stop();
     widget.onRetry();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
@@ -101,14 +93,14 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Compact Lottie
+            // Compact Lottie - NO controller needed
             SizedBox(
               width: 100.w,
               height: 100.h,
               child: Lottie.network(
                 AppLottie.errorCloud,
                 fit: BoxFit.contain,
-                controller: _controller,
+                repeat: true, // Auto repeat animation
                 errorBuilder: (context, error, stackTrace) => Icon(
                   Icons.cloud_off_rounded,
                   size: 60.w,
@@ -118,7 +110,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             ),
             SizedBox(height: 16.h),
             
-            // Compact Title
+            // Title
             Text(
               widget.title ?? 'Connection Issue',
               style: GoogleFonts.inter(
@@ -130,9 +122,9 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             ),
             SizedBox(height: 8.h),
             
-            // Compact Message
+            // Message
             Text(
-              widget.message ?? "Couldn't load wallet data",
+              widget.message ?? "Reconnecting...",
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
                 fontSize: 12.sp,
@@ -141,7 +133,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             ),
             SizedBox(height: 20.h),
             
-            // Auto Retry or Manual Button
+            // 🔥 JWT থাকলে countdown দেখাবে, না থাকলে button
             _isAutoRetrying && widget.hasToken
                 ? _buildAutoRetryIndicator()
                 : _buildRetryButton(),
@@ -155,7 +147,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.5),
+        color: Colors.transparent, // Transparent background
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
           color: AppColors.accentGreen.withOpacity(0.3),
