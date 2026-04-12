@@ -7,7 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 
-// --- Colors (WalletScreen থেকে একই) ----------------------------------------
+// --- Colors ----------------------------------------
 class AppColors {
   static const Color background   = Color(0xFF0A0A0F);
   static const Color surface      = Color(0xFF12121A);
@@ -23,13 +23,10 @@ class AppColors {
   static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie URLs
+// Lottie URLs - শুধু যেখানে animation দরকার
 class AppLottie {
   static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
   static const String emptyState   = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
-  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String chartUp      = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
-  static const String notification = 'https://assets10.lottiefiles.com/packages/lf20_3rlc1l.json';
   static const String livePulse    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
   static const String pinned       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
 }
@@ -53,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     'Following',
   ];
 
+  // Extended coins list - অনেকগুলো মার্কেট
   final List<Map<String, dynamic>> _coins = [
     {
       'name': 'Bitcoin',
@@ -60,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'price': 69243.00,
       'change': 3.92,
       'color': Color(0xFFF7931A),
-      'lottie': AppLottie.coinSpin,
+      'icon': Icons.currency_bitcoin,
     },
     {
       'name': 'Ethereum',
@@ -68,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'price': 2134.62,
       'change': 5.21,
       'color': Color(0xFF627EEA),
-      'lottie': AppLottie.coinSpin,
+      'icon': Icons.token,
     },
     {
       'name': 'Voxel',
@@ -76,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'price': 0.4821,
       'change': 2.14,
       'color': Color(0xFF00C896),
-      'lottie': AppLottie.coinSpin,
+      'icon': Icons.view_in_ar,
     },
     {
       'name': 'Solana',
@@ -84,7 +82,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'price': 142.30,
       'change': -1.08,
       'color': Color(0xFF9945FF),
-      'lottie': AppLottie.coinSpin,
+      'icon': Icons.flash_on,
+    },
+    {
+      'name': 'Cardano',
+      'symbol': 'ADA',
+      'price': 0.5842,
+      'change': 1.45,
+      'color': Color(0xFF0033AD),
+      'icon': Icons.waves,
+    },
+    {
+      'name': 'Polkadot',
+      'symbol': 'DOT',
+      'price': 7.23,
+      'change': -0.82,
+      'color': Color(0xFFE6007A),
+      'icon': Icons.circle,
+    },
+    {
+      'name': 'Chainlink',
+      'symbol': 'LINK',
+      'price': 18.45,
+      'change': 4.12,
+      'color': Color(0xFF2A5ADA),
+      'icon': Icons.link,
+    },
+    {
+      'name': 'Avalanche',
+      'symbol': 'AVAX',
+      'price': 35.67,
+      'change': 2.89,
+      'color': Color(0xFFE84142),
+      'icon': Icons.ac_unit,
     },
   ];
 
@@ -118,7 +148,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // Simulate loading
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _isLoading = false);
     });
@@ -133,41 +162,55 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _isLoading
-          ? _buildSkeletonLoading()
-          : RefreshIndicator(
-              color: AppColors.accentGreen,
-              backgroundColor: AppColors.surface,
-              strokeWidth: 3,
-              onRefresh: _onRefresh,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 60.h),
-                          _buildHeader(),
-                          SizedBox(height: 24.h),
-                          _buildTopCoinsCard(),
-                          SizedBox(height: 24.h),
-                          _buildTabSelector(),
-                          SizedBox(height: 16.h),
-                        ],
+      backgroundColor: Colors.transparent, // TRANSPARENT BACKGROUND
+      extendBodyBehindAppBar: true,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.background,
+              AppColors.surface,
+              AppColors.background,
+            ],
+          ),
+        ),
+        child: _isLoading
+            ? _buildSkeletonLoading()
+            : RefreshIndicator(
+                color: AppColors.accentGreen,
+                backgroundColor: AppColors.surface,
+                strokeWidth: 3,
+                onRefresh: _onRefresh,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w), // ছোট padding
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 50.h), // কম height
+                            _buildHeader(),
+                            SizedBox(height: 16.h),
+                            _buildLiveMarketSection(), // নতুন Live Market
+                            SizedBox(height: 20.h),
+                            _buildTabSelector(),
+                            SizedBox(height: 12.h),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  _buildFeedContent(),
-                  SliverToBoxAdapter(
-                    child: SizedBox(height: 100.h),
-                  ),
-                ],
+                    _buildFeedContent(),
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: 80.h),
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
@@ -176,64 +219,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       baseColor: AppColors.surface,
       highlightColor: AppColors.cardBg.withOpacity(0.5),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
           children: [
-            SizedBox(height: 60.h),
-            // Header skeleton
+            SizedBox(height: 50.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  width: 150.w,
-                  height: 32.h,
+                  width: 120.w,
+                  height: 28.h,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                 ),
                 Container(
-                  width: 60.w,
-                  height: 32.h,
+                  width: 44.w,
+                  height: 44.h,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20.r),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 24.h),
-            // Coins card skeleton
+            SizedBox(height: 16.h),
+            // Live market skeleton
             Container(
               width: double.infinity,
-              height: 180.h,
+              height: 120.h,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(24.r),
+                borderRadius: BorderRadius.circular(16.r),
               ),
             ),
-            SizedBox(height: 24.h),
-            // Tabs skeleton
+            SizedBox(height: 20.h),
             Row(
               children: List.generate(4, (index) => Container(
                 width: 80.w,
-                height: 36.h,
-                margin: EdgeInsets.only(right: 10.w),
+                height: 32.h,
+                margin: EdgeInsets.only(right: 8.w),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(22.r),
+                  borderRadius: BorderRadius.circular(16.r),
                 ),
               )),
             ),
-            SizedBox(height: 16.h),
-            // Announcements skeleton
+            SizedBox(height: 12.h),
             ...List.generate(3, (index) => Container(
               width: double.infinity,
-              height: 120.h,
-              margin: EdgeInsets.only(bottom: 14.h),
+              height: 100.h,
+              margin: EdgeInsets.only(bottom: 10.h),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18.r),
+                borderRadius: BorderRadius.circular(12.r),
               ),
             )),
           ],
@@ -242,60 +282,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // iOS স্টাইলে Header - Dashboard টাইটেল নেই
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // iOS স্টাইলে টাইটেল
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Dashboard',
+              'Good Morning', // Dashboard নেই, পরিবর্তে greeting
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              'FXDig',
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
                 fontSize: 28.sp,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'Track your crypto portfolio',
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 14.sp,
+                letterSpacing: -0.5,
               ),
             ),
           ],
         ),
-        GestureDetector(
-          onTap: _isRefreshing ? null : _onRefresh,
+        // iOS স্টাইলে Refresh Button
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: _isRefreshing ? null : _onRefresh,
           child: Container(
-            width: 44.w,
-            height: 44.h,
+            width: 40.w,
+            height: 40.h,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.surface.withOpacity(0.8),
               borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.border.withOpacity(0.5)),
             ),
             child: _isRefreshing
                 ? Center(
-                    child: SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
-                      ),
+                    child: CupertinoActivityIndicator(
+                      color: AppColors.accentGreen,
+                      radius: 10,
                     ),
                   )
                 : Center(
-                    child: SizedBox(
-                      width: 24.w,
-                      height: 24.h,
-                      child: Lottie.network(
-                        AppLottie.refresh,
-                        repeat: false,
-                      ),
+                    child: Icon(
+                      CupertinoIcons.refresh,
+                      color: AppColors.accentGreen,
+                      size: 20.sp,
                     ),
                   ),
           ),
@@ -304,248 +343,203 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
-  Widget _buildTopCoinsCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.accentBlue.withOpacity(0.3),
-            AppColors.accentPurple.withOpacity(0.1),
-            AppColors.surface,
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ),
-        border: Border.all(
-          color: AppColors.accentBlue.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentBlue.withOpacity(0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Padding(
-            padding: EdgeInsets.all(20.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  // নতুন Live Market Section - কার্ড থেকে বের করে আনা হয়েছে
+  Widget _buildLiveMarketSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Live Market Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentGreen.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(
-                          color: AppColors.accentGreen.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6.w,
-                            height: 6.h,
-                            decoration: BoxDecoration(
-                              color: AppColors.accentGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            'LIVE MARKET',
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 20.w,
-                          height: 20.h,
-                          child: Lottie.network(AppLottie.chartUp),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          'Top Gainers',
-                          style: GoogleFonts.inter(
-                            color: AppColors.textSecondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20.h),
+                // Lottie শুধু Live indicator এ
                 SizedBox(
-                  height: 100.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _coins.length,
-                    separatorBuilder: (_, __) => SizedBox(width: 12.w),
-                    itemBuilder: (context, index) {
-                      final coin = _coins[index];
-                      return _buildCoinCard(coin, index);
-                    },
+                  width: 16.w,
+                  height: 16.h,
+                  child: Lottie.network(
+                    AppLottie.livePulse,
+                    repeat: true,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  'Live Market',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textPrimary,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
+            // iOS স্টাইলে View All
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () {},
+              child: Row(
+                children: [
+                  Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      color: AppColors.accentBlue,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Icon(
+                    CupertinoIcons.chevron_right,
+                    color: AppColors.accentBlue,
+                    size: 14.sp,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        // Horizontal scrolling coins - iOS স্টাইলে
+        SizedBox(
+          height: 90.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _coins.length,
+            separatorBuilder: (_, __) => SizedBox(width: 10.w),
+            itemBuilder: (context, index) {
+              final coin = _coins[index];
+              return _buildCoinCard(coin, index);
+            },
           ),
         ),
-      ),
+      ],
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
+  // iOS স্টাইলে Coin Card - ছোট এবং সুন্দর
   Widget _buildCoinCard(Map<String, dynamic> coin, int index) {
     final isPositive = (coin['change'] as double) >= 0;
     final accentColor = coin['color'] as Color;
     final changeColor = isPositive ? AppColors.accentGreen : AppColors.accentRed;
 
-    return Container(
-      width: 140.w,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: accentColor.withOpacity(0.3),
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () {},
+      child: Container(
+        width: 130.w,
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: accentColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Icon ব্যবহার (Lottie না)
+                Container(
+                  width: 28.w,
+                  height: 28.h,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      coin['icon'] as IconData,
+                      color: accentColor,
+                      size: 16.sp,
+                    ),
+                  ),
+                ),
+                // iOS স্টাইলে Change indicator
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: changeColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    '${isPositive ? '+' : ''}${(coin['change'] as double).toStringAsFixed(2)}%',
+                    style: GoogleFonts.inter(
+                      color: changeColor,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              coin['symbol'] as String,
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '\$${(coin['price'] as double).toStringAsFixed(coin['price'] < 1 ? 4 : 2)}',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 32.w,
-                height: 32.h,
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: SizedBox(
-                    width: 18.w,
-                    height: 18.h,
-                    child: Lottie.network(coin['lottie'] as String),
+    ).animate().fadeIn(delay: Duration(milliseconds: 100 + index * 50)).slideX(begin: 0.2, end: 0);
+  }
+
+  // iOS স্টাইলে Tab Selector
+  Widget _buildTabSelector() {
+    return Container(
+      height: 36.h,
+      decoration: BoxDecoration(
+        color: AppColors.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: Row(
+          children: List.generate(_tabs.length, (index) {
+            final isSelected = _selectedTab == index;
+            return Expanded(
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => setState(() => _selectedTab = index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: EdgeInsets.all(2.w),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppColors.accentBlue.withOpacity(0.2) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _tabs[index],
+                      style: GoogleFonts.inter(
+                        color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              Icon(
-                isPositive ? Icons.trending_up : Icons.trending_down,
-                color: changeColor,
-                size: 16.sp,
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            coin['name'] as String,
-            style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            coin['symbol'] as String,
-            style: GoogleFonts.inter(
-              color: AppColors.textSecondary,
-              fontSize: 10.sp,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            '\$${(coin['price'] as double).toStringAsFixed(2)}',
-            style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontSize: 15.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            '${isPositive ? '+' : ''}${(coin['change'] as double).toStringAsFixed(2)}%',
-            style: GoogleFonts.inter(
-              color: changeColor,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn(delay: Duration(milliseconds: 200 + index * 100)).slideX(begin: 0.2, end: 0);
-  }
-
-  Widget _buildTabSelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: List.generate(_tabs.length, (index) {
-          final isSelected = _selectedTab == index;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedTab = index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: EdgeInsets.only(right: 10.w),
-              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                gradient: isSelected
-                    ? LinearGradient(
-                        colors: [AppColors.accentBlue, AppColors.accentPurple],
-                      )
-                    : null,
-                color: isSelected ? null : AppColors.surface,
-                borderRadius: BorderRadius.circular(22.r),
-                border: Border.all(
-                  color: isSelected ? Colors.transparent : AppColors.border,
-                  width: 1,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.accentBlue.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                _tabs[index],
-                style: GoogleFonts.inter(
-                  color: isSelected ? Colors.black : AppColors.textSecondary,
-                  fontSize: 13.sp,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                ),
-              ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     ).animate().fadeIn(delay: 300.ms);
   }
@@ -557,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           (context, index) {
             final item = _announcements[index];
             return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 5.h),
               child: _buildAnnouncementItem(item, index),
             );
           },
@@ -566,28 +560,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // Empty state for other tabs
     return SliverToBoxAdapter(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 60.h),
+          padding: EdgeInsets.symmetric(vertical: 50.h),
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: AppColors.border),
+            color: AppColors.surface.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.border.withOpacity(0.5)),
           ),
           child: Column(
             children: [
+              // Lottie শুধু Empty state এ
               SizedBox(
-                width: 120.w,
-                height: 120.h,
+                width: 100.w,
+                height: 100.h,
                 child: Lottie.network(AppLottie.emptyState),
               ),
               SizedBox(height: 16.h),
               Text(
-                'Nothing here yet',
+                'No content yet',
                 style: GoogleFonts.inter(
                   color: AppColors.textPrimary,
                   fontSize: 16.sp,
@@ -596,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Content will appear here soon',
+                'Check back later for updates',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
                   fontSize: 13.sp,
@@ -609,58 +603,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // iOS স্টাইলে Announcement Item
   Widget _buildAnnouncementItem(Map<String, dynamic> item, int index) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-            decoration: BoxDecoration(
-              color: AppColors.cardBg.withOpacity(0.5),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(18.r),
-                topRight: Radius.circular(18.r),
-              ),
-            ),
-            child: Row(
+    final isPinned = item['pinned'] as bool;
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: () {},
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg.withOpacity(0.4),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: isPinned ? AppColors.accentOrange.withOpacity(0.3) : AppColors.border.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
                 Container(
-                  width: 40.w,
-                  height: 40.h,
+                  width: 36.w,
+                  height: 36.h,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        AppColors.accentBlue.withOpacity(0.6),
-                        AppColors.accentGreen.withOpacity(0.4),
-                      ],
+                      colors: isPinned 
+                          ? [AppColors.accentOrange, AppColors.accentRed]
+                          : [AppColors.accentBlue, AppColors.accentPurple],
                     ),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: AppColors.textPrimary,
-                    size: 20.sp,
+                  child: Center(
+                    child: Text(
+                      (item['user'] as String).substring(1, 2).toUpperCase(),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                SizedBox(width: 12.w),
+                SizedBox(width: 10.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item['user'] as String,
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            item['user'] as String,
+                            style: GoogleFonts.inter(
+                              color: AppColors.textPrimary,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (isPinned) ...[
+                            SizedBox(width: 6.w),
+                            // Lottie শুধু Pinned এ
+                            SizedBox(
+                              width: 14.w,
+                              height: 14.h,
+                              child: Lottie.network(AppLottie.pinned),
+                            ),
+                          ],
+                        ],
                       ),
                       Text(
                         item['subtitle'] as String,
@@ -672,76 +683,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
-                if (item['pinned'] == true)
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(
-                        color: AppColors.accentOrange.withOpacity(0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 12.w,
-                          height: 12.h,
-                          child: Lottie.network(AppLottie.pinned),
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Pinned',
-                          style: GoogleFonts.inter(
-                            color: AppColors.accentOrange,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Body
-          Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 Text(
-                  item['message'] as String,
+                  item['timeAgo'] as String,
                   style: GoogleFonts.inter(
-                    color: AppColors.textPrimary,
-                    fontSize: 13.sp,
-                    height: 1.6,
+                    color: AppColors.textMuted,
+                    fontSize: 11.sp,
                   ),
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: AppColors.textMuted,
-                      size: 12.sp,
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      '${item['date']} • ${item['timeAgo']}',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textMuted,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            SizedBox(height: 10.h),
+            Text(
+              item['message'] as String,
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
-    ).animate().fadeIn(delay: Duration(milliseconds: 100 * index)).slideX(begin: 0.2, end: 0);
+    ).animate().fadeIn(delay: Duration(milliseconds: 400 + index * 100)).slideY(begin: 0.2, end: 0);
   }
 }
