@@ -23,12 +23,43 @@ class AppColors {
   static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie URLs - শুধু যেখানে animation দরকার
+// Lottie URLs
 class AppLottie {
   static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
   static const String emptyState   = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
   static const String livePulse    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
   static const String pinned       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
+}
+
+// MAIN APP - ScreenUtilInit দিয়ে wrap করা
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // ScreenUtilInit দিয়ে responsive করা
+    return ScreenUtilInit(
+      designSize: const Size(375, 812), // iPhone X design size
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'FXDig',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: Colors.transparent, // TRANSPARENT
+            fontFamily: 'Inter',
+          ),
+          home: const HomeScreen(),
+        );
+      },
+    );
+  }
 }
 
 class HomeScreen extends StatefulWidget {
@@ -50,7 +81,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     'Following',
   ];
 
-  // Extended coins list - অনেকগুলো মার্কেট
   final List<Map<String, dynamic>> _coins = [
     {
       'name': 'Bitcoin',
@@ -161,55 +191,66 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent, // TRANSPARENT BACKGROUND
-      extendBodyBehindAppBar: true,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.background,
-              AppColors.surface,
-              AppColors.background,
-            ],
+    // TRULY TRANSPARENT BACKGROUND
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // FULL TRANSPARENT
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // SCAFFOLD TRANSPARENT
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        body: Container(
+          // Gradient background যোগ করা
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.background,
+                AppColors.surface,
+                AppColors.background.withOpacity(0.95),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: _isLoading
+                ? _buildSkeletonLoading()
+                : RefreshIndicator(
+                    color: AppColors.accentGreen,
+                    backgroundColor: AppColors.surface,
+                    strokeWidth: 3,
+                    onRefresh: _onRefresh,
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 12.h),
+                                _buildHeader(),
+                                SizedBox(height: 20.h),
+                                _buildLiveMarketSection(),
+                                SizedBox(height: 24.h),
+                                _buildTabSelector(),
+                                SizedBox(height: 16.h),
+                              ],
+                            ),
+                          ),
+                        ),
+                        _buildFeedContent(),
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: 100.h),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ),
-        child: _isLoading
-            ? _buildSkeletonLoading()
-            : RefreshIndicator(
-                color: AppColors.accentGreen,
-                backgroundColor: AppColors.surface,
-                strokeWidth: 3,
-                onRefresh: _onRefresh,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w), // ছোট padding
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 50.h), // কম height
-                            _buildHeader(),
-                            SizedBox(height: 16.h),
-                            _buildLiveMarketSection(), // নতুন Live Market
-                            SizedBox(height: 20.h),
-                            _buildTabSelector(),
-                            SizedBox(height: 12.h),
-                          ],
-                        ),
-                      ),
-                    ),
-                    _buildFeedContent(),
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: 80.h),
-                    ),
-                  ],
-                ),
-              ),
       ),
     );
   }
@@ -222,21 +263,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
           children: [
-            SizedBox(height: 50.h),
+            SizedBox(height: 12.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 120.w,
-                  height: 28.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 80.w,
+                      height: 14.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Container(
+                      width: 120.w,
+                      height: 28.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                    ),
+                  ],
                 ),
                 Container(
-                  width: 44.w,
-                  height: 44.h,
+                  width: 40.w,
+                  height: 40.h,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12.r),
@@ -244,33 +299,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            SizedBox(height: 16.h),
-            // Live market skeleton
+            SizedBox(height: 20.h),
             Container(
               width: double.infinity,
-              height: 120.h,
+              height: 100.h,
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16.r),
               ),
             ),
-            SizedBox(height: 20.h),
-            Row(
-              children: List.generate(4, (index) => Container(
-                width: 80.w,
-                height: 32.h,
-                margin: EdgeInsets.only(right: 8.w),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-              )),
+            SizedBox(height: 24.h),
+            Container(
+              height: 36.h,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10.r),
+              ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 16.h),
             ...List.generate(3, (index) => Container(
               width: double.infinity,
-              height: 100.h,
-              margin: EdgeInsets.only(bottom: 10.h),
+              height: 110.h,
+              margin: EdgeInsets.only(bottom: 12.h),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12.r),
@@ -282,59 +332,63 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // iOS স্টাইলে Header - Dashboard টাইটেল নেই
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // iOS স্টাইলে টাইটেল
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Good Morning', // Dashboard নেই, পরিবর্তে greeting
+              'Good Morning',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
+                height: 1.2,
               ),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: 4.h),
             Text(
               'FXDig',
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
-                fontSize: 28.sp,
+                fontSize: 32.sp,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+                letterSpacing: -1,
+                height: 1.1,
               ),
             ),
           ],
         ),
-        // iOS স্টাইলে Refresh Button
         CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _isRefreshing ? null : _onRefresh,
           child: Container(
-            width: 40.w,
-            height: 40.h,
+            width: 44.w,
+            height: 44.h,
             decoration: BoxDecoration(
-              color: AppColors.surface.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.border.withOpacity(0.5)),
+              color: AppColors.surface.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.border.withOpacity(0.3),
+                width: 1,
+              ),
             ),
             child: _isRefreshing
                 ? Center(
                     child: CupertinoActivityIndicator(
                       color: AppColors.accentGreen,
-                      radius: 10,
+                      radius: 12.w,
                     ),
                   )
                 : Center(
                     child: Icon(
                       CupertinoIcons.refresh,
                       color: AppColors.accentGreen,
-                      size: 20.sp,
+                      size: 22.sp,
                     ),
                   ),
           ),
@@ -343,27 +397,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
-  // নতুন Live Market Section - কার্ড থেকে বের করে আনা হয়েছে
   Widget _buildLiveMarketSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Live Market Header
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Row(
               children: [
-                // Lottie শুধু Live indicator এ
                 SizedBox(
-                  width: 16.w,
-                  height: 16.h,
+                  width: 18.w,
+                  height: 18.h,
                   child: Lottie.network(
                     AppLottie.livePulse,
                     repeat: true,
                   ),
                 ),
-                SizedBox(width: 6.w),
+                SizedBox(width: 8.w),
                 Text(
                   'Live Market',
                   style: GoogleFonts.inter(
@@ -374,11 +427,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            // iOS স্টাইলে View All
             CupertinoButton(
               padding: EdgeInsets.zero,
               onPressed: () {},
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'View All',
@@ -388,8 +441,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  SizedBox(width: 2.w),
                   Icon(
-                    CupertinoIcons.chevron_right,
+                    CupertinoIcons.chevron_forward,
                     color: AppColors.accentBlue,
                     size: 14.sp,
                   ),
@@ -398,15 +452,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-        SizedBox(height: 12.h),
-        // Horizontal scrolling coins - iOS স্টাইলে
+        SizedBox(height: 14.h),
         SizedBox(
-          height: 90.h,
+          height: 96.h,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: _coins.length,
-            separatorBuilder: (_, __) => SizedBox(width: 10.w),
+            separatorBuilder: (_, __) => SizedBox(width: 12.w),
             itemBuilder: (context, index) {
               final coin = _coins[index];
               return _buildCoinCard(coin, index);
@@ -417,7 +470,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
-  // iOS স্টাইলে Coin Card - ছোট এবং সুন্দর
   Widget _buildCoinCard(Map<String, dynamic> coin, int index) {
     final isPositive = (coin['change'] as double) >= 0;
     final accentColor = coin['color'] as Color;
@@ -427,13 +479,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.zero,
       onPressed: () {},
       child: Container(
-        width: 130.w,
-        padding: EdgeInsets.all(12.w),
+        width: 140.w,
+        padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: AppColors.cardBg.withOpacity(0.6),
+          color: AppColors.cardBg.withOpacity(0.5),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: accentColor.withOpacity(0.2),
+            color: accentColor.withOpacity(0.15),
             width: 1,
           ),
         ),
@@ -444,102 +496,106 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Icon ব্যবহার (Lottie না)
                 Container(
-                  width: 28.w,
-                  height: 28.h,
+                  width: 32.w,
+                  height: 32.h,
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8.r),
+                    color: accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Center(
                     child: Icon(
                       coin['icon'] as IconData,
                       color: accentColor,
-                      size: 16.sp,
+                      size: 18.sp,
                     ),
                   ),
                 ),
-                // iOS স্টাইলে Change indicator
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: changeColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6.r),
+                    color: changeColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Text(
                     '${isPositive ? '+' : ''}${(coin['change'] as double).toStringAsFixed(2)}%',
                     style: GoogleFonts.inter(
                       color: changeColor,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 10.h),
             Text(
               coin['symbol'] as String,
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
-                fontSize: 14.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
               ),
             ),
             Text(
               '\$${(coin['price'] as double).toStringAsFixed(coin['price'] < 1 ? 4 : 2)}',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
-                fontSize: 12.sp,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: Duration(milliseconds: 100 + index * 50)).slideX(begin: 0.2, end: 0);
+    ).animate().fadeIn(delay: Duration(milliseconds: 100 + index * 60)).slideX(begin: 0.3, end: 0);
   }
 
-  // iOS স্টাইলে Tab Selector
   Widget _buildTabSelector() {
     return Container(
-      height: 36.h,
+      height: 40.h,
+      padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(10.r),
+        color: AppColors.surface.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: AppColors.border.withOpacity(0.2),
+          width: 1,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10.r),
-        child: Row(
-          children: List.generate(_tabs.length, (index) {
-            final isSelected = _selectedTab == index;
-            return Expanded(
-              child: CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => setState(() => _selectedTab = index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: EdgeInsets.all(2.w),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accentBlue.withOpacity(0.2) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _tabs[index],
-                      style: GoogleFonts.inter(
-                        color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
-                        fontSize: 12.sp,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      ),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          final isSelected = _selectedTab == index;
+          return Expanded(
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => setState(() => _selectedTab = index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accentBlue.withOpacity(0.15) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: isSelected ? Border.all(
+                    color: AppColors.accentBlue.withOpacity(0.3),
+                    width: 1,
+                  ) : null,
+                ),
+                child: Center(
+                  child: Text(
+                    _tabs[index],
+                    style: GoogleFonts.inter(
+                      color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
               ),
-            );
-          }),
-        ),
+            ),
+          );
+        }),
       ),
     ).animate().fadeIn(delay: 300.ms);
   }
@@ -551,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           (context, index) {
             final item = _announcements[index];
             return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 5.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
               child: _buildAnnouncementItem(item, index),
             );
           },
@@ -565,26 +621,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 50.h),
+          margin: EdgeInsets.only(top: 20.h),
+          padding: EdgeInsets.symmetric(vertical: 60.h),
           decoration: BoxDecoration(
-            color: AppColors.surface.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.border.withOpacity(0.5)),
+            color: AppColors.surface.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(
+              color: AppColors.border.withOpacity(0.3),
+              width: 1,
+            ),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Lottie শুধু Empty state এ
               SizedBox(
-                width: 100.w,
-                height: 100.h,
+                width: 120.w,
+                height: 120.h,
                 child: Lottie.network(AppLottie.emptyState),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: 20.h),
               Text(
                 'No content yet',
                 style: GoogleFonts.inter(
                   color: AppColors.textPrimary,
-                  fontSize: 16.sp,
+                  fontSize: 17.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -593,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 'Check back later for updates',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
-                  fontSize: 13.sp,
+                  fontSize: 14.sp,
                 ),
               ),
             ],
@@ -603,7 +663,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // iOS স্টাইলে Announcement Item
   Widget _buildAnnouncementItem(Map<String, dynamic> item, int index) {
     final isPinned = item['pinned'] as bool;
 
@@ -611,73 +670,81 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.zero,
       onPressed: () {},
       child: Container(
-        padding: EdgeInsets.all(14.w),
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: AppColors.cardBg.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(12.r),
+          color: AppColors.cardBg.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isPinned ? AppColors.accentOrange.withOpacity(0.3) : AppColors.border.withOpacity(0.3),
+            color: isPinned ? AppColors.accentOrange.withOpacity(0.25) : AppColors.border.withOpacity(0.2),
             width: 1,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 36.w,
-                  height: 36.h,
+                  width: 40.w,
+                  height: 40.h,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                       colors: isPinned 
                           ? [AppColors.accentOrange, AppColors.accentRed]
                           : [AppColors.accentBlue, AppColors.accentPurple],
                     ),
-                    borderRadius: BorderRadius.circular(10.r),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Center(
                     child: Text(
                       (item['user'] as String).substring(1, 2).toUpperCase(),
                       style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 14.sp,
+                        fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(width: 10.w),
+                SizedBox(width: 12.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            item['user'] as String,
-                            style: GoogleFonts.inter(
-                              color: AppColors.textPrimary,
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              item['user'] as String,
+                              style: GoogleFonts.inter(
+                                color: AppColors.textPrimary,
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (isPinned) ...[
-                            SizedBox(width: 6.w),
-                            // Lottie শুধু Pinned এ
+                            SizedBox(width: 8.w),
                             SizedBox(
-                              width: 14.w,
-                              height: 14.h,
+                              width: 16.w,
+                              height: 16.h,
                               child: Lottie.network(AppLottie.pinned),
                             ),
                           ],
                         ],
                       ),
+                      SizedBox(height: 2.h),
                       Text(
                         item['subtitle'] as String,
                         style: GoogleFonts.inter(
                           color: AppColors.textSecondary,
-                          fontSize: 11.sp,
+                          fontSize: 12.sp,
                         ),
                       ),
                     ],
@@ -692,16 +759,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            SizedBox(height: 10.h),
+            SizedBox(height: 12.h),
             Text(
               item['message'] as String,
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
-                fontSize: 13.sp,
-                height: 1.4,
+                fontSize: 14.sp,
+                height: 1.5,
+                fontWeight: FontWeight.w400,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
