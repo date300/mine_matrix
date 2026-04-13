@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../ads/ad_manager.dart';
 import '../../layout/layout.dart';
+import '../../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -31,12 +33,16 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     _loadingStatus.value = "SYNCING YOUR WALLET...";
 
+    // ✅ শুধু deep link init — token আগেই main.dart এ হয়েছে,
+    // wallet topbar.dart এ হবে — double init নেই
+    if (mounted) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.initDeepLinks();
+    }
+
     await Future.delayed(const Duration(milliseconds: 800));
 
-    // Ad show করো (void function, await নেই)
     AdManager.showInterstitial();
-
-    // Ad দেখানোর জন্য একটু সময় দাও তারপর navigate
     await Future.delayed(const Duration(milliseconds: 500));
 
     Get.off(
@@ -134,4 +140,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

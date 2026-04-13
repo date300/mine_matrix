@@ -28,23 +28,32 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _handleNavigation() async {
     await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
     _loadingStatus.value = "CONNECTING TO NODES...";
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // Step 1: DeepLink init (fast)
+    await auth.initDeepLinks();
+
+    if (!mounted) return;
     _loadingStatus.value = "SYNCING YOUR WALLET...";
 
-    // ✅ শুধু deep link init — token আগেই main.dart এ হয়েছে,
-    // wallet topbar.dart এ হবে — double init নেই
-    if (mounted) {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.initDeepLinks();
-    }
+    // Step 2: Wallet init — এটাই Reown SDK চালু করে
+    // এটা শেষ হলে wallet connect হবে, JWT আসবে
+    await auth.initWallet(context);
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    _loadingStatus.value = "LAUNCHING MINE MATRIX...";
 
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    // Step 3: Ad দেখাও তারপর navigate
     AdManager.showInterstitial();
     await Future.delayed(const Duration(milliseconds: 500));
 
+    if (!mounted) return;
     Get.off(
       () => const AppLayout(),
       transition: Transition.fadeIn,
@@ -111,6 +120,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
             SizedBox(height: 35.h),
 
+            // Loading status text
             Obx(() => Text(
                   _loadingStatus.value,
                   style: GoogleFonts.inter(
