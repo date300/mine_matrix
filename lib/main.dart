@@ -5,22 +5,22 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'layout/layout.dart';
-import '../../layout/topbar.dart';
+import 'providers/auth_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'pages/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ScreenUtil.ensureScreenSize();
-
-  // শুধু cached token load করো — initWallet() splash এ হবে
+  
+  // App খোলার আগেই token load + verify করো
   final authProvider = AuthProvider();
   await authProvider.initTokenOnly();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: authProvider), // আগে তৈরি instance pass করো
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
       ],
       child: const MiningApp(),

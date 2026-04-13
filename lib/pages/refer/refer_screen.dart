@@ -10,7 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../layout/topbar.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
 
 // ─── Colors (same as WalletScreen) ─────────────────────────────────────────
