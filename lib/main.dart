@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'layout/layout.dart';
-import 'providers/auth_provider.dart';
+import '../../layout/topbar.dart';
 import 'providers/connectivity_provider.dart';
 import 'pages/splash/splash_screen.dart';
 
