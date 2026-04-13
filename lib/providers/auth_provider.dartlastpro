@@ -21,7 +21,7 @@ class AuthProvider extends ChangeNotifier {
 
   Map<String, dynamic>? _userData;
 
-  final _appLinks = AppLinks();
+  final _appLinks = AppLinks(); // ✅ deep link instance
 
   // --- Getters ---
   bool get isInitialized => _isInitialized;
@@ -33,15 +33,19 @@ class AuthProvider extends ChangeNotifier {
   String? get token => _token;
   String? get referralCode => _referralCode;
   Map<String, dynamic>? get userData => _userData;
+
   String? get address => _userData?['wallet_address']?.toString();
+
   String? get balance => _userData?['balance']?.toString();
 
   String? get _sessionIdentifier {
     if (_userData?['wallet_address'] != null) {
       return _userData!['wallet_address'].toString();
     }
+
     final session = _appKitModal?.session;
     if (session == null) return null;
+
     return session.getAddress('solana') ??
         session.getAddress('eip155') ??
         session.getAddress('email') ??
@@ -56,17 +60,20 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // DEEP LINK INIT
+  // DEEP LINK INIT ✅
   // =========================
   Future<void> initDeepLinks() async {
     try {
+      // App বন্ধ থাকা অবস্থায় লিংক দিয়ে খুললে
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        debugPrint("✅ Initial deep link: $initialLink");
+        debugPrint("🔗 Initial deep link: $initialLink");
         _extractReferralFromLink(initialLink);
       }
+
+      // App চালু থাকা অবস্থায় লিংক আসলে
       _appLinks.uriLinkStream.listen((uri) {
-        debugPrint("✅ Deep link received: $uri");
+        debugPrint("🔗 Deep link received: $uri");
         _extractReferralFromLink(uri);
       });
     } catch (e) {
@@ -84,46 +91,55 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // INIT TOKEN ONLY — Cache-First
-  // আগে cached data দেখাও, পরে background এ verify করো
+  // INIT TOKEN ONLY
   // =========================
   Future<void> initTokenOnly() async {
+    _setLoading(true);
+
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
 
-    // ✅ Step 1: Cached data থাকলে সাথে সাথে UI দেখাও — loading নাই
     if (_token != null) {
-      final userStr = prefs.getString('user');
-      if (userStr != null) {
-        _userData = jsonDecode(userStr);
-        _referralCode = _userData?['referral_code'];
-        _isLoggedIn = true;
-        notifyListeners(); // তাৎক্ষণিক UI আপডেট
-      }
+      final valid = await verifyTokenAndFetchUser();
 
-      // ✅ Step 2: Background এ silently verify — UI block হবে না
-      _verifyInBackground(prefs);
+      if (valid) {
+        _isLoggedIn = true;
+      } else {
+        await prefs.remove('token');
+        await prefs.remove('user');
+        _token = null;
+        _isLoggedIn = false;
+      }
+    }
+
+    _setLoading(false);
+  }
+
+  // =========================
+  // INIT FULL ✅ deep link আগে
+  // =========================
+  Future<void> initAuth(BuildContext context) async {
+    await initDeepLinks(); // ✅ সবার আগে deep link init
+    await initTokenOnly();
+    await initWallet(context);
+  }
+
+  // =========================
+  // TOKEN VERIFY
+  // =========================
+  Future<bool> verifyToken() async {
+    try {
+      final res = await http.get(
+        Uri.parse('https://web3.ltcminematrix.com/api/user/profile'),
+        headers: {'Authorization': 'Bearer $_token'},
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      return false;
     }
   }
 
-  void _verifyInBackground(SharedPreferences prefs) {
-    verifyTokenAndFetchUser().then((valid) {
-      if (!valid) {
-        prefs.remove('token');
-        prefs.remove('user');
-        _token = null;
-        _isLoggedIn = false;
-        _userData = null;
-        notifyListeners();
-      }
-    }).catchError((e) {
-      debugPrint("Background verify error: $e");
-    });
-  }
-
-  // =========================
-  // TOKEN VERIFY + USER FETCH
-  // =========================
+  // Token verify + user data fetch
   Future<bool> verifyTokenAndFetchUser() async {
     try {
       final res = await http.get(
@@ -153,7 +169,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Token verify failed: $e");
 
-      // Network error হলে cached data দিয়ে চালাও
+      // Network error হলে cached data ব্যবহার করো
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
       if (userStr != null) {
@@ -176,11 +192,14 @@ class AuthProvider extends ChangeNotifier {
 
   void generateReferralCode() {
     if (_referralCode != null) return;
+
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     Random rnd = Random();
+
     _referralCode = String.fromCharCodes(
       Iterable.generate(6, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
     );
+
     notifyListeners();
   }
 
@@ -237,11 +256,12 @@ class AuthProvider extends ChangeNotifier {
     debugPrint("identifier: $currentIdentifier");
 
     if (isConnected && currentIdentifier != null) {
-      // Wallet address পরিবর্তন হলে logout
+
       final dbWalletAddress = _userData?['wallet_address'];
       if (dbWalletAddress != null) {
         final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
             _appKitModal?.session?.getAddress('eip155');
+
         if (sessionAddress != null && sessionAddress != dbWalletAddress) {
           debugPrint("Wallet changed! Logging out...");
           logout();
@@ -249,7 +269,6 @@ class AuthProvider extends ChangeNotifier {
         }
       }
 
-      // নতুন wallet connect হলে login করো
       if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentIdentifier;
@@ -263,12 +282,17 @@ class AuthProvider extends ChangeNotifier {
 
         _loginToBackend(sessionAddress).then((success) {
           _isLoggedIn = success;
-          if (!success) _lastLoggedAddress = null;
+
+          if (!success) {
+            _lastLoggedAddress = null;
+          }
+
           _isLoggingIn = false;
           _setLoading(false);
           notifyListeners();
         });
       }
+
     } else if (!isConnected) {
       if (_lastLoggedAddress != null || _isLoggedIn) {
         _lastLoggedAddress = null;
@@ -286,14 +310,14 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       debugPrint("Logging in with: $walletAddress");
-      debugPrint("Referred by: $_inputReferralCode");
+      debugPrint("Referred by: $_inputReferralCode"); // ✅ debug করার জন্য
 
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'wallet_address': walletAddress,
-          'referred_by': _inputReferralCode ?? "",
+          'referred_by': _inputReferralCode ?? ""
         }),
       );
 
@@ -317,8 +341,7 @@ class AuthProvider extends ChangeNotifier {
 
           return true;
         } else {
-          debugPrint(
-              "Login failed: status=${data['status']}, message=${data['message']}");
+          debugPrint("Login failed: status=${data['status']}, message=${data['message']}");
         }
       } else {
         debugPrint("API ERROR ${response.statusCode}: ${response.body}");
