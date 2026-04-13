@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../ads/ad_manager.dart';
 import '../../layout/layout.dart';
-import '../../providers/auth_provider.dart';
+import '../../layout/topbar.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

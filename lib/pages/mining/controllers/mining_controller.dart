@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/auth_provider.dart';
+import '../../../layout/topbar.dart';
 import '../constants/mining_constants.dart';
 import '../services/mining_service.dart';
 
