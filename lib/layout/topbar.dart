@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart'; // kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,7 +36,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
-  bool get isConnected => _appKitModal?.isConnected ?? false;
+  bool get isConnected =>
+      kIsWeb ? _isLoggedIn : (_appKitModal?.isConnected ?? false);
   bool get isAuthenticated => isConnected && _isLoggedIn;
 
   String? get token => _token;
@@ -98,8 +100,8 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('token');
 
-    // ✅ Step 1: Cached data থাকলে সাথে সাথে UI দেখাও
     if (_token != null) {
+      // ✅ Cached data আগে দেখাও
       final userStr = prefs.getString('user');
       if (userStr != null) {
         _userData = jsonDecode(userStr);
@@ -108,7 +110,7 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // ✅ Step 2: Background এ silently verify
+      // ✅ Background এ verify
       _verifyInBackground(prefs);
     }
   }
@@ -160,7 +162,6 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("Token verify failed: $e");
 
-      // Network error হলে cached data দিয়ে চালাও
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
       if (userStr != null) {
@@ -172,6 +173,21 @@ class AuthProvider extends ChangeNotifier {
     }
 
     return false;
+  }
+
+  // =========================
+  // WEB LOGIN — wallet address দিয়ে
+  // =========================
+  Future<bool> loginWithAddress(String walletAddress) async {
+    _setLoading(true);
+    final success = await _loginToBackend(walletAddress.trim());
+    if (success) {
+      _isLoggedIn = true;
+      _lastLoggedAddress = walletAddress.trim();
+    }
+    _setLoading(false);
+    notifyListeners();
+    return success;
   }
 
   // =========================
@@ -192,9 +208,16 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET INIT
+  // WALLET INIT — শুধু Mobile এ
   // =========================
   Future<void> initWallet(BuildContext context) async {
+    if (kIsWeb) {
+      // Web এ Reown SDK লাগবে না
+      _isInitialized = true;
+      notifyListeners();
+      return;
+    }
+
     if (_isInitialized) return;
 
     try {
@@ -234,9 +257,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // WALLET UPDATE
+  // WALLET UPDATE — শুধু Mobile এ
   // =========================
   void _onWalletUpdate() {
+    if (kIsWeb) return;
+
     final currentIdentifier = _sessionIdentifier;
 
     debugPrint("=== WALLET UPDATE ===");
@@ -244,7 +269,6 @@ class AuthProvider extends ChangeNotifier {
     debugPrint("identifier: $currentIdentifier");
 
     if (isConnected && currentIdentifier != null) {
-      // Wallet address পরিবর্তন হলে logout
       final dbWalletAddress = _userData?['wallet_address'];
       if (dbWalletAddress != null) {
         final sessionAddress = _appKitModal?.session?.getAddress('solana') ??
@@ -256,7 +280,6 @@ class AuthProvider extends ChangeNotifier {
         }
       }
 
-      // নতুন wallet connect হলে login করো
       if (currentIdentifier != _lastLoggedAddress && !_isLoggingIn) {
         _isLoggingIn = true;
         _lastLoggedAddress = currentIdentifier;
@@ -293,7 +316,6 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       debugPrint("Logging in with: $walletAddress");
-      debugPrint("Referred by: $_inputReferralCode");
 
       final response = await http.post(
         url,
@@ -338,12 +360,96 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // =========================
-  // OPEN WALLET MODAL
+  // OPEN MODAL
+  // Web → address input dialog
+  // Mobile → Reown modal
   // =========================
   void openModal(BuildContext context) {
-    if (_isInitialized && _appKitModal != null) {
+    if (kIsWeb) {
+      _showWebLoginDialog(context);
+    } else if (_isInitialized && _appKitModal != null) {
       _appKitModal!.openModalView();
     }
+  }
+
+  void _showWebLoginDialog(BuildContext context) {
+    final controller = TextEditingController();
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            "Connect Wallet",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Enter your wallet address to connect",
+                style: TextStyle(color: Colors.white60, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: "0x... or Solana address",
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  errorText: errorMsg,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancel",
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF14F195),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                final addr = controller.text.trim();
+                if (addr.isEmpty) {
+                  setState(() => errorMsg = "Address cannot be empty");
+                  return;
+                }
+                Navigator.pop(ctx);
+                final success = await loginWithAddress(addr);
+                if (!success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text("Login failed. Check your wallet address."),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text("Connect"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // =========================
@@ -380,7 +486,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('token');
     await prefs.remove('user');
 
-    if (_appKitModal != null && isConnected) {
+    if (!kIsWeb && _appKitModal != null && isConnected) {
       await _appKitModal!.disconnect();
     }
 
