@@ -4,6 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_background/animated_background.dart';
+import 'package:flutter_animate/flutter_animate.dart'; // ✅ এই import যোগ করুন
+import 'package:shimmer/shimmer.dart'; // ✅ Shimmer এর জন্য
 import 'constants/mining_constants.dart';
 import 'controllers/mining_controller.dart';
 import 'widgets/mining_widgets.dart';
@@ -90,9 +92,8 @@ class _MiningScreenState extends State<MiningScreen>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ WalletScreen স্টাইলে - পুরো স্ক্রিন জুড়ে কন্টেন্ট
     return Scaffold(
-      backgroundColor: Colors.transparent, // AppLayout background দেখাবে
+      backgroundColor: Colors.transparent,
       body: _c.isLoading
           ? _buildSkeletonLoading()
           : _c.hasError
@@ -111,7 +112,7 @@ class _MiningScreenState extends State<MiningScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: 20.h), // ✅ Top spacing
+                              SizedBox(height: 20.h),
                               _buildHeader(),
                               SizedBox(height: 20.h),
                               _buildMiningOrb(),
@@ -129,7 +130,7 @@ class _MiningScreenState extends State<MiningScreen>
                               _buildAutoMiningCard(),
                               SizedBox(height: 12.h),
                               _buildBoostCard(),
-                              SizedBox(height: 30.h), // Bottom padding
+                              SizedBox(height: 30.h),
                             ],
                           ),
                         ),
@@ -140,7 +141,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ WalletScreen স্টাইলে Skeleton Loading
   Widget _buildSkeletonLoading() {
     return Shimmer.fromColors(
       baseColor: AppColors.bgCard,
@@ -150,7 +150,6 @@ class _MiningScreenState extends State<MiningScreen>
         child: Column(
           children: [
             SizedBox(height: 20.h),
-            // Header skeleton
             Container(
               width: double.infinity,
               height: 60.h,
@@ -160,17 +159,15 @@ class _MiningScreenState extends State<MiningScreen>
               ),
             ),
             SizedBox(height: 20.h),
-            // Orb skeleton
             Container(
               width: 200.w,
               height: 200.h,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.bgCard,
                 shape: BoxShape.circle,
               ),
             ),
             SizedBox(height: 20.h),
-            // Buttons skeleton
             Row(
               children: [
                 Expanded(
@@ -195,7 +192,6 @@ class _MiningScreenState extends State<MiningScreen>
               ],
             ),
             SizedBox(height: 24.h),
-            // Cards skeleton
             ...List.generate(5, (index) => Padding(
               padding: EdgeInsets.only(bottom: 12.h),
               child: Container(
@@ -213,7 +209,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ Header (WalletScreen স্টাইলে)
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -262,7 +257,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ Mining Orb (কেন্দ্রে)
   Widget _buildMiningOrb() {
     final isPaused = _c.dayStarted && !_c.isMining;
 
@@ -296,111 +290,115 @@ class _MiningScreenState extends State<MiningScreen>
       iconData = CupertinoIcons.power;
     }
 
-    return Center(
-      child: GestureDetector(
-        onTap: () async {
-          try {
-            await _c.toggleMining();
-            if (_c.isMining) {
-              _showSnack('⛏️ Mining Started',
-                  'Earn \$100 to complete a cycle!',
-                  AppColors.accentGreen, Colors.black);
+    // ✅ Animate widget দিয়ে wrap করে নিলাম
+    return Animate(
+      target: _c.isMining ? 1.0 : 0.0,
+      effects: [
+        ScaleEffect(
+          begin: const Offset(0.95, 0.95),
+          end: const Offset(1.0, 1.0),
+          duration: 600.ms,
+          curve: Curves.easeOut,
+        ),
+      ],
+      child: Center(
+        child: GestureDetector(
+          onTap: () async {
+            try {
+              await _c.toggleMining();
+              if (_c.isMining) {
+                _showSnack('⛏️ Mining Started',
+                    'Earn \$100 to complete a cycle!',
+                    AppColors.accentGreen, Colors.black);
+              }
+            } catch (e) {
+              _showSnack('❌ Error',
+                  e.toString().replaceFirst('Exception: ', ''),
+                  Colors.red, Colors.white);
             }
-          } catch (e) {
-            _showSnack('❌ Error',
-                e.toString().replaceFirst('Exception: ', ''),
-                Colors.red, Colors.white);
-          }
-        },
-        child: Container(
-          width: 180.w,
-          height: 180.h,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [
-                Colors.black.withOpacity(0.8),
-                Colors.black.withOpacity(0.4),
+          },
+          child: Container(
+            width: 180.w,
+            height: 180.h,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.4),
+                ],
+              ),
+              border: Border.all(
+                color: borderColors[0],
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: orbAccent.withOpacity(0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
               ],
             ),
-            border: Border.all(
-              color: borderColors[0],
-              width: 3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: orbAccent.withOpacity(0.3),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    iconData,
-                    color: orbAccent,
-                    size: 40.sp,
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    orbLabel,
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
+            child: ClipOval(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      iconData,
+                      color: orbAccent,
+                      size: 40.sp,
                     ),
-                  ),
-                  if (orbSub.isNotEmpty) ...[
-                    SizedBox(height: 4.h),
-                    Text(
-                      orbSub,
-                      style: GoogleFonts.inter(
-                        color: Colors.white54,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-                  ],
-                  if (_c.isMining) ...[
                     SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: orbAccent.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: orbAccent.withOpacity(0.4)),
+                    Text(
+                      orbLabel,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: Text(
-                        "+\$${_c.usdPerSec.toStringAsFixed(6)}/s",
-                        style: GoogleFonts.spaceMono(
-                          color: orbAccent,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    if (orbSub.isNotEmpty) ...[
+                      SizedBox(height: 4.h),
+                      Text(
+                        orbSub,
+                        style: GoogleFonts.inter(
+                          color: Colors.white54,
+                          fontSize: 12.sp,
                         ),
                       ),
-                    ),
+                    ],
+                    if (_c.isMining) ...[
+                      SizedBox(height: 8.h),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: orbAccent.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(color: orbAccent.withOpacity(0.4)),
+                        ),
+                        child: Text(
+                          "+\$${_c.usdPerSec.toStringAsFixed(6)}/s",
+                          style: GoogleFonts.spaceMono(
+                            color: orbAccent,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ).animate(
-      target: _c.isMining ? 1.0 : 0.0,
-    ).scale(
-      begin: const Offset(0.95, 0.95),
-      end: const Offset(1.0, 1.0),
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeOut,
     );
   }
 
-  // ✅ Action Buttons (WalletScreen স্টাইলে)
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -466,7 +464,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ Stats Section
   Widget _buildStatsSection() {
     return Container(
       width: double.infinity,
@@ -512,217 +509,227 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ Live Earnings Card (WalletScreen স্টাইলে)
+  // ✅ লাইন 818 - Animate widget দিয়ে wrap
   Widget _buildLiveEarningsCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.accentGreen.withOpacity(0.15),
-            AppColors.bgCard,
+    return Animate(
+      effects: [
+        FadeEffect(duration: 400.ms),
+        SlideEffect(begin: const Offset(0, 0.1), end: Offset.zero, duration: 400.ms),
+      ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.r),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.accentGreen.withOpacity(0.15),
+              AppColors.bgCard,
+            ],
+          ),
+          border: Border.all(
+            color: AppColors.accentGreen.withOpacity(0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentGreen.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        border: Border.all(
-          color: AppColors.accentGreen.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentGreen.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Padding(
-            padding: EdgeInsets.all(20.w),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20.r),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Padding(
+              padding: EdgeInsets.all(20.w),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 8.w,
+                              height: 8.h,
+                              decoration: BoxDecoration(
+                                color: AppColors.accentGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              "LIVE EARNINGS",
+                              style: GoogleFonts.inter(
+                                color: AppColors.accentGreen,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          "\$${_c.liveUSD.toStringAsFixed(4)}",
+                          style: GoogleFonts.spaceMono(
+                            color: Colors.white,
+                            fontSize: 28.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8.w,
-                            height: 8.h,
-                            decoration: BoxDecoration(
-                              color: AppColors.accentGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            "LIVE EARNINGS",
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12.h),
                       Text(
-                        "\$${_c.liveUSD.toStringAsFixed(4)}",
+                        "Withdrawable",
+                        style: GoogleFonts.inter(
+                          color: Colors.white54,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        "\$${_c.withdrawableUSD.toStringAsFixed(2)}",
                         style: GoogleFonts.spaceMono(
-                          color: Colors.white,
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSolanaCard() {
+    final bool active = _c.isMining;
+
+    return Animate(
+      effects: [
+        FadeEffect(duration: 400.ms),
+        SlideEffect(begin: const Offset(0, 0.1), end: Offset.zero, duration: 400.ms),
+      ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.r),
+          gradient: LinearGradient(
+            colors: [
+              AppColors.accentPurple.withOpacity(active ? 0.15 : 0.05),
+              AppColors.bgCard,
+            ],
+          ),
+          border: Border.all(
+            color: AppColors.accentPurple.withOpacity(active ? 0.3 : 0.15),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(20.w),
+          child: Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.accentPurple, AppColors.accentGreen],
+                  ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Icon(
+                  CupertinoIcons.circle_fill,
+                  color: Colors.white,
+                  size: 24.sp,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Withdrawable",
+                      "SOLANA MINING",
+                      style: GoogleFonts.inter(
+                        color: AppColors.accentPurple,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "1 SOL = \$${_c.solPrice.toStringAsFixed(2)}",
                       style: GoogleFonts.inter(
                         color: Colors.white54,
                         fontSize: 10.sp,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      "\$${_c.withdrawableUSD.toStringAsFixed(2)}",
-                      style: GoogleFonts.spaceMono(
-                        color: Colors.white70,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ).animate().fadeIn().slideY(begin: 0.1);
-  }
-
-  // ✅ Solana Card
-  Widget _buildSolanaCard() {
-    final bool active = _c.isMining;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r),
-        gradient: LinearGradient(
-          colors: [
-            AppColors.accentPurple.withOpacity(active ? 0.15 : 0.05),
-            AppColors.bgCard,
-          ],
-        ),
-        border: Border.all(
-          color: AppColors.accentPurple.withOpacity(active ? 0.3 : 0.15),
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(20.w),
-        child: Row(
-          children: [
-            Container(
-              width: 48.w,
-              height: 48.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.accentPurple, AppColors.accentGreen],
-                ),
               ),
-              child: Icon(
-                CupertinoIcons.circle_fill,
-                color: Colors.white,
-                size: 24.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "SOLANA MINING",
-                    style: GoogleFonts.inter(
-                      color: AppColors.accentPurple,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w800,
+                    _c.formatSol(_c.liveSOL),
+                    style: GoogleFonts.spaceMono(
+                      color: active ? AppColors.accentGreen : Colors.white54,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 4.h),
-                  Text(
-                    "1 SOL = \$${_c.solPrice.toStringAsFixed(2)}",
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 10.sp,
+                  if (active)
+                    Row(
+                      children: [
+                        Container(
+                          width: 6.w,
+                          height: 6.h,
+                          decoration: BoxDecoration(
+                            color: AppColors.accentGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          "Active",
+                          style: GoogleFonts.inter(
+                            color: AppColors.accentGreen,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      "Paused",
+                      style: GoogleFonts.inter(
+                        color: Colors.white38,
+                        fontSize: 10.sp,
+                      ),
                     ),
-                  ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  _c.formatSol(_c.liveSOL),
-                  style: GoogleFonts.spaceMono(
-                    color: active ? AppColors.accentGreen : Colors.white54,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                if (active)
-                  Row(
-                    children: [
-                      Container(
-                        width: 6.w,
-                        height: 6.h,
-                        decoration: BoxDecoration(
-                          color: AppColors.accentGreen,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        "Active",
-                        style: GoogleFonts.inter(
-                          color: AppColors.accentGreen,
-                          fontSize: 10.sp,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Text(
-                    "Paused",
-                    style: GoogleFonts.inter(
-                      color: Colors.white38,
-                      fontSize: 10.sp,
-                    ),
-                  ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.1);
+    );
   }
 
-  // ✅ Cycle Progress
   Widget _buildCycleProgress() {
     String statusText;
     Color statusColor;
@@ -742,276 +749,293 @@ class _MiningScreenState extends State<MiningScreen>
       statusIcon = CupertinoIcons.power;
     }
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "CYCLE PROGRESS",
-                  style: GoogleFonts.inter(
-                    color: AppColors.accentGreen,
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(statusIcon, color: statusColor, size: 12.sp),
-                    SizedBox(width: 4.w),
-                    Text(
-                      statusText,
-                      style: GoogleFonts.inter(
-                        color: statusColor,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10.r),
-              child: LinearProgressIndicator(
-                value: _c.cycleProgress.clamp(0.0, 1.0),
-                backgroundColor: Colors.white10,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
-                minHeight: 8.h,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "\$${_c.liveUSD.toStringAsFixed(2)} / \$100",
-                  style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 11.sp,
-                  ),
-                ),
-                Text(
-                  "${(_c.cycleProgress * 100).toStringAsFixed(1)}%",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
+    return Animate(
+      effects: [
+        FadeEffect(duration: 400.ms),
+        SlideEffect(begin: const Offset(0, 0.1), end: Offset.zero, duration: 400.ms),
+      ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.white10),
         ),
-      ),
-    ).animate().fadeIn().slideY(begin: 0.1);
-  }
-
-  // ✅ Auto Mining Card
-  Widget _buildAutoMiningCard() {
-    final bool active = _c.autoMining;
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: active
-              ? AppColors.accentGreen.withOpacity(0.4)
-              : Colors.white10,
-          width: active ? 1.5 : 1,
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Row(
-          children: [
-            Container(
-              width: 44.w,
-              height: 44.h,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: active
-                    ? AppColors.accentGreen.withOpacity(0.2)
-                    : Colors.white10,
-              ),
-              child: Icon(
-                active
-                    ? CupertinoIcons.checkmark_shield_fill
-                    : CupertinoIcons.shield,
-                color: active ? AppColors.accentGreen : Colors.white54,
-                size: 22.sp,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    active ? "AUTO MINING ON" : "AUTO MINING",
+                    "CYCLE PROGRESS",
                     style: GoogleFonts.inter(
-                      color: active ? AppColors.accentGreen : Colors.white,
-                      fontSize: 13.sp,
+                      color: AppColors.accentGreen,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(statusIcon, color: statusColor, size: 12.sp),
+                      SizedBox(width: 4.w),
+                      Text(
+                        statusText,
+                        style: GoogleFonts.inter(
+                          color: statusColor,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10.r),
+                child: LinearProgressIndicator(
+                  value: _c.cycleProgress.clamp(0.0, 1.0),
+                  backgroundColor: Colors.white10,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
+                  minHeight: 8.h,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Text(
-                    active
-                        ? "Auto-restarts every cycle"
-                        : "One-time \$10 unlock",
+                    "\$${_c.liveUSD.toStringAsFixed(2)} / \$100",
                     style: GoogleFonts.inter(
                       color: Colors.white54,
                       fontSize: 11.sp,
                     ),
                   ),
+                  Text(
+                    "${(_c.cycleProgress * 100).toStringAsFixed(1)}%",
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
-            ),
-            if (!active)
-              GestureDetector(
-                onTap: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                    ),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    "BUY \$10",
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              )
-            else
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: AppColors.accentGreen,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.1);
+    );
   }
 
-  // ✅ Boost Card
-  Widget _buildBoostCard() {
-    final bool maxed = _c.boostAmount >= 50;
+  Widget _buildAutoMiningCard() {
+    final bool active = _c.autoMining;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.accentPurple.withOpacity(0.3)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+    return Animate(
+      effects: [
+        FadeEffect(duration: 400.ms),
+        SlideEffect(begin: const Offset(0, 0.1), end: Offset.zero, duration: 400.ms),
+      ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: active
+                ? AppColors.accentGreen.withOpacity(0.4)
+                : Colors.white10,
+            width: active ? 1.5 : 1,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active
+                      ? AppColors.accentGreen.withOpacity(0.2)
+                      : Colors.white10,
+                ),
+                child: Icon(
+                  active
+                      ? CupertinoIcons.checkmark_shield_fill
+                      : CupertinoIcons.shield,
+                  color: active ? AppColors.accentGreen : Colors.white54,
+                  size: 22.sp,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      CupertinoIcons.rocket_fill,
-                      color: AppColors.accentPurple,
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 8.w),
                     Text(
-                      "SPEED BOOST",
+                      active ? "AUTO MINING ON" : "AUTO MINING",
                       style: GoogleFonts.inter(
-                        color: AppColors.accentPurple,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w800,
+                        color: active ? AppColors.accentGreen : Colors.white,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      active
+                          ? "Auto-restarts every cycle"
+                          : "One-time \$10 unlock",
+                      style: GoogleFonts.inter(
+                        color: Colors.white54,
+                        fontSize: 11.sp,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Text(
-                    "${_c.boostMultiplier.toStringAsFixed(2)}x",
-                    style: GoogleFonts.spaceMono(
-                      color: AppColors.accentPurple,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Invested: \$${_c.boostAmount.toStringAsFixed(0)}",
-                  style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 11.sp,
-                  ),
-                ),
+              ),
+              if (!active)
                 GestureDetector(
-                  onTap: maxed
-                      ? null
-                      : () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
+                  onTap: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     decoration: BoxDecoration(
-                      gradient: maxed
-                          ? null
-                          : const LinearGradient(
-                              colors: [AppColors.accentPurple, Color(0xFFCC44FF)],
-                            ),
-                      color: maxed ? Colors.white10 : null,
-                      borderRadius: BorderRadius.circular(10.r),
+                      gradient: const LinearGradient(
+                        colors: [AppColors.accentGreen, Color(0xFF00CC88)],
+                      ),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
-                      maxed ? "MAXED" : "+ BUY",
+                      "BUY \$10",
                       style: GoogleFonts.inter(
-                        color: maxed ? Colors.white38 : Colors.white,
-                        fontSize: 11.sp,
+                        color: Colors.black,
+                        fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+                )
+              else
+                Container(
+                  width: 8.w,
+                  height: 8.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGreen,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn().slideY(begin: 0.1);
+    );
+  }
+
+  // ✅ লাইন 917 - Animate widget দিয়ে wrap
+  Widget _buildBoostCard() {
+    final bool maxed = _c.boostAmount >= 50;
+
+    return Animate(
+      effects: [
+        FadeEffect(duration: 400.ms),
+        SlideEffect(begin: const Offset(0, 0.1), end: Offset.zero, duration: 400.ms),
+      ],
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.accentPurple.withOpacity(0.3)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        CupertinoIcons.rocket_fill,
+                        color: AppColors.accentPurple,
+                        size: 18.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        "SPEED BOOST",
+                        style: GoogleFonts.inter(
+                          color: AppColors.accentPurple,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentPurple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Text(
+                      "${_c.boostMultiplier.toStringAsFixed(2)}x",
+                      style: GoogleFonts.spaceMono(
+                        color: AppColors.accentPurple,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Invested: \$${_c.boostAmount.toStringAsFixed(0)}",
+                    style: GoogleFonts.inter(
+                      color: Colors.white54,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: maxed
+                        ? null
+                        : () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        gradient: maxed
+                            ? null
+                            : const LinearGradient(
+                                colors: [AppColors.accentPurple, Color(0xFFCC44FF)],
+                              ),
+                        color: maxed ? Colors.white10 : null,
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Text(
+                        maxed ? "MAXED" : "+ BUY",
+                        style: GoogleFonts.inter(
+                          color: maxed ? Colors.white38 : Colors.white,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
