@@ -32,7 +32,7 @@ class _MiningScreenState extends State<MiningScreen>
     super.dispose();
   }
 
-  // ─── Claim flow ───────────────────────────────────────────────────────────
+  // ── Claim flow ──────────────────────────────────────────────────────────────
   void _handleClaimTap() {
     if (_c.dayStarted && _c.isMining) {
       showClaimDialog(context, _c, _executeClaim);
@@ -88,7 +88,7 @@ class _MiningScreenState extends State<MiningScreen>
     ));
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────
+  // ── Build ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,42 +125,21 @@ class _MiningScreenState extends State<MiningScreen>
                           child: Column(
                             children: [
                               SizedBox(height: 15.h),
-                              LiveEarningsCard(c: _c),
-                              SizedBox(height: 8.h),
-                              SolanaLiveCard(c: _c),
-                              SizedBox(height: 8.h),
-                              
-                              // প্রোগ্রেস সেকশন
-                              CycleProgressSection(c: _c),
-                              SizedBox(height: 8.h),
-                              
-                              // নতুন ফিচার: Auto Mining Card যুক্ত করা হয়েছে
-                              AutoMiningCard(
-                                c: _c,
-                                onBuyAuto: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
-                              ),
-                              SizedBox(height: 8.h),
 
-                              // আপডেট: onBuyBoost প্যারামিটার যুক্ত করা হয়েছে
-                              BoostInfoSection(
-                                c: _c,
-                                onBuyBoost: () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
-                              ),
-                              SizedBox(height: 8.h),
-                              
+                              // ── 1. Withdrawable Balance (সবার উপরে) ──
                               if (_c.withdrawableUSD > 0) ...[
                                 WithdrawableSection(c: _c),
                                 SizedBox(height: 8.h),
                               ],
-                              SizedBox(height: 16.h),
-                              
+
+                              // ── 2. Mining Orb ──
                               MiningOrb(
                                 c: _c,
                                 onTap: () async {
                                   try {
                                     await _c.toggleMining();
                                     if (_c.isMining) {
-                                      _showSnack('⛏ Mining Started',
+                                      _showSnack('⚡ Mining Started',
                                           'Earn \$100 to complete a cycle!',
                                           AppColors.accentGreen, Colors.black);
                                     }
@@ -172,15 +151,43 @@ class _MiningScreenState extends State<MiningScreen>
                                 },
                               ),
                               SizedBox(height: 25.h),
-                              
+
+                              // ── 3. Action Buttons ──
                               ActionButtons(
                                 c: _c,
                                 onClaim: _handleClaimTap,
                                 onRefresh: _c.fetchStatus,
                               ),
                               SizedBox(height: 12.h),
-                              
+
+                              // ── 4. Stats Grid ──
                               StatsGrid(c: _c),
+                              SizedBox(height: 16.h),
+
+                              // ── 5. Live Earnings Card ──
+                              LiveEarningsCard(c: _c),
+                              SizedBox(height: 8.h),
+
+                              // ── 6. Solana Live Card ──
+                              SolanaLiveCard(c: _c),
+                              SizedBox(height: 8.h),
+
+                              // ── 7. Cycle Progress ──
+                              CycleProgressSection(c: _c),
+                              SizedBox(height: 8.h),
+
+                              // ── 8. Auto Mining Card ──
+                              AutoMiningCard(
+                                c: _c,
+                                onBuyAuto: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
+                              ),
+                              SizedBox(height: 8.h),
+
+                              // ── 9. Boost Info ──
+                              BoostInfoSection(
+                                c: _c,
+                                onBuyBoost: () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
+                              ),
                               SizedBox(height: 30.h),
                             ],
                           ),
@@ -194,8 +201,7 @@ class _MiningScreenState extends State<MiningScreen>
 }
 
 // ============================================================================
-// Missing Widgets: আগের কোড থেকে মিসিং হওয়া উইজেটগুলো নিচে দেওয়া হলো 
-// যাতে কোনো Compilation Error না আসে।
+// Supporting Widgets
 // ============================================================================
 
 class MiningErrorWidget extends StatelessWidget {

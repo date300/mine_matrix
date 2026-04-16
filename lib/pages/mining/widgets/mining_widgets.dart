@@ -12,7 +12,7 @@ import '../controllers/mining_controller.dart';
 // NOTE: AppColors is imported from mining_constants.dart
 
 // ---------------------------------------------------------------------------
-// Lottie URLs — শুধু hero/central element এ ব্যবহার হবে
+// Lottie URLs (এগুলো ঠিক আছে)
 // ---------------------------------------------------------------------------
 class AppLottie {
   static const String mining   = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
@@ -25,7 +25,7 @@ class AppLottie {
 }
 
 // ---------------------------------------------------------------------------
-// _SectionLabel — section divider
+// _SectionLabel (ঠিক আছে)
 // ---------------------------------------------------------------------------
 class _SectionLabel extends StatelessWidget {
   final String text;
@@ -58,7 +58,7 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Pulse Dot — ছোট animated dot (Live indicator)
+// Pulse Dot (ঠিক আছে)
 // ---------------------------------------------------------------------------
 class PulseDot extends StatefulWidget {
   final Color color;
@@ -103,11 +103,17 @@ class _PulseDotState extends State<PulseDot> with SingleTickerProviderStateMixin
 }
 
 // ---------------------------------------------------------------------------
-// LiveEarningsCard — Lottie pulse dot রাখা হয়েছে (hero metric)
+// ✅ LiveEarningsCard - padding parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class LiveEarningsCard extends StatelessWidget {
   final MiningController c;
-  const LiveEarningsCard({super.key, required this.c});
+  final double padding; // ✅ নতুন parameter
+  
+  const LiveEarningsCard({
+    super.key, 
+    required this.c,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +139,7 @@ class LiveEarningsCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+            padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 2).h), // ✅ padding ব্যবহার
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -142,7 +148,7 @@ class LiveEarningsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // LIVE badge — Lottie pulse যুক্তিসঙ্গত এখানে
+                      // LIVE badge
                       Row(
                         children: [
                           SizedBox(
@@ -223,11 +229,17 @@ class LiveEarningsCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// SolanaLiveCard — Icon ব্যবহার (ছোট card header এ Lottie দরকার নেই)
+// ✅ SolanaLiveCard - padding parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class SolanaLiveCard extends StatelessWidget {
   final MiningController c;
-  const SolanaLiveCard({super.key, required this.c});
+  final double padding; // ✅ নতুন parameter
+  
+  const SolanaLiveCard({
+    super.key, 
+    required this.c,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +267,7 @@ class SolanaLiveCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 4).h), // ✅ padding ব্যবহার
             child: Row(
               children: [
                 // Icon: Solana currency icon
@@ -322,11 +334,17 @@ class SolanaLiveCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// CycleProgressSection — Icon ব্যবহার (progress bar নিজেই visual)
+// ✅ CycleProgressSection - padding parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class CycleProgressSection extends StatelessWidget {
   final MiningController c;
-  const CycleProgressSection({super.key, required this.c});
+  final double padding; // ✅ নতুন parameter
+  
+  const CycleProgressSection({
+    super.key, 
+    required this.c,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +374,7 @@ class CycleProgressSection extends StatelessWidget {
         border: Border.all(color: Colors.white10, width: 1),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+        padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 2).h), // ✅ padding ব্যবহার
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -416,12 +434,19 @@ class CycleProgressSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// BoostInfoSection — Icon ব্যবহার (Lottie সরানো হয়েছে)
+// ✅ BoostInfoSection - padding parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class BoostInfoSection extends StatelessWidget {
   final MiningController c;
   final VoidCallback onBuyBoost;
-  const BoostInfoSection({super.key, required this.c, required this.onBuyBoost});
+  final double padding; // ✅ নতুন parameter
+  
+  const BoostInfoSection({
+    super.key, 
+    required this.c, 
+    required this.onBuyBoost,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -437,7 +462,7 @@ class BoostInfoSection extends StatelessWidget {
         border: Border.all(color: AppColors.accentPurple.withOpacity(0.2), width: 1),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+        padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 2).h), // ✅ padding ব্যবহার
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -511,7 +536,7 @@ class BoostInfoSection extends StatelessWidget {
                 Icon(CupertinoIcons.speedometer, color: Colors.white24, size: 11.sp),
                 SizedBox(width: 5.w),
                 Text(
-                  "AI: ${c.aiMultiplier.toStringAsFixed(2)}x  ·  Speed: ${c.boostMultiplier.toStringAsFixed(2)}x",
+                  "AI: ${c.aiMultiplier.toStringAsFixed(2)}x  •  Speed: ${c.boostMultiplier.toStringAsFixed(2)}x",
                   style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.sp)),
               ],
             ),
@@ -523,12 +548,19 @@ class BoostInfoSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// AutoMiningCard — Icon ব্যবহার (Lottie সরানো)
+// ✅ AutoMiningCard - padding parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class AutoMiningCard extends StatelessWidget {
   final MiningController c;
   final VoidCallback onBuyAuto;
-  const AutoMiningCard({super.key, required this.c, required this.onBuyAuto});
+  final double padding; // ✅ নতুন parameter
+  
+  const AutoMiningCard({
+    super.key, 
+    required this.c, 
+    required this.onBuyAuto,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -551,10 +583,10 @@ class AutoMiningCard extends StatelessWidget {
             : null,
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
+        padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 4).h), // ✅ padding ব্যবহার
         child: Row(
           children: [
-            // Icon only (Lottie সরানো হয়েছে — ছোট card এ অতিরিক্ত)
+            // Icon
             Container(
               width: 40.w, height: 40.h,
               decoration: BoxDecoration(
@@ -624,11 +656,17 @@ class AutoMiningCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// WithdrawableSection — Icon ব্যবহার, compact design
+// ✅ WithdrawableSection - আগে থেকেই ভালো আছে, কিন্তু padding যোগ করা হলো
 // ---------------------------------------------------------------------------
 class WithdrawableSection extends StatelessWidget {
   final MiningController c;
-  const WithdrawableSection({super.key, required this.c});
+  final double padding; // ✅ নতুন parameter
+  
+  const WithdrawableSection({
+    super.key, 
+    required this.c,
+    this.padding = 16, // ✅ ডিফল্ট মান
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -645,7 +683,7 @@ class WithdrawableSection extends StatelessWidget {
         border: Border.all(color: AppColors.accentLeaf.withOpacity(0.3), width: 1),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
+        padding: EdgeInsets.symmetric(horizontal: padding.w, vertical: (padding - 4).h), // ✅ padding ব্যবহার
         child: Row(
           children: [
             Container(
@@ -679,12 +717,19 @@ class WithdrawableSection extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// MiningOrb — Lottie রাখা হয়েছে (এটাই app এর hero element)
+// ✅ MiningOrb - size parameter যোগ করা হয়েছে
 // ---------------------------------------------------------------------------
 class MiningOrb extends StatelessWidget {
   final MiningController c;
   final VoidCallback onTap;
-  const MiningOrb({super.key, required this.c, required this.onTap});
+  final double? size; // ✅ নতুন optional parameter
+  
+  const MiningOrb({
+    super.key, 
+    required this.c, 
+    required this.onTap,
+    this.size, // ✅ যদি না দেওয়া হয়, তাহলে default ব্যবহার হবে
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -717,6 +762,11 @@ class MiningOrb extends StatelessWidget {
       lottieAsset = AppLottie.bolt;
     }
 
+    // ✅ size না দিলে default মান ব্যবহার করবে
+    final double orbSize = size ?? 150.w;
+    final double outerRingSize = orbSize * 1.13; // 170/150 = 1.13
+    final double outerRing2Size = orbSize * 1.28; // 192/150 = 1.28
+
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -725,7 +775,8 @@ class MiningOrb extends StatelessWidget {
           // Outer ring animation
           if (c.isMining)
             Container(
-              width: 170.w, height: 170.h,
+              width: outerRingSize,
+              height: outerRingSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -742,7 +793,8 @@ class MiningOrb extends StatelessWidget {
 
           if (c.isMining && c.boostActive)
             Container(
-              width: 192.w, height: 192.h,
+              width: outerRing2Size,
+              height: outerRing2Size,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.accentPurple.withOpacity(0.2), width: 1),
@@ -752,7 +804,8 @@ class MiningOrb extends StatelessWidget {
 
           // Main orb
           Container(
-            width: 150.w, height: 150.h,
+            width: orbSize,
+            height: orbSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -767,25 +820,29 @@ class MiningOrb extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Lottie — hero element এ সঠিক ব্যবহার
+                    // Lottie
                     SizedBox(
-                      width: 50.w, height: 50.h,
+                      width: orbSize * 0.33, // 50/150 = 0.33
+                      height: orbSize * 0.33,
                       child: Lottie.network(lottieAsset, repeat: c.isMining),
                     ),
-                    SizedBox(height: 6.h),
+                    SizedBox(height: orbSize * 0.04), // 6/150 = 0.04
                     Text(orbLabel,
                       style: GoogleFonts.inter(
-                        color: Colors.white, fontSize: 15.sp,
+                        color: Colors.white, fontSize: (orbSize * 0.1).sp, // 15/150 = 0.1
                         fontWeight: FontWeight.w800, letterSpacing: 1.0)),
                     if (orbSub.isNotEmpty) ...[
-                      SizedBox(height: 3.h),
+                      SizedBox(height: orbSize * 0.02), // 3/150 = 0.02
                       Text(orbSub,
-                        style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.sp)),
+                        style: GoogleFonts.inter(color: Colors.white38, fontSize: (orbSize * 0.067).sp)), // 10/150 = 0.067
                     ],
                     if (c.isMining) ...[
-                      SizedBox(height: 6.h),
+                      SizedBox(height: orbSize * 0.04), // 6/150 = 0.04
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: orbSize * 0.053, // 8/150 = 0.053
+                          vertical: orbSize * 0.02, // 3/150 = 0.02
+                        ),
                         decoration: BoxDecoration(
                           color: orbAccent.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(20.r),
@@ -793,7 +850,7 @@ class MiningOrb extends StatelessWidget {
                         ),
                         child: Text("+\$${c.usdPerSec.toStringAsFixed(6)}/s",
                           style: GoogleFonts.spaceMono(
-                            color: orbAccent, fontSize: 9.sp, fontWeight: FontWeight.w700)),
+                            color: orbAccent, fontSize: (orbSize * 0.06).sp, fontWeight: FontWeight.w700)), // 9/150 = 0.06
                       ),
                     ],
                   ],
@@ -808,7 +865,7 @@ class MiningOrb extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Buy Boost Bottom Sheet — Icon ব্যবহার (header Lottie সরানো)
+// Buy Boost Bottom Sheet (ঠিক আছে, কোনো পরিবর্তন লাগবে না)
 // ---------------------------------------------------------------------------
 class BuyBoostSheet extends StatefulWidget {
   final MiningController c;
@@ -857,7 +914,7 @@ class _BuyBoostSheetState extends State<BuyBoostSheet> {
           ),
           SizedBox(height: 24.h),
 
-          // Header — Icon ব্যবহার (Lottie সরানো, header এ দরকার নেই)
+          // Header
           Row(
             children: [
               Container(
@@ -877,7 +934,7 @@ class _BuyBoostSheetState extends State<BuyBoostSheet> {
                     Text("BUY SPEED BOOST",
                       style: GoogleFonts.inter(
                         color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.w800)),
-                    Text("Invest \$1–\$50 to speed up mining",
+                    Text("Invest \$1-\$50 to speed up mining",
                       style: GoogleFonts.inter(color: Colors.white38, fontSize: 12.sp)),
                   ],
                 ),
@@ -1047,7 +1104,7 @@ class _BuyBoostSheetState extends State<BuyBoostSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Buy Auto Mining Bottom Sheet — Icon ব্যবহার (Lottie সরানো)
+// Buy Auto Mining Bottom Sheet (ঠিক আছে)
 // ---------------------------------------------------------------------------
 class BuyAutoMiningSheet extends StatefulWidget {
   final MiningController c;
@@ -1083,7 +1140,7 @@ class _BuyAutoMiningSheetState extends State<BuyAutoMiningSheet> {
           ),
           SizedBox(height: 24.h),
 
-          // Icon — Lottie সরানো, Icon যথেষ্ট
+          // Icon
           Container(
             width: 72.w, height: 72.h,
             decoration: BoxDecoration(
@@ -1105,7 +1162,7 @@ class _BuyAutoMiningSheetState extends State<BuyAutoMiningSheet> {
             style: GoogleFonts.inter(color: Colors.white38, fontSize: 13.sp, height: 1.5)),
           SizedBox(height: 22.h),
 
-          // Feature rows — Icon ব্যবহার
+          // Feature rows
           _featureRow(CupertinoIcons.checkmark_circle_fill,
               "Auto-restart after every \$100 cycle", AppColors.accentGreen),
           _featureRow(CupertinoIcons.checkmark_circle_fill,
@@ -1211,7 +1268,7 @@ class _BuyAutoMiningSheetState extends State<BuyAutoMiningSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Helper functions
+// Helper functions (ঠিক আছে)
 // ---------------------------------------------------------------------------
 void showBuyBoostSheet(
   BuildContext context,

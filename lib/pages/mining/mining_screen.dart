@@ -32,7 +32,6 @@ class _MiningScreenState extends State<MiningScreen>
     super.dispose();
   }
 
-  // ── Claim flow ──────────────────────────────────────────────────────────────
   void _handleClaimTap() {
     if (_c.dayStarted && _c.isMining) {
       showClaimDialog(context, _c, _executeClaim);
@@ -62,14 +61,14 @@ class _MiningScreenState extends State<MiningScreen>
           totalWithdrawable: newW,
         );
         if (complete) {
-          _showSnack('🎉 Cycle Complete!',
+          _showSnack('✅ Cycle Complete!',
               '\$100 added to withdrawable!', AppColors.accentGreen, Colors.black);
         }
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       if (msg.toLowerCase().contains('wait')) {
-        _showSnack('⏳ Too Soon',
+        _showSnack('⏱️ Too Soon',
             'Wait at least 60 seconds between claims', Colors.orange, Colors.white);
       } else {
         _showSnack('❌ Claim Failed', msg, Colors.red, Colors.white);
@@ -88,120 +87,205 @@ class _MiningScreenState extends State<MiningScreen>
     ));
   }
 
-  // ── Build ───────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    // ✅ স্ক্রিন সাইজ ক্যালকুলেশন
+    final Size screenSize = MediaQuery.of(context).size;
+    final double screenWidth = screenSize.width;
+    final double screenHeight = screenSize.height;
+    
+    // SafeArea padding
+    final EdgeInsets safeArea = MediaQuery.of(context).padding;
+    final double topSafe = safeArea.top;
+    final double bottomSafe = safeArea.bottom;
+    
+    // ✅ Fixed heights (আপনার AppLayout অনুযায়ী)
+    const double topBarHeight = 56.0;      // TopBar height
+    const double bottomNavHeight = 80.0;   // FloatingBottomNav height
+    
+    // ✅ পেজের নেট উপলব্ধ সাইজ
+    final double pageWidth = screenWidth;
+    final double pageHeight = screenHeight - topBarHeight - bottomNavHeight - topSafe;
+    
+    // ✅ Responsive breakpoints
+    final bool isSmallScreen = screenHeight < 700;
+    final bool isLargeScreen = screenHeight > 850;
+    
+    // ✅ Dynamic spacing
+    final double orbSize = isSmallScreen ? 180.w : (isLargeScreen ? 220.w : 200.w);
+    final double sectionSpacing = isSmallScreen ? 8.h : (isLargeScreen ? 16.h : 12.h);
+    final double cardPadding = isSmallScreen ? 12.w : 16.w;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Particle background
-          AnimatedBackground(
-            vsync: this,
-            behaviour: RandomParticleBehaviour(
-              options: const ParticleOptions(
-                baseColor: AppColors.accentGreen,
-                spawnOpacity: 0.1,
-                particleCount: 15,
+      backgroundColor: Colors.transparent, // ✅ AppLayout background দেখাবে
+      body: SizedBox(
+        width: pageWidth,
+        height: pageHeight,
+        child: Stack(
+          children: [
+            // Particle background
+            AnimatedBackground(
+              vsync: this,
+              behaviour: RandomParticleBehaviour(
+                options: const ParticleOptions(
+                  baseColor: AppColors.accentGreen,
+                  spawnOpacity: 0.1,
+                  particleCount: 15,
+                ),
+              ),
+              child: Container(),
+            ),
+
+            SafeArea(
+              top: false, // ✅ TopBar already has SafeArea
+              bottom: false, // ✅ BottomNav থাকায় bottom SafeArea লাগবে না
+              child: SizedBox(
+                width: pageWidth,
+                height: pageHeight,
+                child: _c.isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.accentGreen))
+                    : _c.hasError
+                        ? MiningErrorWidget(onRetry: _c.fetchStatus)
+                        : RefreshIndicator(
+                            color: AppColors.accentGreen,
+                            backgroundColor: AppColors.bgCard,
+                            onRefresh: _c.fetchStatus,
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: EdgeInsets.symmetric(horizontal: 16.w),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: pageHeight - 20.h, // ✅ Full page coverage
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(height: isSmallScreen ? 8.h : 12.h),
+
+                                    // ✅ 1. Withdrawable Balance
+                                    if (_c.withdrawableUSD > 0) ...[
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: WithdrawableSection(c: _c),
+                                      ),
+                                      SizedBox(height: sectionSpacing),
+                                    ],
+
+                                    // ✅ 2. Mining Orb (Responsive Size)
+                                    SizedBox(
+                                      width: orbSize,
+                                      height: orbSize,
+                                      child: MiningOrb(
+                                        c: _c,
+                                        size: orbSize,
+                                        onTap: () async {
+                                          try {
+                                            await _c.toggleMining();
+                                            if (_c.isMining) {
+                                              _showSnack('⛏️ Mining Started',
+                                                  'Earn \$100 to complete a cycle!',
+                                                  AppColors.accentGreen, Colors.black);
+                                            }
+                                          } catch (e) {
+                                            _showSnack('❌ Error',
+                                                e.toString().replaceFirst('Exception: ', ''),
+                                                Colors.red, Colors.white);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing + 4.h),
+
+                                    // ✅ 3. Action Buttons
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ActionButtons(
+                                        c: _c,
+                                        onClaim: _handleClaimTap,
+                                        onRefresh: _c.fetchStatus,
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing),
+
+                                    // ✅ 4. Stats Grid
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: StatsGrid(
+                                        c: _c,
+                                        padding: cardPadding,
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing),
+
+                                    // ✅ 5. Live Earnings Card
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: LiveEarningsCard(
+                                        c: _c,
+                                        padding: cardPadding,
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing - 4.h),
+
+                                    // ✅ 6. Solana Live Card
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: SolanaLiveCard(
+                                        c: _c,
+                                        padding: cardPadding,
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing - 4.h),
+
+                                    // ✅ 7. Cycle Progress
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: CycleProgressSection(
+                                        c: _c,
+                                        padding: cardPadding,
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing - 4.h),
+
+                                    // ✅ 8. Auto Mining Card
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: AutoMiningCard(
+                                        c: _c,
+                                        padding: cardPadding,
+                                        onBuyAuto: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
+                                      ),
+                                    ),
+                                    SizedBox(height: sectionSpacing - 4.h),
+
+                                    // ✅ 9. Boost Info
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: BoostInfoSection(
+                                        c: _c,
+                                        padding: cardPadding,
+                                        onBuyBoost: () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
+                                      ),
+                                    ),
+                                    SizedBox(height: 20.h), // Bottom padding
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
               ),
             ),
-            child: Container(),
-          ),
-
-          SafeArea(
-            child: _c.isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.accentGreen))
-                : _c.hasError
-                    ? MiningErrorWidget(onRetry: _c.fetchStatus)
-                    : RefreshIndicator(
-                        color: AppColors.accentGreen,
-                        backgroundColor: AppColors.bgCard,
-                        onRefresh: _c.fetchStatus,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: EdgeInsets.symmetric(horizontal: 18.w),
-                          child: Column(
-                            children: [
-                              SizedBox(height: 15.h),
-
-                              // ── 1. Withdrawable Balance (সবার উপরে) ──
-                              if (_c.withdrawableUSD > 0) ...[
-                                WithdrawableSection(c: _c),
-                                SizedBox(height: 8.h),
-                              ],
-
-                              // ── 2. Mining Orb ──
-                              MiningOrb(
-                                c: _c,
-                                onTap: () async {
-                                  try {
-                                    await _c.toggleMining();
-                                    if (_c.isMining) {
-                                      _showSnack('⚡ Mining Started',
-                                          'Earn \$100 to complete a cycle!',
-                                          AppColors.accentGreen, Colors.black);
-                                    }
-                                  } catch (e) {
-                                    _showSnack('❌ Error',
-                                        e.toString().replaceFirst('Exception: ', ''),
-                                        Colors.red, Colors.white);
-                                  }
-                                },
-                              ),
-                              SizedBox(height: 25.h),
-
-                              // ── 3. Action Buttons ──
-                              ActionButtons(
-                                c: _c,
-                                onClaim: _handleClaimTap,
-                                onRefresh: _c.fetchStatus,
-                              ),
-                              SizedBox(height: 12.h),
-
-                              // ── 4. Stats Grid ──
-                              StatsGrid(c: _c),
-                              SizedBox(height: 16.h),
-
-                              // ── 5. Live Earnings Card ──
-                              LiveEarningsCard(c: _c),
-                              SizedBox(height: 8.h),
-
-                              // ── 6. Solana Live Card ──
-                              SolanaLiveCard(c: _c),
-                              SizedBox(height: 8.h),
-
-                              // ── 7. Cycle Progress ──
-                              CycleProgressSection(c: _c),
-                              SizedBox(height: 8.h),
-
-                              // ── 8. Auto Mining Card ──
-                              AutoMiningCard(
-                                c: _c,
-                                onBuyAuto: () => showBuyAutoMiningSheet(context, _c, _c.purchaseAutoMining),
-                              ),
-                              SizedBox(height: 8.h),
-
-                              // ── 9. Boost Info ──
-                              BoostInfoSection(
-                                c: _c,
-                                onBuyBoost: () => showBuyBoostSheet(context, _c, _c.purchaseBoost),
-                              ),
-                              SizedBox(height: 30.h),
-                            ],
-                          ),
-                        ),
-                      ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 // ============================================================================
-// Supporting Widgets
+// Updated Supporting Widgets with Responsive Parameters
 // ============================================================================
 
 class MiningErrorWidget extends StatelessWidget {
@@ -240,17 +324,22 @@ class ActionButtons extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        OutlinedButton.icon(
-          onPressed: onRefresh,
-          icon: Icon(CupertinoIcons.refresh, size: 14.sp, color: Colors.white70),
-          label: Text("Refresh", style: GoogleFonts.inter(color: Colors.white70, fontSize: 11.sp)),
-          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white24)),
+        Flexible(
+          child: OutlinedButton.icon(
+            onPressed: onRefresh,
+            icon: Icon(CupertinoIcons.refresh, size: 14.sp, color: Colors.white70),
+            label: Text("Refresh", style: GoogleFonts.inter(color: Colors.white70, fontSize: 11.sp)),
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white24)),
+          ),
         ),
-        ElevatedButton.icon(
-          onPressed: onClaim,
-          icon: Icon(CupertinoIcons.money_dollar_circle_fill, size: 16.sp, color: Colors.black),
-          label: Text("Claim Earned", style: GoogleFonts.inter(color: Colors.black, fontSize: 11.sp, fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentGreen),
+        SizedBox(width: 12.w),
+        Flexible(
+          child: ElevatedButton.icon(
+            onPressed: onClaim,
+            icon: Icon(CupertinoIcons.money_dollar_circle_fill, size: 16.sp, color: Colors.black),
+            label: Text("Claim", style: GoogleFonts.inter(color: Colors.black, fontSize: 11.sp, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentGreen),
+          ),
         ),
       ],
     );
@@ -259,12 +348,13 @@ class ActionButtons extends StatelessWidget {
 
 class StatsGrid extends StatelessWidget {
   final MiningController c;
-  const StatsGrid({super.key, required this.c});
+  final double padding;
+  const StatsGrid({super.key, required this.c, this.padding = 16});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 12.h),
+      padding: EdgeInsets.symmetric(vertical: padding, horizontal: padding),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.03),
         borderRadius: BorderRadius.circular(12.r),
@@ -273,9 +363,9 @@ class StatsGrid extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _statItem("Base Speed", "\$${kBaseUsdPerSec.toStringAsFixed(6)}/s"),
-          Container(width: 1, height: 20.h, color: Colors.white12),
-          _statItem("Current Multiplier", "${c.boostMultiplier.toStringAsFixed(2)}x"),
+          Expanded(child: _statItem("Base Speed", "\$${kBaseUsdPerSec.toStringAsFixed(6)}/s")),
+          Container(width: 1, height: 30.h, color: Colors.white12),
+          Expanded(child: _statItem("Multiplier", "${c.boostMultiplier.toStringAsFixed(2)}x")),
         ],
       ),
     );
