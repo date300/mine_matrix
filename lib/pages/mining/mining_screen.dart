@@ -3,13 +3,54 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animated_background/animated_background.dart';
-import 'package:flutter_animate/flutter_animate.dart'; // ✅ এই import যোগ করুন
-import 'package:shimmer/shimmer.dart'; // ✅ Shimmer এর জন্য
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 import 'constants/mining_constants.dart';
 import 'controllers/mining_controller.dart';
-import 'widgets/mining_widgets.dart';
+import 'widgets/mining_widgets.dart'; // ✅ এখানে MiningErrorWidget থাকতে হবে
 import 'dialogs/mining_dialogs.dart';
+
+// ✅ MiningErrorWidget এখানে define করা হলো যদি mining_widgets.dart এ না থাকে
+class MiningErrorWidget extends StatelessWidget {
+  final VoidCallback onRetry;
+  
+  const MiningErrorWidget({super.key, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            CupertinoIcons.exclamationmark_triangle_fill,
+            color: Colors.orange,
+            size: 48.sp,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            "Failed to load mining data",
+            style: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 16.sp,
+            ),
+          ),
+          SizedBox(height: 24.h),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: Icon(CupertinoIcons.refresh, size: 18.sp),
+            label: Text("Retry"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentGreen,
+              foregroundColor: Colors.black,
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
@@ -290,7 +331,6 @@ class _MiningScreenState extends State<MiningScreen>
       iconData = CupertinoIcons.power;
     }
 
-    // ✅ Animate widget দিয়ে wrap করে নিলাম
     return Animate(
       target: _c.isMining ? 1.0 : 0.0,
       effects: [
@@ -414,7 +454,7 @@ class _MiningScreenState extends State<MiningScreen>
         Expanded(
           child: _buildActionButton(
             'Refresh',
-            AppColors.accentBlue,
+            Colors.blue, // ✅ AppColors.accentBlue এর পরিবর্তে Colors.blue ব্যবহার
             CupertinoIcons.refresh,
             _c.fetchStatus,
           ),
@@ -509,7 +549,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ লাইন 818 - Animate widget দিয়ে wrap
   Widget _buildLiveEarningsCard() {
     return Animate(
       effects: [
@@ -935,7 +974,6 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 
-  // ✅ লাইন 917 - Animate widget দিয়ে wrap
   Widget _buildBoostCard() {
     final bool maxed = _c.boostAmount >= 50;
 
