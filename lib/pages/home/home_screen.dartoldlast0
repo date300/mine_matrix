@@ -339,57 +339,63 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     // TRULY TRANSPARENT BACKGROUND
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0A0A0F), // Deep black
-            Color(0xFF12121A), // Dark surface
-            Color(0xFF0A0A0F), // Deep black again
-          ],
-        ),
+      decoration: const BoxDecoration(
+        color: Colors.transparent, // FULL TRANSPARENT
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent, // SCAFFOLD TRANSPARENT
         extendBody: true,
         extendBodyBehindAppBar: true,
-        body: SafeArea(
-          bottom: false,
-          child: _isLoading
-              ? _buildSkeletonLoading()
-              : RefreshIndicator(
-                  color: AppColors.accentGreen,
-                  backgroundColor: AppColors.surface,
-                  strokeWidth: 3,
-                  onRefresh: _onRefresh,
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(height: 12.h),
-                              _buildHeader(),
-                              SizedBox(height: 20.h),
-                              _buildLiveMarketSection(),
-                              SizedBox(height: 24.h),
-                              _buildTabSelector(),
-                              SizedBox(height: 16.h),
-                            ],
+        body: Container(
+          // Gradient background ??? ???
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.background,
+                AppColors.surface,
+                AppColors.background.withOpacity(0.95),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: _isLoading
+                ? _buildSkeletonLoading()
+                : RefreshIndicator(
+                    color: AppColors.accentGreen,
+                    backgroundColor: AppColors.surface,
+                    strokeWidth: 3,
+                    onRefresh: _onRefresh,
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(height: 12.h),
+                                _buildHeader(),
+                                SizedBox(height: 20.h),
+                                _buildLiveMarketSection(),
+                                SizedBox(height: 24.h),
+                                _buildTabSelector(),
+                                SizedBox(height: 16.h),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      _buildFeedContent(),
-                      SliverToBoxAdapter(
-                        child: SizedBox(height: 100.h),
-                      ),
-                    ],
+                        _buildFeedContent(),
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: 100.h),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -397,8 +403,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildSkeletonLoading() {
     return Shimmer.fromColors(
-      baseColor: Color(0xFF161620),
-      highlightColor: Colors.white.withOpacity(0.05),
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.cardBg.withOpacity(0.5),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
@@ -411,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   width: 40.w,
                   height: 40.h,
                   decoration: BoxDecoration(
-                    color: Color(0xFF161620),
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
@@ -422,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               width: double.infinity,
               height: 100.h,
               decoration: BoxDecoration(
-                color: Color(0xFF161620),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16.r),
               ),
             ),
@@ -430,7 +436,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Container(
               height: 36.h,
               decoration: BoxDecoration(
-                color: Color(0xFF161620),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(10.r),
               ),
             ),
@@ -440,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: 110.h,
               margin: EdgeInsets.only(bottom: 12.h),
               decoration: BoxDecoration(
-                color: Color(0xFF161620),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(12.r),
               ),
             )),
@@ -462,40 +468,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: 44.w,
             height: 44.h,
             decoration: BoxDecoration(
-              color: Color(0xFF161620).withOpacity(0.6),
+              color: AppColors.surface.withOpacity(0.6),
               borderRadius: BorderRadius.circular(14.r),
               border: Border.all(
-                color: Colors.white.withOpacity(0.15),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentGreen.withOpacity(0.1),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14.r),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: _isRefreshing
-                    ? Center(
-                        child: CupertinoActivityIndicator(
-                          color: AppColors.accentGreen,
-                          radius: 12.w,
-                        ),
-                      )
-                    : Center(
-                        child: Icon(
-                          CupertinoIcons.refresh,
-                          color: AppColors.accentGreen,
-                          size: 22.sp,
-                        ),
-                      ),
+                color: AppColors.border.withOpacity(0.3),
+                width: 1,
               ),
             ),
+            child: _isRefreshing
+                ? Center(
+                    child: CupertinoActivityIndicator(
+                      color: AppColors.accentGreen,
+                      radius: 12.w,
+                    ),
+                  )
+                : Center(
+                    child: Icon(
+                      CupertinoIcons.refresh,
+                      color: AppColors.accentGreen,
+                      size: 22.sp,
+                    ),
+                  ),
           ),
         ),
       ],
@@ -513,29 +506,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             Row(
               children: [
-                Container(
-                  width: 8.w,
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentGreen,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accentGreen.withOpacity(0.5),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ],
+                SizedBox(
+                  width: 18.w,
+                  height: 18.h,
+                  child: Lottie.network(
+                    AppLottie.livePulse,
+                    repeat: true,
                   ),
                 ),
                 SizedBox(width: 8.w),
                 Text(
-                  'LIVE MARKET',
+                  'Live Market',
                   style: GoogleFonts.inter(
-                    color: AppColors.accentGreen,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+                    color: AppColors.textPrimary,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -543,35 +528,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             CupertinoButton(
               padding: EdgeInsets.zero,
               onPressed: () {},
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(
-                    color: AppColors.accentBlue.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'View All',
-                      style: GoogleFonts.inter(
-                        color: AppColors.accentBlue,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    Icon(
-                      CupertinoIcons.chevron_forward,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View All',
+                    style: GoogleFonts.inter(
                       color: AppColors.accentBlue,
-                      size: 12.sp,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: 2.w),
+                  Icon(
+                    CupertinoIcons.chevron_forward,
+                    color: AppColors.accentBlue,
+                    size: 14.sp,
+                  ),
+                ],
               ),
             ),
           ],
@@ -600,8 +574,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildMarketLoadingSkeleton() {
     return Shimmer.fromColors(
-      baseColor: Color(0xFF161620),
-      highlightColor: Colors.white.withOpacity(0.05),
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.cardBg.withOpacity(0.5),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const NeverScrollableScrollPhysics(),
@@ -611,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return Container(
             width: 140.w,
             decoration: BoxDecoration(
-              color: Color(0xFF161620),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(16.r),
             ),
           );
@@ -653,101 +627,73 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onPressed: () {},
       child: Container(
         width: 140.w,
+        padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Color(0xFF161620).withOpacity(0.6),
+          color: AppColors.cardBg.withOpacity(0.5),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: accentColor.withOpacity(0.25),
-            width: 1.5,
+            color: accentColor.withOpacity(0.15),
+            width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withOpacity(0.15),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
-          ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Padding(
-              padding: EdgeInsets.all(14.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        width: 32.w,
-                        height: 32.h,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              accentColor.withOpacity(0.3),
-                              accentColor.withOpacity(0.15),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10.r),
-                          border: Border.all(
-                            color: accentColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            coin['icon'] as IconData,
-                            color: accentColor,
-                            size: 18.sp,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: changeColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: changeColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          '${isPositive ? '+' : ''}${(coin['change'] as double).toStringAsFixed(2)}%',
-                          style: GoogleFonts.inter(
-                            color: changeColor,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 32.w,
+                  height: 32.h,
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10.r),
                   ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    coin['symbol'] as String,
+                  child: Center(
+                    child: Icon(
+                      coin['icon'] as IconData,
+                      color: accentColor,
+                      size: 18.sp,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: changeColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${isPositive ? '+' : ''}${(coin['change'] as double).toStringAsFixed(2)}%',
                     style: GoogleFonts.inter(
-                      color: AppColors.textPrimary,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                      color: changeColor,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Text(
-                    '\$${(coin['price'] as double).toStringAsFixed(coin['price'] < 1 ? 4 : 2)}',
-                    style: GoogleFonts.spaceMono(
-                      color: AppColors.textSecondary,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              coin['symbol'] as String,
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
               ),
             ),
-          ),
+            Text(
+              '\$${(coin['price'] as double).toStringAsFixed(coin['price'] < 1 ? 4 : 2)}',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     ).animate().fadeIn(delay: Duration(milliseconds: 100 + index * 60)).slideX(begin: 0.3, end: 0);
@@ -758,56 +704,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       height: 40.h,
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: Color(0xFF161620).withOpacity(0.5),
+        color: AppColors.surface.withOpacity(0.4),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: AppColors.border.withOpacity(0.2),
           width: 1,
         ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Row(
-            children: List.generate(_tabs.length, (index) {
-              final isSelected = _selectedTab == index;
-              return Expanded(
-                child: CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => setState(() => _selectedTab = index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    decoration: BoxDecoration(
-                      gradient: isSelected ? LinearGradient(
-                        colors: [
-                          AppColors.accentBlue.withOpacity(0.25),
-                          AppColors.accentBlue.withOpacity(0.15),
-                        ],
-                      ) : null,
-                      borderRadius: BorderRadius.circular(10.r),
-                      border: isSelected ? Border.all(
-                        color: AppColors.accentBlue.withOpacity(0.4),
-                        width: 1.5,
-                      ) : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _tabs[index],
-                        style: GoogleFonts.inter(
-                          color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
-                          fontSize: 12.sp,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                      ),
+      child: Row(
+        children: List.generate(_tabs.length, (index) {
+          final isSelected = _selectedTab == index;
+          return Expanded(
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => setState(() => _selectedTab = index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accentBlue.withOpacity(0.15) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: isSelected ? Border.all(
+                    color: AppColors.accentBlue.withOpacity(0.3),
+                    width: 1,
+                  ) : null,
+                ),
+                child: Center(
+                  child: Text(
+                    _tabs[index],
+                    style: GoogleFonts.inter(
+                      color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                      fontSize: 12.sp,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
-              );
-            }),
-          ),
-        ),
+              ),
+            ),
+          );
+        }),
       ),
     ).animate().fadeIn(delay: 300.ms);
   }
@@ -836,57 +771,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           margin: EdgeInsets.only(top: 20.h),
           padding: EdgeInsets.symmetric(vertical: 60.h),
           decoration: BoxDecoration(
-            color: Color(0xFF161620).withOpacity(0.4),
+            color: AppColors.surface.withOpacity(0.3),
             borderRadius: BorderRadius.circular(20.r),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
-              width: 1.5,
+              color: AppColors.border.withOpacity(0.3),
+              width: 1,
             ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20.r),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 80.w,
-                    height: 80.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentBlue.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.accentBlue.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      CupertinoIcons.tray,
-                      color: AppColors.accentBlue.withOpacity(0.7),
-                      size: 36.sp,
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-                  Text(
-                    'No content yet',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textPrimary,
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Check back later for updates',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textSecondary,
-                      fontSize: 13.sp,
-                    ),
-                  ),
-                ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 120.w,
+                height: 120.h,
+                child: Lottie.network(AppLottie.emptyState),
               ),
-            ),
+              SizedBox(height: 20.h),
+              Text(
+                'No content yet',
+                style: GoogleFonts.inter(
+                  color: AppColors.textPrimary,
+                  fontSize: 17.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Check back later for updates',
+                style: GoogleFonts.inter(
+                  color: AppColors.textSecondary,
+                  fontSize: 14.sp,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -900,148 +817,109 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       padding: EdgeInsets.zero,
       onPressed: () {},
       child: Container(
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Color(0xFF161620).withOpacity(0.5),
+          color: AppColors.cardBg.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isPinned 
-                ? AppColors.accentOrange.withOpacity(0.3) 
-                : Colors.white.withOpacity(0.1),
-            width: 1.5,
+            color: isPinned ? AppColors.accentOrange.withOpacity(0.25) : AppColors.border.withOpacity(0.2),
+            width: 1,
           ),
-          boxShadow: [
-            if (isPinned)
-              BoxShadow(
-                color: AppColors.accentOrange.withOpacity(0.15),
-                blurRadius: 20,
-                offset: Offset(0, 8),
-              ),
-          ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.h,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isPinned 
+                          ? [AppColors.accentOrange, AppColors.accentRed]
+                          : [AppColors.accentBlue, AppColors.accentPurple],
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Center(
+                    child: Text(
+                      (item['user'] as String).substring(1, 2).toUpperCase(),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 40.w,
-                        height: 40.h,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isPinned 
-                                ? [AppColors.accentOrange, AppColors.accentRed]
-                                : [AppColors.accentBlue, AppColors.accentPurple],
-                          ),
-                          borderRadius: BorderRadius.circular(12.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (isPinned ? AppColors.accentOrange : AppColors.accentBlue).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            (item['user'] as String).substring(1, 2).toUpperCase(),
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    item['user'] as String,
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isPinned) ...[
-                                  SizedBox(width: 8.w),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentOrange.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                      border: Border.all(
-                                        color: AppColors.accentOrange.withOpacity(0.4),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'PINNED',
-                                      style: GoogleFonts.inter(
-                                        color: AppColors.accentOrange,
-                                        fontSize: 8.sp,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              item['subtitle'] as String,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              item['user'] as String,
                               style: GoogleFonts.inter(
-                                color: AppColors.textSecondary,
-                                fontSize: 11.sp,
+                                color: AppColors.textPrimary,
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w600,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isPinned) ...[
+                            SizedBox(width: 8.w),
+                            SizedBox(
+                              width: 16.w,
+                              height: 16.h,
+                              child: Lottie.network(AppLottie.pinned),
                             ),
                           ],
-                        ),
+                        ],
                       ),
+                      SizedBox(height: 2.h),
                       Text(
-                        item['timeAgo'] as String,
+                        item['subtitle'] as String,
                         style: GoogleFonts.inter(
-                          color: AppColors.textMuted,
-                          fontSize: 10.sp,
+                          color: AppColors.textSecondary,
+                          fontSize: 12.sp,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    item['message'] as String,
-                    style: GoogleFonts.inter(
-                      color: AppColors.textSecondary,
-                      fontSize: 13.sp,
-                      height: 1.5,
-                      fontWeight: FontWeight.w400,
-                    ),
+                ),
+                Text(
+                  item['timeAgo'] as String,
+                  style: GoogleFonts.inter(
+                    color: AppColors.textMuted,
+                    fontSize: 11.sp,
                   ),
-                ],
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              item['message'] as String,
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 14.sp,
+                height: 1.5,
+                fontWeight: FontWeight.w400,
               ),
             ),
-          ),
+          ],
         ),
       ),
     ).animate().fadeIn(delay: Duration(milliseconds: 400 + index * 100)).slideY(begin: 0.2, end: 0);
   }
 }
+
