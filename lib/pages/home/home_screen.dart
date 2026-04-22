@@ -124,10 +124,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     try {
       setState(() => _isMarketLoading = true);
       
-      // CoinGecko API endpoint for multiple coins
+      // CoinGecko API endpoint for the exact 20 coins
       final response = await http.get(
         Uri.parse(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,polkadot,chainlink,avalanche-2,the-voxel-project&vs_currencies=usd&include_24hr_change=true'
+          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana,ripple,tether,usd-coin,dai,dogecoin,shiba-inu,pepe,chainlink,avalanche-2,polkadot,uniswap,axie-infinity,the-sandbox,decentraland,arbitrum,optimism,the-open-network&vs_currencies=usd&include_24hr_change=true'
         ),
       );
 
@@ -136,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         
         setState(() {
           _coins = [
+            // === MAJOR COINS ===
             {
               'name': 'Bitcoin',
               'symbol': 'BTC',
@@ -153,6 +154,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'icon': Icons.token,
             },
             {
+              'name': 'Binance Coin',
+              'symbol': 'BNB',
+              'price': data['binancecoin']?['usd']?.toDouble() ?? 0.0,
+              'change': data['binancecoin']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFF3BA2F),
+              'icon': Icons.account_balance,
+            },
+            {
               'name': 'Solana',
               'symbol': 'SOL',
               'price': data['solana']?['usd']?.toDouble() ?? 0.0,
@@ -161,21 +170,67 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'icon': Icons.flash_on,
             },
             {
-              'name': 'Cardano',
-              'symbol': 'ADA',
-              'price': data['cardano']?['usd']?.toDouble() ?? 0.0,
-              'change': data['cardano']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF0033AD),
-              'icon': Icons.waves,
+              'name': 'XRP',
+              'symbol': 'XRP',
+              'price': data['ripple']?['usd']?.toDouble() ?? 0.0,
+              'change': data['ripple']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF23292F),
+              'icon': Icons.water_drop,
+            },
+            
+            // === STABLECOINS ===
+            {
+              'name': 'Tether',
+              'symbol': 'USDT',
+              'price': data['tether']?['usd']?.toDouble() ?? 0.0,
+              'change': data['tether']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF26A17B),
+              'icon': Icons.attach_money,
             },
             {
-              'name': 'Polkadot',
-              'symbol': 'DOT',
-              'price': data['polkadot']?['usd']?.toDouble() ?? 0.0,
-              'change': data['polkadot']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFE6007A),
-              'icon': Icons.circle,
+              'name': 'USD Coin',
+              'symbol': 'USDC',
+              'price': data['usd-coin']?['usd']?.toDouble() ?? 0.0,
+              'change': data['usd-coin']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF2775CA),
+              'icon': Icons.monetization_on,
             },
+            {
+              'name': 'DAI',
+              'symbol': 'DAI',
+              'price': data['dai']?['usd']?.toDouble() ?? 0.0,
+              'change': data['dai']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFF5AC37),
+              'icon': Icons.savings,
+            },
+            
+            // === MEME COINS ===
+            {
+              'name': 'Dogecoin',
+              'symbol': 'DOGE',
+              'price': data['dogecoin']?['usd']?.toDouble() ?? 0.0,
+              'change': data['dogecoin']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFC2A633),
+              'icon': Icons.pets,
+            },
+            {
+              'name': 'Shiba Inu',
+              'symbol': 'SHIB',
+              'price': data['shiba-inu']?['usd']?.toDouble() ?? 0.0,
+              'change': data['shiba-inu']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFFFA409),
+              'icon': Icons.emoji_nature,
+            },
+            {
+              'name': 'Pepe',
+              'symbol': 'PEPE',
+              'price': data['pepe']?['usd']?.toDouble() ?? 0.0,
+              'change': data['pepe']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF00A82D),
+              'icon': Icons.face,
+            },
+            
+            // === DEFI ===
             {
               'name': 'Chainlink',
               'symbol': 'LINK',
@@ -193,12 +248,72 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'icon': Icons.ac_unit,
             },
             {
-              'name': 'Voxel',
-              'symbol': 'VXL',
-              'price': data['the-voxel-project']?['usd']?.toDouble() ?? 0.0,
-              'change': data['the-voxel-project']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF00C896),
-              'icon': Icons.view_in_ar,
+              'name': 'Polkadot',
+              'symbol': 'DOT',
+              'price': data['polkadot']?['usd']?.toDouble() ?? 0.0,
+              'change': data['polkadot']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFE6007A),
+              'icon': Icons.circle,
+            },
+            {
+              'name': 'Uniswap',
+              'symbol': 'UNI',
+              'price': data['uniswap']?['usd']?.toDouble() ?? 0.0,
+              'change': data['uniswap']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFFF007A),
+              'icon': Icons.swap_horiz,
+            },
+            
+            // === METAVERSE/GAMING ===
+            {
+              'name': 'Axie Infinity',
+              'symbol': 'AXS',
+              'price': data['axie-infinity']?['usd']?.toDouble() ?? 0.0,
+              'change': data['axie-infinity']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF0055D5),
+              'icon': Icons.sports_esports,
+            },
+            {
+              'name': 'The Sandbox',
+              'symbol': 'SAND',
+              'price': data['the-sandbox']?['usd']?.toDouble() ?? 0.0,
+              'change': data['the-sandbox']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF00ADEF),
+              'icon': Icons.landscape,
+            },
+            {
+              'name': 'Decentraland',
+              'symbol': 'MANA',
+              'price': data['decentraland']?['usd']?.toDouble() ?? 0.0,
+              'change': data['decentraland']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFFF2D55),
+              'icon': Icons.public,
+            },
+            
+            // === LAYER 2 ===
+            {
+              'name': 'Arbitrum',
+              'symbol': 'ARB',
+              'price': data['arbitrum']?['usd']?.toDouble() ?? 0.0,
+              'change': data['arbitrum']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF28A0F0),
+              'icon': Icons.layers,
+            },
+            {
+              'name': 'Optimism',
+              'symbol': 'OP',
+              'price': data['optimism']?['usd']?.toDouble() ?? 0.0,
+              'change': data['optimism']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFFF0420),
+              'icon': Icons.network_check,
+            },
+            {
+              'name': 'Toncoin',
+              'symbol': 'TON',
+              'price': data['the-open-network']?['usd']?.toDouble() ?? 0.0,
+              'change': data['the-open-network']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF0088CC),
+              'icon': Icons.telegram,
             },
           ];
           _isMarketLoading = false;
@@ -464,7 +579,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: 5,
+        itemCount: 8,
         separatorBuilder: (_, __) => SizedBox(width: 12.w),
         itemBuilder: (context, index) {
           return Container(
@@ -807,3 +922,4 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate().fadeIn(delay: Duration(milliseconds: 400 + index * 100)).slideY(begin: 0.2, end: 0);
   }
 }
+
