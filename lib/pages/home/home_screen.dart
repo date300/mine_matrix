@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:http/http.dart' as http;
 
 // --- Colors ----------------------------------------
 class AppColors {
@@ -73,78 +75,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _selectedTab = 0;
   bool _isLoading = true;
   bool _isRefreshing = false;
+  bool _isMarketLoading = true;
 
   final List<String> _tabs = [
     'Announcements',
     'News',
   ];
 
-  final List<Map<String, dynamic>> _coins = [
-    {
-      'name': 'Bitcoin',
-      'symbol': 'BTC',
-      'price': 69243.00,
-      'change': 3.92,
-      'color': Color(0xFFF7931A),
-      'icon': Icons.currency_bitcoin,
-    },
-    {
-      'name': 'Ethereum',
-      'symbol': 'ETH',
-      'price': 2134.62,
-      'change': 5.21,
-      'color': Color(0xFF627EEA),
-      'icon': Icons.token,
-    },
-    {
-      'name': 'Voxel',
-      'symbol': 'VXL',
-      'price': 0.4821,
-      'change': 2.14,
-      'color': Color(0xFF00C896),
-      'icon': Icons.view_in_ar,
-    },
-    {
-      'name': 'Solana',
-      'symbol': 'SOL',
-      'price': 142.30,
-      'change': -1.08,
-      'color': Color(0xFF9945FF),
-      'icon': Icons.flash_on,
-    },
-    {
-      'name': 'Cardano',
-      'symbol': 'ADA',
-      'price': 0.5842,
-      'change': 1.45,
-      'color': Color(0xFF0033AD),
-      'icon': Icons.waves,
-    },
-    {
-      'name': 'Polkadot',
-      'symbol': 'DOT',
-      'price': 7.23,
-      'change': -0.82,
-      'color': Color(0xFFE6007A),
-      'icon': Icons.circle,
-    },
-    {
-      'name': 'Chainlink',
-      'symbol': 'LINK',
-      'price': 18.45,
-      'change': 4.12,
-      'color': Color(0xFF2A5ADA),
-      'icon': Icons.link,
-    },
-    {
-      'name': 'Avalanche',
-      'symbol': 'AVAX',
-      'price': 35.67,
-      'change': 2.89,
-      'color': Color(0xFFE84142),
-      'icon': Icons.ac_unit,
-    },
-  ];
+  List<Map<String, dynamic>> _coins = [];
 
   final List<Map<String, dynamic>> _announcements = [
     {
@@ -176,14 +114,109 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _fetchMarketData();
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _isLoading = false);
     });
   }
 
+  Future<void> _fetchMarketData() async {
+    try {
+      setState(() => _isMarketLoading = true);
+      
+      // CoinGecko API endpoint for multiple coins
+      final response = await http.get(
+        Uri.parse(
+          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,cardano,polkadot,chainlink,avalanche-2,the-voxel-project&vs_currencies=usd&include_24hr_change=true'
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        setState(() {
+          _coins = [
+            {
+              'name': 'Bitcoin',
+              'symbol': 'BTC',
+              'price': data['bitcoin']?['usd']?.toDouble() ?? 0.0,
+              'change': data['bitcoin']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFF7931A),
+              'icon': Icons.currency_bitcoin,
+            },
+            {
+              'name': 'Ethereum',
+              'symbol': 'ETH',
+              'price': data['ethereum']?['usd']?.toDouble() ?? 0.0,
+              'change': data['ethereum']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF627EEA),
+              'icon': Icons.token,
+            },
+            {
+              'name': 'Solana',
+              'symbol': 'SOL',
+              'price': data['solana']?['usd']?.toDouble() ?? 0.0,
+              'change': data['solana']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF9945FF),
+              'icon': Icons.flash_on,
+            },
+            {
+              'name': 'Cardano',
+              'symbol': 'ADA',
+              'price': data['cardano']?['usd']?.toDouble() ?? 0.0,
+              'change': data['cardano']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF0033AD),
+              'icon': Icons.waves,
+            },
+            {
+              'name': 'Polkadot',
+              'symbol': 'DOT',
+              'price': data['polkadot']?['usd']?.toDouble() ?? 0.0,
+              'change': data['polkadot']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFE6007A),
+              'icon': Icons.circle,
+            },
+            {
+              'name': 'Chainlink',
+              'symbol': 'LINK',
+              'price': data['chainlink']?['usd']?.toDouble() ?? 0.0,
+              'change': data['chainlink']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF2A5ADA),
+              'icon': Icons.link,
+            },
+            {
+              'name': 'Avalanche',
+              'symbol': 'AVAX',
+              'price': data['avalanche-2']?['usd']?.toDouble() ?? 0.0,
+              'change': data['avalanche-2']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFFE84142),
+              'icon': Icons.ac_unit,
+            },
+            {
+              'name': 'Voxel',
+              'symbol': 'VXL',
+              'price': data['the-voxel-project']?['usd']?.toDouble() ?? 0.0,
+              'change': data['the-voxel-project']?['usd_24h_change']?.toDouble() ?? 0.0,
+              'color': Color(0xFF00C896),
+              'icon': Icons.view_in_ar,
+            },
+          ];
+          _isMarketLoading = false;
+        });
+      } else {
+        // If API fails, show error state
+        setState(() => _isMarketLoading = false);
+      }
+    } catch (e) {
+      print('Error fetching market data: $e');
+      setState(() => _isMarketLoading = false);
+    }
+  }
+
   Future<void> _onRefresh() async {
     setState(() => _isRefreshing = true);
-    await Future.delayed(const Duration(seconds: 1));
+    await _fetchMarketData();
+    await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _isRefreshing = false);
   }
 
@@ -405,19 +438,68 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         SizedBox(height: 14.h),
         SizedBox(
           height: 96.h,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: _coins.length,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              final coin = _coins[index];
-              return _buildCoinCard(coin, index);
-            },
-          ),
+          child: _isMarketLoading
+              ? _buildMarketLoadingSkeleton()
+              : _coins.isEmpty
+                  ? _buildMarketError()
+                  : ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _coins.length,
+                      separatorBuilder: (_, __) => SizedBox(width: 12.w),
+                      itemBuilder: (context, index) {
+                        final coin = _coins[index];
+                        return _buildCoinCard(coin, index);
+                      },
+                    ),
         ),
       ],
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
+  }
+
+  Widget _buildMarketLoadingSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.cardBg.withOpacity(0.5),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 5,
+        separatorBuilder: (_, __) => SizedBox(width: 12.w),
+        itemBuilder: (context, index) {
+          return Container(
+            width: 140.w,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMarketError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            CupertinoIcons.exclamationmark_triangle,
+            color: AppColors.accentOrange,
+            size: 24.sp,
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Failed to load market data',
+            style: GoogleFonts.inter(
+              color: AppColors.textSecondary,
+              fontSize: 13.sp,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCoinCard(Map<String, dynamic> coin, int index) {

@@ -31,7 +31,7 @@ class AppLottie {
   static const String pinned       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
 }
 
-// MAIN APP - ScreenUtilInit দিয়ে wrap করা
+// MAIN APP - ScreenUtilInit ????? wrap ???
 void main() {
   runApp(const MyApp());
 }
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ScreenUtilInit দিয়ে responsive করা
+    // ScreenUtilInit ????? responsive ???
     return ScreenUtilInit(
       designSize: const Size(375, 812), // iPhone X design size
       minTextAdapt: true,
@@ -76,9 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   final List<String> _tabs = [
     'Announcements',
-    'Discover',
     'News',
-    'Following',
   ];
 
   final List<Map<String, dynamic>> _coins = [
@@ -201,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         extendBody: true,
         extendBodyBehindAppBar: true,
         body: Container(
-          // Gradient background যোগ করা
+          // Gradient background ??? ???
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -265,30 +263,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             SizedBox(height: 12.h),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 80.w,
-                      height: 14.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Container(
-                      width: 120.w,
-                      height: 28.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                    ),
-                  ],
-                ),
                 Container(
                   width: 40.w,
                   height: 40.h,
@@ -334,35 +310,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Good Morning',
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'FXDig',
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 32.sp,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -1,
-                height: 1.1,
-              ),
-            ),
-          ],
-        ),
         CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _isRefreshing ? null : _onRefresh,
