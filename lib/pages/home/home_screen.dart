@@ -33,7 +33,6 @@ class AppLottie {
   static const String pinned       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
 }
 
-// MAIN APP - ScreenUtilInit ????? wrap ???
 void main() {
   runApp(const MyApp());
 }
@@ -43,9 +42,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ScreenUtilInit ????? responsive ???
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // iPhone X design size
+      designSize: const Size(375, 812),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -54,7 +52,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: Colors.transparent, // TRANSPARENT
+            scaffoldBackgroundColor: Colors.transparent,
             fontFamily: 'Inter',
           ),
           home: const HomeScreen(),
@@ -123,8 +121,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _fetchMarketData() async {
     try {
       setState(() => _isMarketLoading = true);
-      
-      // CoinGecko API endpoint for the exact 20 coins
       final response = await http.get(
         Uri.parse(
           'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,binancecoin,solana,ripple,tether,usd-coin,dai,dogecoin,shiba-inu,pepe,chainlink,avalanche-2,polkadot,uniswap,axie-infinity,the-sandbox,decentraland,arbitrum,optimism,the-open-network&vs_currencies=usd&include_24hr_change=true'
@@ -133,16 +129,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
         setState(() {
           _coins = [
-            // === MAJOR COINS ===
             {
               'name': 'Bitcoin',
               'symbol': 'BTC',
               'price': data['bitcoin']?['usd']?.toDouble() ?? 0.0,
               'change': data['bitcoin']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFF7931A),
+              'color': const Color(0xFFF7931A),
               'icon': Icons.currency_bitcoin,
             },
             {
@@ -150,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'ETH',
               'price': data['ethereum']?['usd']?.toDouble() ?? 0.0,
               'change': data['ethereum']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF627EEA),
+              'color': const Color(0xFF627EEA),
               'icon': Icons.token,
             },
             {
@@ -158,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'BNB',
               'price': data['binancecoin']?['usd']?.toDouble() ?? 0.0,
               'change': data['binancecoin']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFF3BA2F),
+              'color': const Color(0xFFF3BA2F),
               'icon': Icons.account_balance,
             },
             {
@@ -166,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'SOL',
               'price': data['solana']?['usd']?.toDouble() ?? 0.0,
               'change': data['solana']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF9945FF),
+              'color': const Color(0xFF9945FF),
               'icon': Icons.flash_on,
             },
             {
@@ -174,17 +168,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'XRP',
               'price': data['ripple']?['usd']?.toDouble() ?? 0.0,
               'change': data['ripple']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF23292F),
+              'color': const Color(0xFF23292F),
               'icon': Icons.water_drop,
             },
-            
-            // === STABLECOINS ===
             {
               'name': 'Tether',
               'symbol': 'USDT',
               'price': data['tether']?['usd']?.toDouble() ?? 0.0,
               'change': data['tether']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF26A17B),
+              'color': const Color(0xFF26A17B),
               'icon': Icons.attach_money,
             },
             {
@@ -192,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'USDC',
               'price': data['usd-coin']?['usd']?.toDouble() ?? 0.0,
               'change': data['usd-coin']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF2775CA),
+              'color': const Color(0xFF2775CA),
               'icon': Icons.monetization_on,
             },
             {
@@ -200,17 +192,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'DAI',
               'price': data['dai']?['usd']?.toDouble() ?? 0.0,
               'change': data['dai']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFF5AC37),
+              'color': const Color(0xFFF5AC37),
               'icon': Icons.savings,
             },
-            
-            // === MEME COINS ===
             {
               'name': 'Dogecoin',
               'symbol': 'DOGE',
               'price': data['dogecoin']?['usd']?.toDouble() ?? 0.0,
               'change': data['dogecoin']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFC2A633),
+              'color': const Color(0xFFC2A633),
               'icon': Icons.pets,
             },
             {
@@ -218,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'SHIB',
               'price': data['shiba-inu']?['usd']?.toDouble() ?? 0.0,
               'change': data['shiba-inu']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFFFA409),
+              'color': const Color(0xFFFFA409),
               'icon': Icons.emoji_nature,
             },
             {
@@ -226,17 +216,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'PEPE',
               'price': data['pepe']?['usd']?.toDouble() ?? 0.0,
               'change': data['pepe']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF00A82D),
+              'color': const Color(0xFF00A82D),
               'icon': Icons.face,
             },
-            
-            // === DEFI ===
             {
               'name': 'Chainlink',
               'symbol': 'LINK',
               'price': data['chainlink']?['usd']?.toDouble() ?? 0.0,
               'change': data['chainlink']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF2A5ADA),
+              'color': const Color(0xFF2A5ADA),
               'icon': Icons.link,
             },
             {
@@ -244,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'AVAX',
               'price': data['avalanche-2']?['usd']?.toDouble() ?? 0.0,
               'change': data['avalanche-2']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFE84142),
+              'color': const Color(0xFFE84142),
               'icon': Icons.ac_unit,
             },
             {
@@ -252,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'DOT',
               'price': data['polkadot']?['usd']?.toDouble() ?? 0.0,
               'change': data['polkadot']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFE6007A),
+              'color': const Color(0xFFE6007A),
               'icon': Icons.circle,
             },
             {
@@ -260,17 +248,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'UNI',
               'price': data['uniswap']?['usd']?.toDouble() ?? 0.0,
               'change': data['uniswap']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFFF007A),
+              'color': const Color(0xFFFF007A),
               'icon': Icons.swap_horiz,
             },
-            
-            // === METAVERSE/GAMING ===
             {
               'name': 'Axie Infinity',
               'symbol': 'AXS',
               'price': data['axie-infinity']?['usd']?.toDouble() ?? 0.0,
               'change': data['axie-infinity']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF0055D5),
+              'color': const Color(0xFF0055D5),
               'icon': Icons.sports_esports,
             },
             {
@@ -278,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'SAND',
               'price': data['the-sandbox']?['usd']?.toDouble() ?? 0.0,
               'change': data['the-sandbox']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF00ADEF),
+              'color': const Color(0xFF00ADEF),
               'icon': Icons.landscape,
             },
             {
@@ -286,17 +272,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'MANA',
               'price': data['decentraland']?['usd']?.toDouble() ?? 0.0,
               'change': data['decentraland']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFFF2D55),
+              'color': const Color(0xFFFF2D55),
               'icon': Icons.public,
             },
-            
-            // === LAYER 2 ===
             {
               'name': 'Arbitrum',
               'symbol': 'ARB',
               'price': data['arbitrum']?['usd']?.toDouble() ?? 0.0,
               'change': data['arbitrum']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF28A0F0),
+              'color': const Color(0xFF28A0F0),
               'icon': Icons.layers,
             },
             {
@@ -304,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'OP',
               'price': data['optimism']?['usd']?.toDouble() ?? 0.0,
               'change': data['optimism']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFFFF0420),
+              'color': const Color(0xFFFF0420),
               'icon': Icons.network_check,
             },
             {
@@ -312,14 +296,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               'symbol': 'TON',
               'price': data['the-open-network']?['usd']?.toDouble() ?? 0.0,
               'change': data['the-open-network']?['usd_24h_change']?.toDouble() ?? 0.0,
-              'color': Color(0xFF0088CC),
+              'color': const Color(0xFF0088CC),
               'icon': Icons.telegram,
             },
           ];
           _isMarketLoading = false;
         });
       } else {
-        // If API fails, show error state
         setState(() => _isMarketLoading = false);
       }
     } catch (e) {
@@ -337,66 +320,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    // TRULY TRANSPARENT BACKGROUND
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.transparent, // FULL TRANSPARENT
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent, // SCAFFOLD TRANSPARENT
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        body: Container(
-          // Gradient background ??? ???
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.background,
-                AppColors.surface,
-                AppColors.background.withOpacity(0.95),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: _isLoading
-                ? _buildSkeletonLoading()
-                : RefreshIndicator(
-                    color: AppColors.accentGreen,
-                    backgroundColor: AppColors.surface,
-                    strokeWidth: 3,
-                    onRefresh: _onRefresh,
-                    child: CustomScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.w),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(height: 12.h),
-                                _buildHeader(),
-                                SizedBox(height: 20.h),
-                                _buildLiveMarketSection(),
-                                SizedBox(height: 24.h),
-                                _buildTabSelector(),
-                                SizedBox(height: 16.h),
-                              ],
-                            ),
-                          ),
+    return Scaffold(
+      backgroundColor: Colors.transparent, // ✅ TRANSPARENT
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      body: SafeArea(
+        bottom: false,
+        child: _isLoading
+            ? _buildSkeletonLoading()
+            : RefreshIndicator(
+                color: AppColors.accentGreen,
+                backgroundColor: AppColors.surface,
+                strokeWidth: 3,
+                onRefresh: _onRefresh,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 12.h),
+                            _buildHeader(),
+                            SizedBox(height: 20.h),
+                            _buildLiveMarketSection(),
+                            SizedBox(height: 24.h),
+                            _buildTabSelector(),
+                            SizedBox(height: 16.h),
+                          ],
                         ),
-                        _buildFeedContent(),
-                        SliverToBoxAdapter(
-                          child: SizedBox(height: 100.h),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-          ),
-        ),
+                    _buildFeedContent(),
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: 100.h),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -509,10 +472,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SizedBox(
                   width: 18.w,
                   height: 18.h,
-                  child: Lottie.network(
-                    AppLottie.livePulse,
-                    repeat: true,
-                  ),
+                  child: Lottie.network(AppLottie.livePulse, repeat: true),
                 ),
                 SizedBox(width: 8.w),
                 Text(
@@ -722,20 +682,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOut,
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.accentBlue.withOpacity(0.15) : Colors.transparent,
+                  color: isSelected
+                      ? AppColors.accentBlue.withOpacity(0.15)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10.r),
-                  border: isSelected ? Border.all(
-                    color: AppColors.accentBlue.withOpacity(0.3),
-                    width: 1,
-                  ) : null,
+                  border: isSelected
+                      ? Border.all(
+                          color: AppColors.accentBlue.withOpacity(0.3),
+                          width: 1,
+                        )
+                      : null,
                 ),
                 child: Center(
                   child: Text(
                     _tabs[index],
                     style: GoogleFonts.inter(
-                      color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                      color: isSelected
+                          ? AppColors.accentBlue
+                          : AppColors.textSecondary,
                       fontSize: 12.sp,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -822,7 +790,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           color: AppColors.cardBg.withOpacity(0.3),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isPinned ? AppColors.accentOrange.withOpacity(0.25) : AppColors.border.withOpacity(0.2),
+            color: isPinned
+                ? AppColors.accentOrange.withOpacity(0.25)
+                : AppColors.border.withOpacity(0.2),
             width: 1,
           ),
         ),
@@ -840,7 +810,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: isPinned 
+                      colors: isPinned
                           ? [AppColors.accentOrange, AppColors.accentRed]
                           : [AppColors.accentBlue, AppColors.accentPurple],
                     ),
@@ -922,4 +892,3 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ).animate().fadeIn(delay: Duration(milliseconds: 400 + index * 100)).slideY(begin: 0.2, end: 0);
   }
 }
-
