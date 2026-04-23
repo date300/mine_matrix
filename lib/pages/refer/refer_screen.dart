@@ -163,7 +163,7 @@ class _ReferScreenState extends State<ReferScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: _isLoading
           ? _skeleton()
           : _hasError
