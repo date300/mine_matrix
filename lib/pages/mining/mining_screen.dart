@@ -64,17 +64,17 @@ class _MiningScreenState extends State<MiningScreen>
           totalWithdrawable: newW,
         );
         if (complete) {
-          _showSnack('â Cycle Complete!',
+          _showSnack('Cycle Complete!',
               '\$100 added to withdrawable!', AppColors.accentGreen, Colors.black);
         }
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       if (msg.toLowerCase().contains('wait')) {
-        _showSnack('â³ Too Soon',
+        _showSnack('Too Soon',
             'Wait at least 60 seconds between claims', Colors.orange, Colors.white);
       } else {
-        _showSnack('â Claim Failed', msg, Colors.red, Colors.white);
+        _showSnack('Claim Failed', msg, Colors.red, Colors.white);
       }
     }
   }
@@ -306,12 +306,12 @@ class _MiningScreenState extends State<MiningScreen>
             try {
               await _c.toggleMining();
               if (_c.isMining) {
-                _showSnack('ð Mining Started',
+                _showSnack('Mining Started',
                     'Earn \$100 to complete a cycle!',
                     AppColors.accentGreen, Colors.black);
               }
             } catch (e) {
-              _showSnack('â Error',
+              _showSnack('Error',
                   e.toString().replaceFirst('Exception: ', ''),
                   Colors.red, Colors.white);
             }
@@ -1033,4 +1033,6 @@ class _MiningScreenState extends State<MiningScreen>
           ),
         ),
       ),
-   
+    );
+  }
+}
