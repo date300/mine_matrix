@@ -5,9 +5,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../widgets/custom_error_widget.dart';
+import '../../widgets/custom_error_widget.dart' hide AppColors;
 import 'constants/mining_constants.dart';
 import 'controllers/mining_controller.dart';
+import 'widgets/mining_widgets.dart';
 import 'dialogs/mining_dialogs.dart';
 
 class MiningScreen extends StatefulWidget {
