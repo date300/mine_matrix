@@ -5,52 +5,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../widgets/custom_error_widget.dart';
 import 'constants/mining_constants.dart';
 import 'controllers/mining_controller.dart';
-import 'widgets/mining_widgets.dart'; // ✅ এখানে MiningErrorWidget থাকতে হবে
 import 'dialogs/mining_dialogs.dart';
-
-// ✅ MiningErrorWidget এখানে define করা হলো যদি mining_widgets.dart এ না থাকে
-class MiningErrorWidget extends StatelessWidget {
-  final VoidCallback onRetry;
-  
-  const MiningErrorWidget({super.key, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            CupertinoIcons.exclamationmark_triangle_fill,
-            color: Colors.orange,
-            size: 48.sp,
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            "Failed to load mining data",
-            style: GoogleFonts.inter(
-              color: Colors.white70,
-              fontSize: 16.sp,
-            ),
-          ),
-          SizedBox(height: 24.h),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: Icon(CupertinoIcons.refresh, size: 18.sp),
-            label: Text("Retry"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentGreen,
-              foregroundColor: Colors.black,
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class MiningScreen extends StatefulWidget {
   const MiningScreen({super.key});
@@ -105,24 +63,24 @@ class _MiningScreenState extends State<MiningScreen>
           totalWithdrawable: newW,
         );
         if (complete) {
-          _showSnack('✅ Cycle Complete!',
+          _showSnack('â Cycle Complete!',
               '\$100 added to withdrawable!', AppColors.accentGreen, Colors.black);
         }
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
       if (msg.toLowerCase().contains('wait')) {
-        _showSnack('⏱️ Too Soon',
+        _showSnack('â³ Too Soon',
             'Wait at least 60 seconds between claims', Colors.orange, Colors.white);
       } else {
-        _showSnack('❌ Claim Failed', msg, Colors.red, Colors.white);
+        _showSnack('â Claim Failed', msg, Colors.red, Colors.white);
       }
     }
   }
 
   void _showSnack(String title, String msg, Color bg, Color textColor) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('$title  $msg',
+      content: Text('$title\n$msg',
           style: GoogleFonts.inter(
               color: textColor, fontWeight: FontWeight.bold)),
       backgroundColor: bg,
@@ -138,7 +96,7 @@ class _MiningScreenState extends State<MiningScreen>
       body: _c.isLoading
           ? _buildSkeletonLoading()
           : _c.hasError
-              ? MiningErrorWidget(onRetry: _c.fetchStatus)
+              ? CustomErrorWidget(onRetry: _c.fetchStatus)
               : RefreshIndicator(
                   color: AppColors.accentGreen,
                   backgroundColor: AppColors.bgCard,
@@ -347,12 +305,12 @@ class _MiningScreenState extends State<MiningScreen>
             try {
               await _c.toggleMining();
               if (_c.isMining) {
-                _showSnack('⛏️ Mining Started',
+                _showSnack('ð Mining Started',
                     'Earn \$100 to complete a cycle!',
                     AppColors.accentGreen, Colors.black);
               }
             } catch (e) {
-              _showSnack('❌ Error',
+              _showSnack('â Error',
                   e.toString().replaceFirst('Exception: ', ''),
                   Colors.red, Colors.white);
             }
@@ -454,7 +412,7 @@ class _MiningScreenState extends State<MiningScreen>
         Expanded(
           child: _buildActionButton(
             'Refresh',
-            Colors.blue, // ✅ AppColors.accentBlue এর পরিবর্তে Colors.blue ব্যবহার
+            Colors.blue,
             CupertinoIcons.refresh,
             _c.fetchStatus,
           ),
@@ -1074,6 +1032,4 @@ class _MiningScreenState extends State<MiningScreen>
           ),
         ),
       ),
-    );
-  }
-}
+   
