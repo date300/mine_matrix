@@ -83,30 +83,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _coins = [];
 
   final List<Map<String, dynamic>> _announcements = [
-    {
-      'user': '@511 BOITALO',
-      'subtitle': '103 Users trading along',
-      'message': 'Welcome to FXDig.com, If you want to change something, start today.',
-      'date': '2026-01-23 08:17:09',
-      'timeAgo': '2M, 14D, 4H',
-      'pinned': true,
-    },
+
     {
       'user': '@Admin',
       'subtitle': '512 Users reading',
-      'message': 'Dear users, if you want, you can now purchase a package of any amount on New ID. We have provided a list of packages.',
+      'message': 'Developer Sohan.',
       'date': '2026-03-27 03:29:21',
       'timeAgo': '10D, 8H',
       'pinned': false,
     },
-    {
-      'user': '@Support',
-      'subtitle': '78 Users following',
-      'message': 'System maintenance scheduled for April 10, 2026. Please ensure your funds are secured.',
-      'date': '2026-04-01 10:00:00',
-      'timeAgo': '6D, 2H',
-      'pinned': false,
-    },
+    
   ];
 
   @override
