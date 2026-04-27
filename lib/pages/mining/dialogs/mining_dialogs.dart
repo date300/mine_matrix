@@ -62,7 +62,7 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.white20,
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -373,7 +373,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.white20,
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
@@ -592,7 +592,7 @@ class ClaimNotReadySheet extends StatelessWidget {
               width: 40.w,
               height: 4.h,
               decoration: BoxDecoration(
-                color: Colors.white20,
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
               ),
             ),
