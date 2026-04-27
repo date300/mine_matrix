@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/custom_error_widget.dart'; // ✅ নতুন নামে import
+import '../../widgets/custom_error_widget.dart';
 
 // --- Colors ------------------------------------------------------------------
 class AppColors {
@@ -28,11 +28,11 @@ class AppColors {
   static const Color textMuted    = Color(0xFF4A4A5A);
   static const Color border       = Color(0xFF2A2A3A);
   static const Color cardBg       = Color(0xFF161620);
+  static const Color accentYellow = Color(0xFFF0B90B); // BNB Yellow
 }
 
 // Lottie Network URLs
 class AppLottie {
-  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
   static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
   static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
   static const String txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
@@ -48,11 +48,94 @@ class AppLottie {
   static const String arrowRight   = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
   static const String confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
   static const String loadingSpinner='https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
-  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
   static const String wallet       = 'https://assets10.lottiefiles.com/packages/lf20_hu7birqV.json';
+  static const String usdtCoin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String bnbCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
+
+// --- Models ------------------------------------------------------------------
+class DepositInfo {
+  final String platformWallet;
+  final double minDeposit;
+  final String network;
+  final int requiredConfirmations;
+
+  DepositInfo({
+    required this.platformWallet,
+    required this.minDeposit,
+    required this.network,
+    required this.requiredConfirmations,
+  });
+
+  factory DepositInfo.fromJson(Map<String, dynamic> json) {
+    return DepositInfo(
+      platformWallet: json['platformWallet'] ?? '',
+      minDeposit: double.tryParse(json['minDeposit']?.toString() ?? '1') ?? 1.0,
+      network: json['network'] ?? 'BEP20',
+      requiredConfirmations: int.tryParse(json['requiredConfirmations']?.toString() ?? '12') ?? 12,
+    );
+  }
+}
+
+class MiningStatus {
+  final double balance;
+  final double withdrawable;
+
+  MiningStatus({
+    required this.balance,
+    required this.withdrawable,
+  });
+
+  factory MiningStatus.fromJson(Map<String, dynamic> json) {
+    return MiningStatus(
+      balance: double.tryParse(json['balance']?.toString() ?? '0') ?? 0,
+      withdrawable: double.tryParse(json['withdrawable']?.toString() ?? '0') ?? 0,
+    );
+  }
+}
+
+class TransactionItem {
+  final String txHash;
+  final double amount;
+  final String network;
+  final String status;
+  final String? sender;
+  final int? confirmations;
+  final String? mode;
+  final DateTime? date;
+  final DateTime? approvedAt;
+  final String? rejectedReason;
+
+  TransactionItem({
+    required this.txHash,
+    required this.amount,
+    required this.network,
+    required this.status,
+    this.sender,
+    this.confirmations,
+    this.mode,
+    this.date,
+    this.approvedAt,
+    this.rejectedReason,
+  });
+
+  factory TransactionItem.fromJson(Map<String, dynamic> json) {
+    return TransactionItem(
+      txHash: json['txHash'] ?? json['tx_hash'] ?? '',
+      amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
+      network: json['network'] ?? 'BEP20',
+      status: json['status'] ?? 'pending',
+      sender: json['sender']?.toString(),
+      confirmations: int.tryParse(json['confirmations']?.toString() ?? '0'),
+      mode: json['mode'] ?? json['approval_mode'],
+      date: json['date'] != null ? DateTime.tryParse(json['date'].toString()) : null,
+      approvedAt: json['approvedAt'] != null ? DateTime.tryParse(json['approvedAt'].toString()) : null,
+      rejectedReason: json['rejectedReason']?.toString(),
+    );
+  }
+}
 
 // --- Main Screen --------------------------------------------------------------
 class WalletScreen extends StatefulWidget {
@@ -66,12 +149,17 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   bool   _isLoading      = true;
   bool   _hasError       = false;
   bool   _isRefreshing   = false;
-  String _platformWallet = '';
-  double _solPrice       = 0;
-  double _balance        = 0;
+
+  DepositInfo? _depositInfo;
+  MiningStatus? _miningStatus;
   double _displayBalance = 0;
-  List<Map<String, dynamic>> _history = [];
-  
+  double _targetBalance  = 0;
+
+  List<TransactionItem> _history = [];
+  int _currentPage = 1;
+  int _totalPages = 1;
+  bool _isLoadingMore = false;
+
   late AnimationController _balanceController;
   late Animation<double> _balanceAnimation;
 
@@ -86,7 +174,15 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       parent: _balanceController,
       curve: Curves.easeOutCubic,
     );
-    
+
+    _balanceAnimation.addListener(() {
+      if (mounted) {
+        setState(() {
+          _displayBalance = _targetBalance * _balanceAnimation.value;
+        });
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
   }
 
@@ -105,22 +201,15 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   };
 
   void _animateBalance(double newValue) {
-    final double oldValue = _displayBalance;
-    _balanceAnimation.addListener(() {
-      if (mounted) {
-        setState(() {
-          _displayBalance = oldValue + (newValue - oldValue) * _balanceAnimation.value;
-        });
-      }
-    });
+    _targetBalance = newValue;
     _balanceController.forward(from: 0);
   }
 
-  Future<void> _loadAll({bool silent = false}) async {
+  Future<void> _loadAll({bool silent = false, int page = 1}) async {
     if (!silent) {
       setState(() { _isLoading = true; _hasError = false; });
     }
-    
+
     try {
       final token = _getToken();
       if (token == null) { 
@@ -128,12 +217,11 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         return; 
       }
 
+      // Fetch deposit info and mining status in parallel
       final results = await Future.wait([
-        http.get(Uri.parse('$_baseUrl/api/deposit/info'), headers: _headers())
+        http.get(Uri.parse('\$_baseUrl/api/deposit/info'), headers: _headers())
             .timeout(const Duration(seconds: 15)),
-        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _headers())
-            .timeout(const Duration(seconds: 15)),
-        http.get(Uri.parse('$_baseUrl/api/deposit/history'), headers: _headers())
+        http.get(Uri.parse('\$_baseUrl/api/mining/status'), headers: _headers())
             .timeout(const Duration(seconds: 15)),
       ]);
 
@@ -141,27 +229,25 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
       final infoRes = results[0];
       final statusRes = results[1];
-      final histRes = results[2];
 
+      // Parse deposit info
       if (infoRes.statusCode == 200) {
         final info = jsonDecode(infoRes.body);
-        _platformWallet = info['platformWallet'] ?? '';
-        _solPrice = double.tryParse(info['solPriceUSD']?.toString() ?? '0') ?? 0;
+        _depositInfo = DepositInfo.fromJson(info);
       }
 
+      // Parse mining status
       if (statusRes.statusCode == 200) {
         final status = jsonDecode(statusRes.body);
-        final newBalance = double.tryParse(status['withdrawableUSD']?.toString() ?? '0') ?? 0;
-        if (_balance != newBalance) {
-          _balance = newBalance;
+        _miningStatus = MiningStatus.fromJson(status);
+        final newBalance = _miningStatus!.balance;
+        if (_displayBalance != newBalance) {
           _animateBalance(newBalance);
         }
       }
 
-      if (histRes.statusCode == 200) {
-        final h = jsonDecode(histRes.body);
-        _history = List<Map<String, dynamic>>.from(h['deposits'] ?? []);
-      }
+      // Fetch history
+      await _loadHistory(page: page, silent: true);
 
       setState(() => _isLoading = false);
     } on Exception catch (e) {
@@ -175,6 +261,55 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         }
         _showErrorSnackBar(errorMsg);
       }
+    }
+  }
+
+  Future<void> _loadHistory({required int page, bool silent = false}) async {
+    if (_isLoadingMore) return;
+
+    if (!silent) {
+      setState(() => _isLoadingMore = true);
+    }
+
+    try {
+      final res = await http.get(
+        Uri.parse('\$_baseUrl/api/deposit/history?page=\$page&limit=10'),
+        headers: _headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      if (!mounted) return;
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List<dynamic> deposits = data['data'] ?? data['deposits'] ?? [];
+        final pagination = data['pagination'];
+
+        final items = deposits.map((d) => TransactionItem.fromJson(d)).toList();
+
+        setState(() {
+          if (page == 1) {
+            _history = items;
+          } else {
+            _history.addAll(items);
+          }
+          _currentPage = page;
+          _totalPages = pagination?['totalPages'] ?? 1;
+          _isLoadingMore = false;
+        });
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+        if (!silent) {
+          _showErrorSnackBar('Failed to load history');
+        }
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_currentPage < _totalPages && !_isLoadingMore) {
+      await _loadHistory(page: _currentPage + 1);
     }
   }
 
@@ -211,7 +346,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
   Future<void> _onRefresh() async {
     setState(() => _isRefreshing = true);
-    await _loadAll(silent: true);
+    await _loadAll(silent: true, page: 1);
     setState(() => _isRefreshing = false);
   }
 
@@ -222,7 +357,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       body: _isLoading
           ? _buildSkeletonLoading()
           : _hasError
-              ? CustomErrorWidget(onRetry: _loadAll) // ✅ নতুন নামে ব্যবহার
+              ? CustomErrorWidget(onRetry: _loadAll)
               : RefreshIndicator(
                   color: AppColors.accentGreen,
                   backgroundColor: AppColors.surface,
@@ -345,7 +480,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
             ),
             SizedBox(height: 4.h),
             Text(
-              'Manage your SOL deposits',
+              'Manage your USDT deposits',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
                 fontSize: 14.sp,
@@ -399,19 +534,19 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.accentPurple.withOpacity(0.3),
-            AppColors.accentBlue.withOpacity(0.1),
+            AppColors.accentYellow.withOpacity(0.3),
+            AppColors.accentPurple.withOpacity(0.1),
             AppColors.surface,
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
         border: Border.all(
-          color: AppColors.accentPurple.withOpacity(0.3),
+          color: AppColors.accentYellow.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentPurple.withOpacity(0.2),
+            color: AppColors.accentYellow.withOpacity(0.15),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -462,23 +597,34 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                         ],
                       ),
                     ),
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 20.w,
-                          height: 20.h,
-                          child: Lottie.network(AppLottie.solCoin),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentYellow.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: AppColors.accentYellow.withOpacity(0.3),
                         ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          '\$${_solPrice.toStringAsFixed(2)}',
-                          style: GoogleFonts.inter(
-                            color: AppColors.textSecondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.currency_bitcoin,
+                            color: AppColors.accentYellow,
+                            size: 14,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 4.w),
+                          Text(
+                            'BEP20',
+                            style: GoogleFonts.inter(
+                              color: AppColors.accentYellow,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -506,14 +652,15 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   },
                 ),
                 SizedBox(height: 8.h),
-                Text(
-                  '${(_displayBalance / (_solPrice > 0 ? _solPrice : 1)).toStringAsFixed(4)} SOL',
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.accentPurple,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
+                if (_miningStatus != null)
+                  Text(
+                    'Withdrawable: \$${_miningStatus!.withdrawable.toStringAsFixed(2)}',
+                    style: GoogleFonts.spaceMono(
+                      color: AppColors.accentYellow,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -529,7 +676,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           child: _buildActionButton(
             'Deposit',
             AppColors.accentGreen,
-            AppLottie.coinSpin,
+            AppLottie.usdtCoin,
             () => _showDepositSheet(),
           ),
         ),
@@ -620,7 +767,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   }
 
   Widget _buildHistoryList() {
-    if (_history.isEmpty) {
+    if (_history.isEmpty && !_isLoadingMore) {
       return SliverToBoxAdapter(
         child: _buildEmptyState(),
       );
@@ -629,13 +776,53 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
+          if (index == _history.length) {
+            if (_isLoadingMore) {
+              return Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accentGreen,
+                    strokeWidth: 2,
+                  ),
+                ),
+              );
+            }
+            if (_currentPage < _totalPages) {
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                child: GestureDetector(
+                  onTap: _loadMore,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Load More',
+                      style: GoogleFonts.inter(
+                        color: AppColors.accentGreen,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return SizedBox.shrink();
+          }
+
           final item = _history[index];
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
             child: _buildTransactionItem(item, index),
           );
         },
-        childCount: _history.length,
+        childCount: _history.length + 1,
       ),
     );
   }
@@ -698,15 +885,9 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
-    final sol = double.tryParse(data['sol_amount']?.toString() ?? '0') ?? 0;
-    final usd = double.tryParse(data['usd_amount']?.toString() ?? '0') ?? 0;
-    final status = data['status']?.toString() ?? 'pending';
-    final sig = data['tx_signature']?.toString() ?? '';
-    final date = data['created_at']?.toString() ?? '';
-    
-    final bool isSuccess = status == 'confirmed';
-    final bool isFailed = status == 'failed';
+  Widget _buildTransactionItem(TransactionItem item, int index) {
+    final bool isSuccess = item.status == 'confirmed';
+    final bool isFailed = item.status == 'rejected' || item.status == 'failed';
     final bool isPending = !isSuccess && !isFailed;
 
     Color statusColor;
@@ -729,7 +910,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
     return GestureDetector(
       onTap: () {
-        Clipboard.setData(ClipboardData(text: sig));
+        Clipboard.setData(ClipboardData(text: item.txHash));
         _showCopiedSnackBar();
       },
       child: Container(
@@ -762,7 +943,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SOL Deposit',
+                    'USDT Deposit',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
                       fontSize: 15.sp,
@@ -771,15 +952,36 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    _formatSignature(sig),
+                    _formatTxHash(item.txHash),
                     style: GoogleFonts.spaceMono(
                       color: AppColors.textMuted,
                       fontSize: 11.sp,
                     ),
                   ),
                   SizedBox(height: 4.h),
+                  if (item.mode != null)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: item.mode == 'auto' 
+                            ? AppColors.accentBlue.withOpacity(0.15)
+                            : AppColors.accentPurple.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        item.mode!.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          color: item.mode == 'auto' 
+                              ? AppColors.accentBlue 
+                              : AppColors.accentPurple,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: 4.h),
                   Text(
-                    _formatDate(date),
+                    _formatDate(item.date),
                     style: GoogleFonts.inter(
                       color: AppColors.textSecondary,
                       fontSize: 11.sp,
@@ -792,7 +994,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '+\$${usd.toStringAsFixed(2)}',
+                  '+\$${item.amount.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
                     color: AppColors.accentGreen,
                     fontSize: 15.sp,
@@ -800,13 +1002,14 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   ),
                 ),
                 SizedBox(height: 4.h),
-                Text(
-                  '${sol.toStringAsFixed(4)} SOL',
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.textSecondary,
-                    fontSize: 12.sp,
+                if (item.confirmations != null)
+                  Text(
+                    '${item.confirmations} confs',
+                    style: GoogleFonts.spaceMono(
+                      color: AppColors.textSecondary,
+                      fontSize: 10.sp,
+                    ),
                   ),
-                ),
                 SizedBox(height: 6.h),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
@@ -831,18 +1034,14 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
   }
 
-  String _formatSignature(String sig) {
-    if (sig.length < 20) return sig;
-    return '${sig.substring(0, 8)}...${sig.substring(sig.length - 8)}';
+  String _formatTxHash(String hash) {
+    if (hash.length < 20) return hash;
+    return '\${hash.substring(0, 10)}...\${hash.substring(hash.length - 8)}';
   }
 
-  String _formatDate(String date) {
-    try {
-      final dt = DateTime.parse(date);
-      return '${dt.day}/${dt.month}/${dt.year} • ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return date;
-    }
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    return '\${date.day}/\${date.month}/\${date.year} • \${date.hour.toString().padLeft(2, '0')}:\${date.minute.toString().padLeft(2, '0')}';
   }
 
   void _showCopiedSnackBar() {
@@ -875,17 +1074,18 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   }
 
   void _showDepositSheet() {
+    if (_depositInfo == null) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => DepositSheet(
-        platformWallet: _platformWallet,
-        solPrice: _solPrice,
+        depositInfo: _depositInfo!,
         headers: _headers(),
         onSuccess: () {
           Navigator.pop(context);
-          _loadAll(silent: true);
+          _loadAll(silent: true, page: 1);
         },
       ),
     );
@@ -894,15 +1094,13 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
 // --- Deposit Sheet Widget ------------------------------------------------------
 class DepositSheet extends StatefulWidget {
-  final String platformWallet;
-  final double solPrice;
+  final DepositInfo depositInfo;
   final Map<String, String> headers;
   final VoidCallback onSuccess;
 
   const DepositSheet({
     super.key,
-    required this.platformWallet,
-    required this.solPrice,
+    required this.depositInfo,
     required this.headers,
     required this.onSuccess,
   });
@@ -913,11 +1111,11 @@ class DepositSheet extends StatefulWidget {
 
 class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMixin {
   int _step = 0;
-  final _sigController = TextEditingController();
+  final _txHashController = TextEditingController();
   bool _verifying = false;
   String _verifyError = '';
   bool _copied = false;
-  
+
   late AnimationController _confettiController;
 
   @override
@@ -931,15 +1129,18 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
 
   @override
   void dispose() {
-    _sigController.dispose();
+    _txHashController.dispose();
     _confettiController.dispose();
     super.dispose();
   }
 
   Future<void> _verifyDeposit() async {
-    final sig = _sigController.text.trim();
-    if (sig.length < 50) {
-      setState(() => _verifyError = 'Invalid transaction signature');
+    final txHash = _txHashController.text.trim();
+
+    // Validate txHash format (0x + 64 hex chars)
+    final txHashRegex = RegExp(r'^0x[a-fA-F0-9]{64}\$');
+    if (!txHashRegex.hasMatch(txHash)) {
+      setState(() => _verifyError = 'Invalid transaction hash format. Must be 0x + 64 hex characters.');
       return;
     }
 
@@ -947,9 +1148,9 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
 
     try {
       final res = await http.post(
-        Uri.parse('$_baseUrl/api/deposit/verify'),
+        Uri.parse('\$_baseUrl/api/deposit/verify'),
         headers: widget.headers,
-        body: jsonEncode({'signature': sig}),
+        body: jsonEncode({'txHash': txHash}),
       ).timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
@@ -959,6 +1160,12 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
         setState(() => _verifying = false);
         _confettiController.forward();
         _showSuccessDialog(data);
+      } else if (res.statusCode == 202) {
+        // Pending confirmations
+        setState(() {
+          _verifying = false;
+          _verifyError = 'Transaction pending. Confirmations: \${data['confirmations'] ?? 0}/\${data['required'] ?? 12}. Please wait and try again.';
+        });
       } else {
         setState(() {
           _verifying = false;
@@ -978,8 +1185,9 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
   }
 
   void _showSuccessDialog(Map data) {
-    final usd = data['usdAmount']?.toString() ?? '0';
-    final sol = data['solAmount']?.toString() ?? '0';
+    final amount = data['amount']?.toString() ?? '0';
+    final mode = data['mode']?.toString() ?? 'auto';
+    final isManual = mode == 'manual';
 
     showDialog(
       context: context,
@@ -994,10 +1202,10 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
+                  border: Border.all(color: isManual ? AppColors.accentPurple.withOpacity(0.5) : AppColors.accentGreen.withOpacity(0.5)),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.2),
+                      color: isManual ? AppColors.accentPurple.withOpacity(0.2) : AppColors.accentGreen.withOpacity(0.2),
                       blurRadius: 40,
                       offset: const Offset(0, 20),
                     ),
@@ -1012,7 +1220,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.accentGreen.withOpacity(0.2),
+                            isManual ? AppColors.accentPurple.withOpacity(0.2) : AppColors.accentGreen.withOpacity(0.2),
                             Colors.transparent,
                           ],
                         ),
@@ -1024,14 +1232,14 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                             width: 80.w,
                             height: 80.h,
                             child: Lottie.network(
-                              AppLottie.txSuccess,
+                              isManual ? AppLottie.info : AppLottie.txSuccess,
                               repeat: false,
                               controller: _confettiController,
                             ),
                           ),
                           SizedBox(height: 16.h),
                           Text(
-                            'Deposit Successful!',
+                            isManual ? 'Deposit Submitted!' : 'Deposit Successful!',
                             style: GoogleFonts.inter(
                               color: AppColors.textPrimary,
                               fontSize: 20.sp,
@@ -1046,9 +1254,9 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                       child: Column(
                         children: [
                           Text(
-                            '+\$$usd',
+                            '+\\$\$amount',
                             style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
+                              color: isManual ? AppColors.accentPurple : AppColors.accentGreen,
                               fontSize: 36.sp,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1060,11 +1268,11 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                               SizedBox(
                                 width: 16.w,
                                 height: 16.h,
-                                child: Lottie.network(AppLottie.solCoin),
+                                child: Lottie.network(AppLottie.usdtCoin),
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                '$sol SOL deposited',
+                                isManual ? 'Pending admin approval' : 'USDT deposited',
                                 style: GoogleFonts.spaceMono(
                                   color: AppColors.textSecondary,
                                   fontSize: 14.sp,
@@ -1083,13 +1291,15 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                               height: 52.h,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
+                                  colors: isManual 
+                                      ? [AppColors.accentPurple, AppColors.accentBlue]
+                                      : [AppColors.accentGreen, AppColors.accentBlue],
                                 ),
                                 borderRadius: BorderRadius.circular(14.r),
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                'Awesome!',
+                                isManual ? 'Got it!' : 'Awesome!',
                                 style: GoogleFonts.inter(
                                   color: Colors.black,
                                   fontSize: 16.sp,
@@ -1106,15 +1316,16 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               ),
             ),
           ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Lottie.network(
-                AppLottie.confetti,
-                controller: _confettiController,
-                fit: BoxFit.cover,
+          if (!isManual)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Lottie.network(
+                  AppLottie.confetti,
+                  controller: _confettiController,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1149,14 +1360,14 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                   width: 48.w,
                   height: 48.h,
                   decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withOpacity(0.15),
+                    color: AppColors.accentYellow.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(14.r),
                   ),
                   child: Center(
-                    child: SizedBox(
-                      width: 28.w,
-                      height: 28.h,
-                      child: Lottie.network(AppLottie.solCoin),
+                    child: Icon(
+                      Icons.currency_bitcoin,
+                      color: AppColors.accentYellow,
+                      size: 24,
                     ),
                   ),
                 ),
@@ -1166,7 +1377,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Deposit SOL',
+                        'Deposit USDT',
                         style: GoogleFonts.inter(
                           color: AppColors.textPrimary,
                           fontSize: 20.sp,
@@ -1174,9 +1385,9 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                         ),
                       ),
                       Text(
-                        '1 SOL = \$${widget.solPrice.toStringAsFixed(2)}',
+                        '\${widget.depositInfo.network} Network',
                         style: GoogleFonts.inter(
-                          color: AppColors.accentPurple,
+                          color: AppColors.accentYellow,
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1208,7 +1419,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
               children: [
-                _buildStepIndicator(0, 'Send SOL', Icons.send),
+                _buildStepIndicator(0, 'Send USDT', Icons.send),
                 Expanded(
                   child: Container(
                     height: 2,
@@ -1273,7 +1484,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             child: isActive
                 ? Icon(icon, color: Colors.black, size: 20)
                 : Text(
-                    '${step + 1}',
+                    '\${step + 1}',
                     style: GoogleFonts.inter(
                       color: AppColors.textMuted,
                       fontSize: 16.sp,
@@ -1305,14 +1516,14 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accentPurple.withOpacity(0.2),
+                color: AppColors.accentYellow.withOpacity(0.2),
                 blurRadius: 30,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
           child: QrImageView(
-            data: widget.platformWallet,
+            data: widget.depositInfo.platformWallet,
             version: QrVersions.auto,
             size: 180.w,
             backgroundColor: Colors.white,
@@ -1321,7 +1532,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
         ),
         SizedBox(height: 24.h),
         Text(
-          'Send SOL to this address',
+          'Send USDT to this address',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -1331,7 +1542,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
         SizedBox(height: 16.h),
         GestureDetector(
           onTap: () {
-            Clipboard.setData(ClipboardData(text: widget.platformWallet));
+            Clipboard.setData(ClipboardData(text: widget.depositInfo.platformWallet));
             setState(() => _copied = true);
             Future.delayed(const Duration(seconds: 2), () {
               if (mounted) setState(() => _copied = false);
@@ -1351,10 +1562,10 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               children: [
                 Expanded(
                   child: Text(
-                    widget.platformWallet,
+                    widget.depositInfo.platformWallet,
                     style: GoogleFonts.spaceMono(
                       color: AppColors.textPrimary,
-                      fontSize: 12.sp,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ),
@@ -1364,7 +1575,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                   decoration: BoxDecoration(
                     color: _copied
                         ? AppColors.accentGreen.withOpacity(0.2)
-                        : AppColors.accentPurple.withOpacity(0.15),
+                        : AppColors.accentYellow.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: _copied
@@ -1383,21 +1594,21 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
         _buildInfoCard(
           AppLottie.info,
           'Minimum Deposit',
-          '0.001 SOL required',
+          '\${widget.depositInfo.minDeposit.toStringAsFixed(2)} USDT required',
           AppColors.accentOrange,
         ),
         SizedBox(height: 10.h),
         _buildInfoCard(
           AppLottie.warning,
           'Network',
-          'Only Solana Mainnet',
+          'Only \${widget.depositInfo.network} (BSC)',
           AppColors.accentRed,
         ),
         SizedBox(height: 10.h),
         _buildInfoCard(
           AppLottie.secure,
-          'Confirmation',
-          'Usually takes 5-30 seconds',
+          'Confirmations',
+          '\${widget.depositInfo.requiredConfirmations} confirmations required',
           AppColors.accentGreen,
         ),
         SizedBox(height: 32.h),
@@ -1424,7 +1635,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "I've Sent SOL",
+                  "I've Sent USDT",
                   style: GoogleFonts.inter(
                     color: Colors.black,
                     fontSize: 16.sp,
@@ -1451,7 +1662,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Enter Transaction Signature',
+          'Enter Transaction Hash',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 18.sp,
@@ -1487,7 +1698,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    'How to find your signature?',
+                    'How to find your transaction hash?',
                     style: GoogleFonts.inter(
                       color: AppColors.accentBlue,
                       fontSize: 13.sp,
@@ -1498,7 +1709,15 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               ),
               SizedBox(height: 8.h),
               Text(
-                'Phantom/Solflare: Activity → Tap transaction → Copy Signature',
+                'MetaMask/Trust Wallet: Activity → Tap transaction → Copy Transaction Hash',
+                style: GoogleFonts.inter(
+                  color: AppColors.textSecondary,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                'BscScan: Search your wallet → Find the TX → Copy Hash',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
                   fontSize: 12.sp,
@@ -1515,22 +1734,22 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             border: Border.all(
               color: _verifyError.isNotEmpty
                   ? AppColors.accentRed
-                  : _sigController.text.isNotEmpty
+                  : _txHashController.text.isNotEmpty
                       ? AppColors.accentGreen
                       : AppColors.border,
-              width: _sigController.text.isNotEmpty ? 2 : 1,
+              width: _txHashController.text.isNotEmpty ? 2 : 1,
             ),
           ),
           child: TextField(
-            controller: _sigController,
+            controller: _txHashController,
             style: GoogleFonts.spaceMono(
               color: AppColors.textPrimary,
-              fontSize: 12.sp,
+              fontSize: 11.sp,
             ),
-            maxLines: 3,
+            maxLines: 2,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'Paste transaction signature here...',
+              hintText: 'Paste transaction hash here (0x...)',
               hintStyle: GoogleFonts.inter(
                 color: AppColors.textMuted,
                 fontSize: 13.sp,
@@ -1541,7 +1760,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                 onTap: () async {
                   final data = await Clipboard.getData('text/plain');
                   if (data?.text != null) {
-                    _sigController.text = data!.text!.trim();
+                    _txHashController.text = data!.text!.trim();
                     setState(() {});
                   }
                 },
@@ -1549,7 +1768,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                   margin: EdgeInsets.all(12.w),
                   padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
-                    color: AppColors.accentPurple.withOpacity(0.15),
+                    color: AppColors.accentYellow.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: SizedBox(
