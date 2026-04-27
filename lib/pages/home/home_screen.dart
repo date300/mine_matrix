@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     {
       'user': '@Admin',
-      'subtitle': '512 Users reading',
+      'subtitle': 'Heyyy',
       'message': 'Developer Sohan.',
       'date': '2026-03-27 03:29:21',
       'timeAgo': '10D, 8H',
