@@ -11,9 +11,10 @@ import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
+
 import '../../widgets/custom_error_widget.dart';
 
-// --- Colors ---------------------------------------------------------------
+// --- Colors (WalletScreen থেকে একই) ----------------------------------------
 class AppColors {
   static const Color background   = Color(0xFF0A0A0F);
   static const Color surface      = Color(0xFF12121A);
@@ -55,14 +56,13 @@ class AppLottie {
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// --- Withdraw Methods (BEP20 Network) -------------------------------------
+// --- Withdraw Methods -------------------------------------------------------
 class WithdrawMethod {
   final String name;
   final String symbol;
   final String iconUrl;
   final Color color;
   final double minAmount;
-  final double maxAmount;
   final double fee;
 
   const WithdrawMethod({
@@ -71,24 +71,38 @@ class WithdrawMethod {
     required this.iconUrl,
     required this.color,
     required this.minAmount,
-    required this.maxAmount,
     required this.fee,
   });
 }
 
 final List<WithdrawMethod> _withdrawMethods = [
   WithdrawMethod(
-    name: 'BEP20 (BSC)',
-    symbol: 'BEP20',
+    name: 'Solana',
+    symbol: 'SOL',
+    iconUrl: AppLottie.solCoin,
+    color: AppColors.accentPurple,
+    minAmount: 0.01,
+    fee: 0.001,
+  ),
+  WithdrawMethod(
+    name: 'USDT',
+    symbol: 'USDT',
     iconUrl: AppLottie.coinSpin,
     color: AppColors.accentGreen,
-    minAmount: 5,
-    maxAmount: 10000,
-    fee: 0,
+    minAmount: 10,
+    fee: 1,
+  ),
+  WithdrawMethod(
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    iconUrl: AppLottie.coinSpin,
+    color: Color(0xFFF7931A),
+    minAmount: 0.001,
+    fee: 0.0005,
   ),
 ];
 
-// --- Main Screen ----------------------------------------------------------
+// --- Main Screen --------------------------------------------------------------
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
 
@@ -103,9 +117,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   double _balance        = 0;
   double _displayBalance = 0;
   List<Map<String, dynamic>> _history = [];
-  int _currentPage = 1;
-  bool _hasMoreData = true;
-
+  
   late AnimationController _balanceController;
   late Animation<double> _balanceAnimation;
 
@@ -120,7 +132,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
       parent: _balanceController,
       curve: Curves.easeOutCubic,
     );
-
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
   }
 
@@ -135,7 +147,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   Map<String, String> _headers() => {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer \${_getToken()}',
+    'Authorization': 'Bearer ${_getToken()}',
   };
 
   void _animateBalance(double newValue) {
@@ -150,11 +162,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     _balanceController.forward(from: 0);
   }
 
-  Future<void> _loadAll({bool silent = false, bool loadMore = false}) async {
+  Future<void> _loadAll({bool silent = false}) async {
     if (!silent) {
       setState(() { _isLoading = true; _hasError = false; });
     }
-
+    
     try {
       final token = _getToken();
       if (token == null) { 
@@ -162,20 +174,11 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
         return; 
       }
 
-      if (!loadMore) {
-        _currentPage = 1;
-        _hasMoreData = true;
-      }
-
-      final page = loadMore ? _currentPage + 1 : 1;
-
       final results = await Future.wait([
-        http.get(Uri.parse('\$_baseUrl/api/mining/status'), headers: _headers())
+        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _headers())
             .timeout(const Duration(seconds: 15)),
-        http.get(
-          Uri.parse('\$_baseUrl/api/withdraw/history?page=\$page&limit=10'),
-          headers: _headers(),
-        ).timeout(const Duration(seconds: 15)),
+        http.get(Uri.parse('$_baseUrl/api/withdraw/history'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
       ]);
 
       if (!mounted) return;
@@ -185,7 +188,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
       if (statusRes.statusCode == 200) {
         final status = jsonDecode(statusRes.body);
-        final newBalance = double.tryParse(status['withdrawable']?.toString() ?? '0') ?? 0;
+        final newBalance = double.tryParse(status['withdrawableUSD']?.toString() ?? '0') ?? 0;
         if (_balance != newBalance) {
           _balance = newBalance;
           _animateBalance(newBalance);
@@ -194,21 +197,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
       if (histRes.statusCode == 200) {
         final h = jsonDecode(histRes.body);
-        final List<Map<String, dynamic>> newData = 
-            List<Map<String, dynamic>>.from(h['data'] ?? []);
-
-        if (loadMore) {
-          if (newData.isEmpty) {
-            _hasMoreData = false;
-          } else {
-            _history.addAll(newData);
-            _currentPage = page;
-          }
-        } else {
-          _history = newData;
-          _currentPage = 1;
-          _hasMoreData = newData.length >= 10;
-        }
+        _history = List<Map<String, dynamic>>.from(h['withdrawals'] ?? []);
       }
 
       setState(() => _isLoading = false);
@@ -263,12 +252,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     setState(() => _isRefreshing = false);
   }
 
-  void _loadMore() {
-    if (_hasMoreData && !_isLoading) {
-      _loadAll(silent: true, loadMore: true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -305,33 +288,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
                         ),
                       ),
                       _buildHistoryList(),
-                      if (_hasMoreData && _history.isNotEmpty)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.w),
-                            child: Center(
-                              child: GestureDetector(
-                                onTap: _loadMore,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Text(
-                                    'Load More',
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.accentGreen,
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                       SliverToBoxAdapter(
                         child: SizedBox(height: 100.h),
                       ),
@@ -576,7 +532,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
                   animation: _balanceAnimation,
                   builder: (context, child) {
                     return Text(
-                      '\$\${_displayBalance.toStringAsFixed(2)}',
+                      '\$${_displayBalance.toStringAsFixed(2)}',
                       style: GoogleFonts.inter(
                         color: AppColors.textPrimary,
                         fontSize: 40.sp,
@@ -781,31 +737,31 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
     final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
+    final method = data['method']?.toString() ?? 'SOL';
     final status = data['status']?.toString() ?? 'pending';
-    final address = data['wallet_address']?.toString() ?? '';
+    final address = data['address']?.toString() ?? '';
     final date = data['created_at']?.toString() ?? '';
-    final network = data['network']?.toString() ?? 'BEP20';
-
-    final bool isApproved = status == 'approved';
-    final bool isRejected = status == 'rejected';
-    final bool isPending = status == 'pending';
+    
+    final bool isSuccess = status == 'completed';
+    final bool isFailed = status == 'failed';
+    final bool isPending = !isSuccess && !isFailed;
 
     Color statusColor;
     String statusLottie;
     String statusText;
 
-    if (isApproved) {
+    if (isSuccess) {
       statusColor = AppColors.accentGreen;
       statusLottie = AppLottie.txSuccess;
-      statusText = 'Approved';
-    } else if (isRejected) {
+      statusText = 'Completed';
+    } else if (isFailed) {
       statusColor = AppColors.accentRed;
       statusLottie = AppLottie.txFailed;
-      statusText = 'Rejected';
+      statusText = 'Failed';
     } else {
       statusColor = AppColors.accentOrange;
       statusLottie = AppLottie.txPending;
-      statusText = 'Pending';
+      statusText = 'Processing';
     }
 
     return GestureDetector(
@@ -843,7 +799,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '\$${amount.toStringAsFixed(2)}',
+                    '$method Withdrawal',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
                       fontSize: 15.sp,
@@ -872,6 +828,23 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                Text(
+                  '-\$${amount.toStringAsFixed(2)}',
+                  style: GoogleFonts.inter(
+                    color: AppColors.accentRed,
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  method,
+                  style: GoogleFonts.spaceMono(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                  ),
+                ),
+                SizedBox(height: 6.h),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
@@ -887,14 +860,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
                     ),
                   ),
                 ),
-                SizedBox(height: 6.h),
-                Text(
-                  network,
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.textSecondary,
-                    fontSize: 11.sp,
-                  ),
-                ),
               ],
             ),
           ],
@@ -905,13 +870,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   String _formatAddress(String address) {
     if (address.length < 20) return address;
-    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
+    return '${address.substring(0, 8)}...${address.substring(address.length - 8)}';
   }
 
   String _formatDate(String date) {
     try {
       final dt = DateTime.parse(date);
-      return '\${dt.day}/\${dt.month}/\${dt.year} • \${dt.hour}:\${dt.minute.toString().padLeft(2, '0')}';
+      return '${dt.day}/${dt.month}/${dt.year} • ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return date;
     }
@@ -963,7 +928,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   }
 }
 
-// --- Withdraw Sheet Widget ------------------------------------------------
+// --- Withdraw Sheet Widget ---------------------------------------------------
 class WithdrawSheet extends StatefulWidget {
   final double balance;
   final Map<String, String> headers;
@@ -987,7 +952,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
   final _addressController = TextEditingController();
   bool _isProcessing = false;
   String _errorMessage = '';
-
+  
   late AnimationController _confettiController;
 
   @override
@@ -1008,38 +973,32 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
   }
 
   void _setMaxAmount() {
-    final maxAmount = widget.balance;
+    final maxAmount = widget.balance - _selectedMethod.fee;
     if (maxAmount > 0) {
-      _amountController.text = maxAmount.toStringAsFixed(2);
+      _amountController.text = maxAmount.toStringAsFixed(4);
     }
   }
 
   void _validateAndProceed() {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final address = _addressController.text.trim();
-
+    
     if (amount <= 0) {
       setState(() => _errorMessage = 'Please enter a valid amount');
       return;
     }
-
+    
     if (amount < _selectedMethod.minAmount) {
-      setState(() => _errorMessage = 'Minimum withdrawal is \$\${_selectedMethod.minAmount}');
+      setState(() => _errorMessage = 'Minimum withdrawal is ${_selectedMethod.minAmount} ${_selectedMethod.symbol}');
       return;
     }
-
-    if (amount > _selectedMethod.maxAmount) {
-      setState(() => _errorMessage = 'Maximum withdrawal limit is \$\${_selectedMethod.maxAmount}');
+    
+    if (amount + _selectedMethod.fee > widget.balance) {
+      setState(() => _errorMessage = 'Insufficient balance (including fee)');
       return;
     }
-
-    if (amount > widget.balance) {
-      setState(() => _errorMessage = 'Insufficient balance');
-      return;
-    }
-
-    if (address.isEmpty || !RegExp(r'^0x[a-fA-F0-9]{40}\$').hasMatch(address)) {
-      setState(() => _errorMessage = 'Please enter a valid BEP20 wallet address (0x...)');
+    
+    if (_addressController.text.trim().length < 20) {
+      setState(() => _errorMessage = 'Please enter a valid wallet address');
       return;
     }
 
@@ -1054,11 +1013,12 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
 
     try {
       final res = await http.post(
-        Uri.parse('\$_baseUrl/api/withdraw'),
+        Uri.parse('$_baseUrl/api/withdraw/request'),
         headers: widget.headers,
         body: jsonEncode({
           'amount': double.parse(_amountController.text),
-          'wallet': _addressController.text.trim(),
+          'method': _selectedMethod.symbol,
+          'address': _addressController.text.trim(),
         }),
       ).timeout(const Duration(seconds: 20));
 
@@ -1073,7 +1033,6 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
         setState(() {
           _isProcessing = false;
           _errorMessage = data['error'] ?? 'Withdrawal failed';
-          _step = 0;
         });
       }
     } on Exception catch (e) {
@@ -1083,16 +1042,14 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           _errorMessage = e.toString().contains('timeout') 
               ? 'Connection timeout. Try again.' 
               : 'Connection error. Try again.';
-          _step = 0;
         });
       }
     }
   }
 
   void _showSuccessDialog(Map data) {
-    final amount = data['data']?['amount']?.toString() ?? '0';
-    final wallet = data['data']?['wallet']?.toString() ?? '';
-    final withdrawId = data['data']?['withdrawId']?.toString() ?? '';
+    final amount = data['amount']?.toString() ?? '0';
+    final method = data['method']?.toString() ?? 'SOL';
 
     showDialog(
       context: context,
@@ -1159,7 +1116,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                       child: Column(
                         children: [
                           Text(
-                            '-\$\$amount',
+                            '-\$$amount',
                             style: GoogleFonts.inter(
                               color: AppColors.accentRed,
                               fontSize: 36.sp,
@@ -1173,33 +1130,17 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                               SizedBox(
                                 width: 16.w,
                                 height: 16.h,
-                                child: Lottie.network(AppLottie.coinSpin),
+                                child: Lottie.network(AppLottie.solCoin),
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                'BEP20 withdrawal pending',
+                                '$method withdrawal processing',
                                 style: GoogleFonts.spaceMono(
                                   color: AppColors.textSecondary,
                                   fontSize: 14.sp,
                                 ),
                               ),
                             ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'ID: #\$withdrawId',
-                            style: GoogleFonts.spaceMono(
-                              color: AppColors.textMuted,
-                              fontSize: 12.sp,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            _formatAddress(wallet),
-                            style: GoogleFonts.spaceMono(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
                           ),
                           SizedBox(height: 24.h),
                           GestureDetector(
@@ -1247,11 +1188,6 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
         ],
       ),
     );
-  }
-
-  String _formatAddress(String address) {
-    if (address.length < 20) return address;
-    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
   }
 
   @override
@@ -1308,7 +1244,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                         ),
                       ),
                       Text(
-                        'Available: \$\${widget.balance.toStringAsFixed(2)}',
+                        'Available: \$${widget.balance.toStringAsFixed(2)}',
                         style: GoogleFonts.inter(
                           color: AppColors.accentRed,
                           fontSize: 13.sp,
@@ -1407,7 +1343,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
             child: isActive
                 ? Icon(icon, color: Colors.black, size: 20)
                 : Text(
-                    '\${step + 1}',
+                    '${step + 1}',
                     style: GoogleFonts.inter(
                       color: AppColors.textMuted,
                       fontSize: 16.sp,
@@ -1434,7 +1370,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Network',
+          'Select Method',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -1445,7 +1381,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
         ..._withdrawMethods.map((method) => _buildMethodCard(method)),
         SizedBox(height: 24.h),
         Text(
-          'Amount (USD)',
+          'Amount',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -1456,7 +1392,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
         _buildAmountInput(),
         SizedBox(height: 24.h),
         Text(
-          'BEP20 Wallet Address',
+          'Wallet Address',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -1517,7 +1453,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
 
   Widget _buildMethodCard(WithdrawMethod method) {
     final bool isSelected = _selectedMethod.symbol == method.symbol;
-
+    
     return GestureDetector(
       onTap: () => setState(() => _selectedMethod = method),
       child: Container(
@@ -1563,7 +1499,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    'Min: \$\${method.minAmount} • Max: \$\${method.maxAmount}',
+                    'Min: ${method.minAmount} ${method.symbol} • Fee: ${method.fee} ${method.symbol}',
                     style: GoogleFonts.inter(
                       color: AppColors.textSecondary,
                       fontSize: 11.sp,
@@ -1619,18 +1555,6 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           ),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16.w),
-          prefixIcon: Padding(
-            padding: EdgeInsets.only(left: 16.w, right: 8.w),
-            child: Text(
-              '\$',
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
           suffix: GestureDetector(
             onTap: _setMaxAmount,
             child: Container(
@@ -1676,7 +1600,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
         ),
         maxLines: 2,
         decoration: InputDecoration(
-          hintText: 'Enter BEP20 wallet address (0x...)',
+          hintText: 'Enter wallet address...',
           hintStyle: GoogleFonts.inter(
             color: AppColors.textMuted,
             fontSize: 13.sp,
@@ -1742,6 +1666,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
 
   Widget _buildStep1() {
     final amount = double.tryParse(_amountController.text) ?? 0;
+    final total = amount + _selectedMethod.fee;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1755,11 +1680,11 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           ),
         ),
         SizedBox(height: 24.h),
-        _buildConfirmRow('Network', _selectedMethod.name),
-        _buildConfirmRow('Amount', '\$\${amount.toStringAsFixed(2)}'),
-        _buildConfirmRow('Wallet', _formatAddress(_addressController.text.trim())),
+        _buildConfirmRow('Method', _selectedMethod.name),
+        _buildConfirmRow('Amount', '\$${amount.toStringAsFixed(2)}'),
+        _buildConfirmRow('Network Fee', '${_selectedMethod.fee} ${_selectedMethod.symbol}'),
         Divider(color: AppColors.border, height: 24.h),
-        _buildConfirmRow('Total Deduction', '\$\${amount.toStringAsFixed(2)}', isTotal: true),
+        _buildConfirmRow('Total Deduction', '\$${total.toStringAsFixed(2)}', isTotal: true),
         SizedBox(height: 24.h),
         Container(
           padding: EdgeInsets.all(16.w),
