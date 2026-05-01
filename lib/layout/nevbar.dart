@@ -42,7 +42,7 @@ class FloatingBottomNav extends StatelessWidget {
                 _navItem(2, CupertinoIcons.person_2_fill, "Refer"),
                 SizedBox(width: 60.w), // Mining button gap
                 _navItem(3, CupertinoIcons.briefcase_fill, "Wallet"),
-                _navItem(4, CupertinoIcons.arrow_down_circle_fill, "Withdraw"),
+                _navItem(4, CupertinoIcons.money_dollar_circle_fill, "Cash"),
               ],
             ),
           ),
