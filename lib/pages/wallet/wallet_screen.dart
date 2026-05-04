@@ -345,7 +345,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
             ),
             SizedBox(height: 2.h),
             Text(
-              'Manage your SOL deposits',
+              'Manage your SOL funds',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
                 fontSize: 12.sp,
@@ -527,7 +527,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       children: [
         Expanded(
           child: _buildActionButton(
-            'Deposit',
+            'Add Funds',
             AppColors.accentGreen,
             AppLottie.coinSpin,
             () => _showDepositSheet(),
@@ -588,7 +588,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           ],
         ),
       ),
-    ).animate().fadeIn(delay: 200.ms).slideX(begin: label == 'Deposit' ? -0.2 : 0.2, end: 0);
+    ).animate().fadeIn(delay: 200.ms).slideX(begin: label == 'Add Funds' ? -0.2 : 0.2, end: 0);
   }
 
   Widget _buildHistoryHeader() {
@@ -667,7 +667,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           ),
           SizedBox(height: 6.h),
           Text(
-            'Your deposit history will appear here',
+            'Your funding history will appear here',
             style: GoogleFonts.inter(
               color: AppColors.textSecondary,
               fontSize: 12.sp,
@@ -684,7 +684,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 border: Border.all(color: AppColors.accentGreen.withOpacity(0.3)),
               ),
               child: Text(
-                'Make First Deposit',
+                'Add Funds',
                 style: GoogleFonts.inter(
                   color: AppColors.accentGreen,
                   fontSize: 12.sp,
@@ -762,7 +762,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SOL Deposit',
+                    'Added Funds',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
                       fontSize: 13.sp,

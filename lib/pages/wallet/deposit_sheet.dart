@@ -10,30 +10,26 @@ import 'package:http/http.dart' as http;
 
 // --- Colors ------------------------------------------------------------------
 class AppColors {
-  static const Color background = Color(0xFF0A0A0F);
-  static const Color surface = Color(0xFF12121A);
-  static const Color accentGreen = Color(0xFF00FFA3);
+  static const Color background   = Color(0xFF0A0A0F);
+  static const Color surface      = Color(0xFF12121A);
+  static const Color accentGreen  = Color(0xFF00FFA3);
   static const Color accentPurple = Color(0xFFB829F7);
-  static const Color accentBlue = Color(0xFF00D4FF);
+  static const Color accentBlue   = Color(0xFF00D4FF);
   static const Color accentOrange = Color(0xFFFF9500);
-  static const Color accentRed = Color(0xFFFF4D4D);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF8B8B9E);
-  static const Color textMuted = Color(0xFF4A4A5A);
-  static const Color border = Color(0xFF2A2A3A);
-  static const Color cardBg = Color(0xFF161620);
+  static const Color accentRed    = Color(0xFFFF4D4D);
+  static const Color textPrimary  = Color(0xFFFFFFFF);
+  static const Color textSecondary= Color(0xFF8B8B9E);
+  static const Color textMuted    = Color(0xFF4A4A5A);
+  static const Color border       = Color(0xFF2A2A3A);
+  static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie URLs (only essential animations kept)
+// Lottie URLs (only essential)
 class AppLottie {
-  static const String solCoin =
-      'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String txSuccess =
-      'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
-  static const String txFailed =
-      'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
-  static const String confetti =
-      'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+  static const String solCoin   = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String txSuccess = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
+  static const String txFailed  = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
+  static const String confetti  = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
@@ -144,8 +140,8 @@ class _DepositSheetState extends State<DepositSheet>
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20.r),
-                  border:
-                      Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
+                  border: Border.all(
+                      color: AppColors.accentGreen.withOpacity(0.5)),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.accentGreen.withOpacity(0.2),
@@ -183,7 +179,7 @@ class _DepositSheetState extends State<DepositSheet>
                           ),
                           SizedBox(height: 12.h),
                           Text(
-                            'Deposit Successful!',
+                            'Funds Added!',
                             style: GoogleFonts.inter(
                               color: AppColors.textPrimary,
                               fontSize: 18.sp,
@@ -212,12 +208,11 @@ class _DepositSheetState extends State<DepositSheet>
                               SizedBox(
                                 width: 14.w,
                                 height: 14.h,
-                                child:
-                                    Lottie.network(AppLottie.solCoin),
+                                child: Lottie.network(AppLottie.solCoin),
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                '$sol SOL deposited',
+                                '$sol SOL added',
                                 style: GoogleFonts.spaceMono(
                                   color: AppColors.textSecondary,
                                   fontSize: 12.sp,
@@ -322,7 +317,7 @@ class _DepositSheetState extends State<DepositSheet>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Deposit SOL',
+                        'Add Funds',
                         style: GoogleFonts.inter(
                           color: AppColors.textPrimary,
                           fontSize: 18.sp,
@@ -538,7 +533,7 @@ class _DepositSheetState extends State<DepositSheet>
         SizedBox(height: 16.h),
         _buildInfoCard(
           Icons.info_outline,
-          'Minimum Deposit',
+          'Minimum Amount',
           '0.001 SOL required',
           AppColors.accentOrange,
         ),
@@ -612,7 +607,7 @@ class _DepositSheetState extends State<DepositSheet>
         ),
         SizedBox(height: 6.h),
         Text(
-          'Paste the transaction hash from your wallet to verify and credit your deposit.',
+          'Paste the transaction hash from your wallet to verify and credit your add funds.',
           style: GoogleFonts.inter(
             color: AppColors.textSecondary,
             fontSize: 12.sp,
@@ -625,8 +620,8 @@ class _DepositSheetState extends State<DepositSheet>
           decoration: BoxDecoration(
             color: AppColors.accentBlue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10.r),
-            border:
-                Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+            border: Border.all(
+                color: AppColors.accentBlue.withOpacity(0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,8 +711,8 @@ class _DepositSheetState extends State<DepositSheet>
             decoration: BoxDecoration(
               color: AppColors.accentRed.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10.r),
-              border:
-                  Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+              border: Border.all(
+                  color: AppColors.accentRed.withOpacity(0.3)),
             ),
             child: Row(
               children: [
