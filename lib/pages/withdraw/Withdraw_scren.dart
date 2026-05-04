@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,57 +14,64 @@ import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
 
-// --- Colors ---------------------------------------------------------------
-class AppColors {
-  static const Color background   = Color(0xFF0A0A0F);
-  static const Color surface      = Color(0xFF12121A);
-  static const Color accentGreen  = Color(0xFF00FFA3);
-  static const Color accentPurple = Color(0xFFB829F7);
-  static const Color accentBlue   = Color(0xFF00D4FF);
-  static const Color accentOrange = Color(0xFFFF9500);
-  static const Color accentRed    = Color(0xFFFF4D4D);
-  static const Color textPrimary  = Color(0xFFFFFFFF);
-  static const Color textSecondary= Color(0xFF8B8B9E);
-  static const Color textMuted    = Color(0xFF4A4A5A);
-  static const Color border       = Color(0xFF2A2A3A);
-  static const Color cardBg       = Color(0xFF161620);
+// ─────────────────────────────────────────────────────────────────────────────
+//  DESIGN TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+class _C {
+  // Backgrounds
+  static const bg0     = Color(0xFF050508);   // deepest
+  static const bg1     = Color(0xFF0D0D14);   // base
+  static const bg2     = Color(0xFF13131F);   // surface
+  static const bg3     = Color(0xFF1A1A28);   // elevated
+
+  // Neon accents
+  static const cyan    = Color(0xFF00E5FF);
+  static const green   = Color(0xFF00FF94);
+  static const purple  = Color(0xFF7B4FFF);
+  static const magenta = Color(0xFFFF2D78);
+  static const amber   = Color(0xFFFFB800);
+
+  // Text
+  static const t1 = Color(0xFFEEEEFF);
+  static const t2 = Color(0xFF7878A0);
+  static const t3 = Color(0xFF3C3C58);
+
+  // Border
+  static const b1 = Color(0xFF252538);
+  static const b2 = Color(0xFF353550);
 }
 
-// Lottie URLs
-class AppLottie {
-  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
-  static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
-  static const String txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
-  static const String txSuccess    = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
-  static const String txFailed     = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
-  static const String errorCloud   = 'https://assets10.lottiefiles.com/packages/lf20_kcsr6fcp.json';
-  static const String copy         = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
-  static const String info         = 'https://assets10.lottiefiles.com/packages/lf20_b6cz19m8.json';
-  static const String warning      = 'https://assets10.lottiefiles.com/packages/lf20_Tkwjw8.json';
-  static const String secure       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
-  static const String question     = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
-  static const String verifyLoading= 'https://assets10.lottiefiles.com/packages/lf20_p8bfn5to.json';
-  static const String arrowRight   = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
-  static const String confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
-  static const String loadingSpinner='https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
-  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String wallet       = 'https://assets10.lottiefiles.com/packages/lf20_hu7birqV.json';
-  static const String send         = 'https://assets10.lottiefiles.com/packages/lf20_3rlc1l.json';
-  static const String moneyOut     = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
+// ─────────────────────────────────────────────────────────────────────────────
+//  LOTTIE ASSETS
+// ─────────────────────────────────────────────────────────────────────────────
+class _L {
+  static const coinSpin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const refresh       = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const emptyHistory  = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
+  static const txPending     = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
+  static const txSuccess     = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
+  static const txFailed      = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
+  static const copy          = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
+  static const warning       = 'https://assets10.lottiefiles.com/packages/lf20_Tkwjw8.json';
+  static const wallet        = 'https://assets10.lottiefiles.com/packages/lf20_hu7birqV.json';
+  static const moneyOut      = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
+  static const arrowRight    = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
+  static const confetti      = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+  static const verifyLoading = 'https://assets10.lottiefiles.com/packages/lf20_p8bfn5to.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// --- Withdraw Methods (BEP20 Network) -------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  WITHDRAW METHOD MODEL
+// ─────────────────────────────────────────────────────────────────────────────
 class WithdrawMethod {
   final String name;
   final String symbol;
   final String iconUrl;
-  final Color color;
+  final Color  color;
   final double minAmount;
   final double maxAmount;
-  final double fee;
 
   const WithdrawMethod({
     required this.name,
@@ -72,7 +80,6 @@ class WithdrawMethod {
     required this.color,
     required this.minAmount,
     required this.maxAmount,
-    required this.fee,
   });
 }
 
@@ -80,15 +87,174 @@ final List<WithdrawMethod> _withdrawMethods = [
   WithdrawMethod(
     name: 'BEP20 (BSC)',
     symbol: 'BEP20',
-    iconUrl: AppLottie.coinSpin,
-    color: AppColors.accentGreen,
+    iconUrl: _L.coinSpin,
+    color: _C.amber,
     minAmount: 5,
     maxAmount: 10000,
-    fee: 0,
   ),
 ];
 
-// --- Main Screen ----------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEX GRID PAINTER  (background decoration)
+// ─────────────────────────────────────────────────────────────────────────────
+class _HexGridPainter extends CustomPainter {
+  final double opacity;
+  const _HexGridPainter({this.opacity = 1});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = _C.cyan.withOpacity(0.035 * opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.6;
+
+    const r = 28.0;
+    const dx = r * 1.732;
+    const dy = r * 1.5;
+
+    int row = 0;
+    for (double y = -r; y < size.height + r; y += dy) {
+      final offset = (row % 2 == 0) ? 0.0 : dx / 2;
+      for (double x = -r + offset; x < size.width + r; x += dx) {
+        _drawHex(canvas, paint, Offset(x, y), r);
+      }
+      row++;
+    }
+  }
+
+  void _drawHex(Canvas canvas, Paint paint, Offset center, double r) {
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final angle = math.pi / 180 * (60 * i - 30);
+      final pt = Offset(center.dx + r * math.cos(angle), center.dy + r * math.sin(angle));
+      i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_HexGridPainter old) => old.opacity != opacity;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  NEON BORDER WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+class _NeonBorder extends StatefulWidget {
+  final Widget child;
+  final double radius;
+  final Color color;
+  final bool animate;
+
+  const _NeonBorder({
+    required this.child,
+    this.radius = 20,
+    this.color = _C.cyan,
+    this.animate = false,
+  });
+
+  @override
+  State<_NeonBorder> createState() => _NeonBorderState();
+}
+
+class _NeonBorderState extends State<_NeonBorder> with SingleTickerProviderStateMixin {
+  late AnimationController _ac;
+
+  @override
+  void initState() {
+    super.initState();
+    _ac = AnimationController(vsync: this, duration: const Duration(seconds: 3))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.animate) {
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(widget.radius),
+          border: Border.all(color: widget.color.withOpacity(0.3), width: 1),
+          boxShadow: [BoxShadow(color: widget.color.withOpacity(0.08), blurRadius: 16)],
+        ),
+        child: widget.child,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _ac,
+      builder: (_, __) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: SweepGradient(
+              center: Alignment.center,
+              startAngle: 0,
+              endAngle: math.pi * 2,
+              transform: GradientRotation(_ac.value * math.pi * 2),
+              colors: [
+                widget.color.withOpacity(0.0),
+                widget.color.withOpacity(0.8),
+                widget.color.withOpacity(0.0),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(color: widget.color.withOpacity(0.15), blurRadius: 24),
+            ],
+          ),
+          padding: const EdgeInsets.all(1.2),
+          child: Container(
+            decoration: BoxDecoration(
+              color: _C.bg2,
+              borderRadius: BorderRadius.circular(widget.radius - 1),
+            ),
+            child: widget.child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  GLOWING TAG
+// ─────────────────────────────────────────────────────────────────────────────
+class _GlowTag extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _GlowTag(this.label, {this.color = _C.green});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withOpacity(0.35)),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.15), blurRadius: 10)],
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.orbitron(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  WITHDRAW SCREEN
+// ─────────────────────────────────────────────────────────────────────────────
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
 
@@ -97,36 +263,36 @@ class WithdrawScreen extends StatefulWidget {
 }
 
 class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStateMixin {
-  bool   _isLoading      = true;
-  bool   _hasError       = false;
-  bool   _isRefreshing   = false;
-  double _balance        = 0;
-  double _displayBalance = 0;
+  bool   _isLoading    = true;
+  bool   _hasError     = false;
+  bool   _isRefreshing = false;
+  double _balance      = 0;
+  double _displayBal   = 0;
   List<Map<String, dynamic>> _history = [];
-  int _currentPage = 1;
-  bool _hasMoreData = true;
+  int  _currentPage  = 1;
+  bool _hasMoreData  = true;
 
-  late AnimationController _balanceController;
-  late Animation<double> _balanceAnimation;
+  late AnimationController _balCtrl;
+  late Animation<double>   _balAnim;
+  late AnimationController _scanCtrl;
 
   @override
   void initState() {
     super.initState();
-    _balanceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    _balanceAnimation = CurvedAnimation(
-      parent: _balanceController,
-      curve: Curves.easeOutCubic,
-    );
+
+    _balCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _balAnim = CurvedAnimation(parent: _balCtrl, curve: Curves.easeOutCubic);
+
+    _scanCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
   }
 
   @override
   void dispose() {
-    _balanceController.dispose();
+    _balCtrl.dispose();
+    _scanCtrl.dispose();
     super.dispose();
   }
 
@@ -135,120 +301,65 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   Map<String, String> _headers() => {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer \${_getToken()}',
+    'Authorization': 'Bearer ${_getToken()}',
   };
 
-  void _animateBalance(double newValue) {
-    final double oldValue = _displayBalance;
-    _balanceAnimation.addListener(() {
-      if (mounted) {
-        setState(() {
-          _displayBalance = oldValue + (newValue - oldValue) * _balanceAnimation.value;
-        });
-      }
+  void _animateBalance(double newVal) {
+    final old = _displayBal;
+    _balAnim.addListener(() {
+      if (mounted) setState(() => _displayBal = old + (newVal - old) * _balAnim.value);
     });
-    _balanceController.forward(from: 0);
+    _balCtrl.forward(from: 0);
   }
 
   Future<void> _loadAll({bool silent = false, bool loadMore = false}) async {
-    if (!silent) {
-      setState(() { _isLoading = true; _hasError = false; });
-    }
-
+    if (!silent) setState(() { _isLoading = true; _hasError = false; });
     try {
       final token = _getToken();
-      if (token == null) { 
-        setState(() { _isLoading = false; _hasError = true; }); 
-        return; 
-      }
+      if (token == null) { setState(() { _isLoading = false; _hasError = true; }); return; }
 
-      if (!loadMore) {
-        _currentPage = 1;
-        _hasMoreData = true;
-      }
-
+      if (!loadMore) { _currentPage = 1; _hasMoreData = true; }
       final page = loadMore ? _currentPage + 1 : 1;
 
       final results = await Future.wait([
-        http.get(Uri.parse('\$_baseUrl/api/mining/status'), headers: _headers())
+        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _headers())
             .timeout(const Duration(seconds: 15)),
-        http.get(
-          Uri.parse('\$_baseUrl/api/withdraw/history?page=\$page&limit=10'),
-          headers: _headers(),
-        ).timeout(const Duration(seconds: 15)),
+        http.get(Uri.parse('$_baseUrl/api/withdraw/history?page=$page&limit=10'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
       ]);
 
       if (!mounted) return;
-
       final statusRes = results[0];
-      final histRes = results[1];
+      final histRes   = results[1];
 
       if (statusRes.statusCode == 200) {
-        final status = jsonDecode(statusRes.body);
-        final newBalance = double.tryParse(status['withdrawable']?.toString() ?? '0') ?? 0;
-        if (_balance != newBalance) {
-          _balance = newBalance;
-          _animateBalance(newBalance);
-        }
+        final status  = jsonDecode(statusRes.body);
+        final newBal  = double.tryParse(status['withdrawable']?.toString() ?? '0') ?? 0;
+        if (_balance != newBal) { _balance = newBal; _animateBalance(newBal); }
       }
-
       if (histRes.statusCode == 200) {
-        final h = jsonDecode(histRes.body);
-        final List<Map<String, dynamic>> newData = 
-            List<Map<String, dynamic>>.from(h['data'] ?? []);
-
+        final h   = jsonDecode(histRes.body);
+        final List<Map<String, dynamic>> nd = List<Map<String, dynamic>>.from(h['data'] ?? []);
         if (loadMore) {
-          if (newData.isEmpty) {
-            _hasMoreData = false;
-          } else {
-            _history.addAll(newData);
-            _currentPage = page;
-          }
+          if (nd.isEmpty) { _hasMoreData = false; } else { _history.addAll(nd); _currentPage = page; }
         } else {
-          _history = newData;
-          _currentPage = 1;
-          _hasMoreData = newData.length >= 10;
+          _history = nd; _currentPage = 1; _hasMoreData = nd.length >= 10;
         }
       }
-
       setState(() => _isLoading = false);
     } on Exception catch (e) {
       if (mounted) {
         setState(() { _isLoading = false; _hasError = true; });
-        String errorMsg = 'Connection error. Please retry.';
-        if (e.toString().contains('timeout')) {
-          errorMsg = 'Connection timeout. Please try again.';
-        } else if (e.toString().contains('Socket') || e.toString().contains('Network')) {
-          errorMsg = 'No internet connection.';
-        }
-        _showErrorSnackBar(errorMsg);
+        _toast(e.toString().contains('timeout') ? 'Connection timeout.' : 'Network error.', _C.magenta);
       }
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  void _toast(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20.w,
-              height: 20.h,
-              child: Lottie.network(AppLottie.warning, repeat: false),
-            ),
-            SizedBox(width: 10.w),
-            Expanded(
-              child: Text(
-                message,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 13.sp,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.accentRed.withOpacity(0.9),
+        content: Text(msg, style: GoogleFonts.rajdhani(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.w600)),
+        backgroundColor: color.withOpacity(0.9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         margin: EdgeInsets.all(16.w),
@@ -263,148 +374,89 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     setState(() => _isRefreshing = false);
   }
 
-  void _loadMore() {
-    if (_hasMoreData && !_isLoading) {
-      _loadAll(silent: true, loadMore: true);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _isLoading
-          ? _buildSkeletonLoading()
-          : _hasError
-              ? CustomErrorWidget(onRetry: _loadAll)
-              : RefreshIndicator(
-                  color: AppColors.accentGreen,
-                  backgroundColor: AppColors.surface,
-                  strokeWidth: 3,
-                  onRefresh: _onRefresh,
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(height: 60.h),
-                              _buildHeader(),
-                              SizedBox(height: 24.h),
-                              _buildBalanceCard(),
-                              SizedBox(height: 24.h),
-                              _buildActionButtons(),
-                              SizedBox(height: 32.h),
-                              _buildHistoryHeader(),
-                              SizedBox(height: 16.h),
-                            ],
-                          ),
-                        ),
-                      ),
-                      _buildHistoryList(),
-                      if (_hasMoreData && _history.isNotEmpty)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.w),
-                            child: Center(
-                              child: GestureDetector(
-                                onTap: _loadMore,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Text(
-                                    'Load More',
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.accentGreen,
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      SliverToBoxAdapter(
-                        child: SizedBox(height: 100.h),
-                      ),
-                    ],
-                  ),
-                ),
+      backgroundColor: _C.bg0,
+      body: Stack(
+        children: [
+          // Hex grid background
+          Positioned.fill(
+            child: CustomPaint(painter: _HexGridPainter()),
+          ),
+          // Radial glow top-left
+          Positioned(
+            top: -120, left: -80,
+            child: Container(
+              width: 320, height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  _C.cyan.withOpacity(0.07),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+          // Radial glow bottom-right
+          Positioned(
+            bottom: -100, right: -60,
+            child: Container(
+              width: 280, height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  _C.purple.withOpacity(0.06),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+          if (_isLoading)
+            _buildSkeleton()
+          else if (_hasError)
+            CustomErrorWidget(onRetry: _loadAll)
+          else
+            RefreshIndicator(
+              color: _C.cyan,
+              backgroundColor: _C.bg2,
+              strokeWidth: 2,
+              onRefresh: _onRefresh,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(child: _buildTopSection()),
+                  _buildHistorySliver(),
+                  if (_hasMoreData && _history.isNotEmpty)
+                    SliverToBoxAdapter(child: _buildLoadMore()),
+                  SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSkeletonLoading() {
-    return Shimmer.fromColors(
-      baseColor: AppColors.surface,
-      highlightColor: AppColors.cardBg.withOpacity(0.5),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        child: Column(
-          children: [
-            SizedBox(height: 60.h),
-            Container(
-              width: double.infinity,
-              height: 200.h,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(24.r),
-              ),
-            ),
-            SizedBox(height: 24.h),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 60.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Container(
-                    height: 60.h,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 32.h),
-            Container(
-              width: 120.w,
-              height: 24.h,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            SizedBox(height: 16.h),
-            ...List.generate(3, (index) => Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
-              child: Container(
-                width: double.infinity,
-                height: 80.h,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-              ),
-            )),
-          ],
-        ),
+  // ── TOP SECTION ──────────────────────────────────────────────────────────
+  Widget _buildTopSection() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 56.h),
+          _buildHeader(),
+          SizedBox(height: 24.h),
+          _buildBalanceCard(),
+          SizedBox(height: 20.h),
+          _buildQuickStats(),
+          SizedBox(height: 20.h),
+          _buildWithdrawButton(),
+          SizedBox(height: 32.h),
+          _buildSectionLabel('TRANSACTION HISTORY'),
+          SizedBox(height: 14.h),
+        ],
       ),
     );
   }
@@ -417,54 +469,56 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Withdraw',
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 28.sp,
-                fontWeight: FontWeight.bold,
+              'WITHDRAW',
+              style: GoogleFonts.orbitron(
+                color: _C.t1,
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
               ),
             ),
             SizedBox(height: 4.h),
-            Text(
-              'Withdraw your earnings securely',
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 14.sp,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 6, height: 6,
+                  decoration: BoxDecoration(
+                    color: _C.green,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: _C.green.withOpacity(0.6), blurRadius: 6)],
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  'BEP20 Network  •  Live',
+                  style: GoogleFonts.rajdhani(
+                    color: _C.t2,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         GestureDetector(
           onTap: _isRefreshing ? null : _onRefresh,
           child: Container(
-            width: 44.w,
-            height: 44.h,
+            width: 44.w, height: 44.h,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: _C.bg2,
               borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: _C.b1),
             ),
             child: _isRefreshing
-                ? Center(
-                    child: SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
-                      ),
-                    ),
-                  )
-                : Center(
-                    child: SizedBox(
-                      width: 24.w,
-                      height: 24.h,
-                      child: Lottie.network(
-                        AppLottie.refresh,
-                        repeat: false,
-                      ),
-                    ),
-                  ),
+                ? Center(child: SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 1.5, color: _C.cyan),
+                  ))
+                : Center(child: SizedBox(
+                    width: 24.w, height: 24.h,
+                    child: Lottie.network(_L.refresh, repeat: false),
+                  )),
           ),
         ),
       ],
@@ -472,250 +526,268 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   }
 
   Widget _buildBalanceCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.accentRed.withOpacity(0.3),
-            AppColors.accentOrange.withOpacity(0.1),
-            AppColors.surface,
-          ],
-          stops: const [0.0, 0.5, 1.0],
-        ),
-        border: Border.all(
-          color: AppColors.accentRed.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentRed.withOpacity(0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return _NeonBorder(
+      radius: 24,
+      color: _C.cyan,
+      animate: true,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24.r),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Padding(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _C.bg3.withOpacity(0.95),
+                  _C.bg2.withOpacity(0.95),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24.r),
+            ),
             padding: EdgeInsets.all(24.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Decorative circuit lines
+                Positioned(
+                  top: 0, right: 0,
+                  child: CustomPaint(
+                    size: const Size(80, 80),
+                    painter: _CircuitPainter(color: _C.cyan.withOpacity(0.12)),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentGreen.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(
-                          color: AppColors.accentGreen.withOpacity(0.3),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _GlowTag('● WITHDRAWABLE', color: _C.green),
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 18.w, height: 18.h,
+                              child: Lottie.network(_L.wallet),
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              'BSC CHAIN',
+                              style: GoogleFonts.orbitron(
+                                color: _C.t2, fontSize: 9.sp, letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6.w,
-                            height: 6.h,
-                            decoration: BoxDecoration(
-                              color: AppColors.accentGreen,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            'AVAILABLE',
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ],
+                      ],
+                    ),
+                    SizedBox(height: 22.h),
+                    Text(
+                      'Available Balance',
+                      style: GoogleFonts.rajdhani(
+                        color: _C.t2, fontSize: 13.sp, fontWeight: FontWeight.w500,
                       ),
                     ),
+                    SizedBox(height: 6.h),
+                    AnimatedBuilder(
+                      animation: _balAnim,
+                      builder: (_, __) => RichText(
+                        text: TextSpan(children: [
+                          TextSpan(
+                            text: '\$',
+                            style: GoogleFonts.orbitron(
+                              color: _C.cyan.withOpacity(0.7),
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          TextSpan(
+                            text: _displayBal.toStringAsFixed(2),
+                            style: GoogleFonts.orbitron(
+                              color: _C.t1,
+                              fontSize: 38.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
                     Row(
                       children: [
-                        SizedBox(
-                          width: 20.w,
-                          height: 20.h,
-                          child: Lottie.network(AppLottie.wallet),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _C.green.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: _C.green.withOpacity(0.2)),
+                          ),
+                          child: Text(
+                            'MIN \$5 · MAX \$10,000',
+                            style: GoogleFonts.orbitron(
+                              color: _C.green.withOpacity(0.8),
+                              fontSize: 8.sp,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
                         ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          'Withdrawable',
-                          style: GoogleFonts.inter(
-                            color: AppColors.textSecondary,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _C.amber.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: _C.amber.withOpacity(0.2)),
+                          ),
+                          child: Text(
+                            'ZERO FEE',
+                            style: GoogleFonts.orbitron(
+                              color: _C.amber,
+                              fontSize: 8.sp,
+                              letterSpacing: 0.8,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                SizedBox(height: 20.h),
-                Text(
-                  'Available Balance',
-                  style: GoogleFonts.inter(
-                    color: AppColors.textSecondary,
-                    fontSize: 14.sp,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                AnimatedBuilder(
-                  animation: _balanceAnimation,
-                  builder: (context, child) {
-                    return Text(
-                      '\$\${_displayBalance.toStringAsFixed(2)}',
-                      style: GoogleFonts.inter(
-                        color: AppColors.textPrimary,
-                        fontSize: 40.sp,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -1,
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'Ready to withdraw',
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.accentRed,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ],
             ),
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.15, end: 0);
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildQuickStats() {
     return Row(
       children: [
-        Expanded(
-          child: _buildActionButton(
-            'Withdraw Now',
-            AppColors.accentRed,
-            AppLottie.moneyOut,
-            () => _showWithdrawSheet(),
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: _buildActionButton(
-            'History',
-            AppColors.accentBlue,
-            AppLottie.wallet,
-            () {},
-          ),
-        ),
+        Expanded(child: _statTile('PENDING', '${_history.where((h) => h['status'] == 'pending').length}', _C.amber)),
+        SizedBox(width: 10.w),
+        Expanded(child: _statTile('APPROVED', '${_history.where((h) => h['status'] == 'approved').length}', _C.green)),
+        SizedBox(width: 10.w),
+        Expanded(child: _statTile('REJECTED', '${_history.where((h) => h['status'] == 'rejected').length}', _C.magenta)),
       ],
     );
   }
 
-  Widget _buildActionButton(
-    String label,
-    Color color,
-    String lottieUrl,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 64.h,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+  Widget _statTile(String label, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 14.h),
+      decoration: BoxDecoration(
+        color: _C.bg2,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.06), blurRadius: 16)],
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: GoogleFonts.orbitron(
+              color: color,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w700,
             ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            label,
+            style: GoogleFonts.rajdhani(
+              color: _C.t2,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 200.ms);
+  }
+
+  Widget _buildWithdrawButton() {
+    return GestureDetector(
+      onTap: _showWithdrawSheet,
+      child: Container(
+        width: double.infinity,
+        height: 58.h,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF00E5FF), Color(0xFF7B4FFF)],
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(color: _C.cyan.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 8)),
+            BoxShadow(color: _C.purple.withOpacity(0.2), blurRadius: 24, offset: const Offset(0, 8)),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              width: 28.w,
-              height: 28.h,
-              child: Lottie.network(lottieUrl),
+              width: 28.w, height: 28.h,
+              child: Lottie.network(_L.moneyOut),
             ),
-            SizedBox(width: 10.w),
+            SizedBox(width: 12.w),
             Text(
-              label,
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
+              'WITHDRAW NOW',
+              style: GoogleFonts.orbitron(
+                color: Colors.black,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
               ),
             ),
           ],
         ),
       ),
-    ).animate().fadeIn(delay: 200.ms).slideX(begin: label == 'Withdraw Now' ? -0.2 : 0.2, end: 0);
+    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildHistoryHeader() {
+  Widget _buildSectionLabel(String label) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Recent Withdrawals',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
+        Container(
+          width: 3, height: 14,
+          decoration: BoxDecoration(
+            color: _C.cyan,
+            borderRadius: BorderRadius.circular(2),
+            boxShadow: [BoxShadow(color: _C.cyan.withOpacity(0.6), blurRadius: 8)],
           ),
         ),
-        if (_history.isNotEmpty)
-          GestureDetector(
-            onTap: () {},
-            child: Text(
-              'View All',
-              style: GoogleFonts.inter(
-                color: AppColors.accentGreen,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        SizedBox(width: 8.w),
+        Text(
+          label,
+          style: GoogleFonts.orbitron(
+            color: _C.t2,
+            fontSize: 11.sp,
+            letterSpacing: 2,
+            fontWeight: FontWeight.w600,
           ),
+        ),
       ],
     );
   }
 
-  Widget _buildHistoryList() {
+  // ── HISTORY ──────────────────────────────────────────────────────────────
+  Widget _buildHistorySliver() {
     if (_history.isEmpty) {
       return SliverToBoxAdapter(
-        child: _buildEmptyState(),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: _buildEmptyState(),
+        ),
       );
     }
-
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final item = _history[index];
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
-            child: _buildTransactionItem(item, index),
-          );
-        },
+        (ctx, i) => Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
+          child: _buildTxCard(_history[i], i),
+        ),
         childCount: _history.length,
       ),
     );
@@ -723,54 +795,31 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   Widget _buildEmptyState() {
     return Container(
-      width: double.infinity,
       padding: EdgeInsets.symmetric(vertical: 40.h),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: _C.bg2,
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: _C.b1),
       ),
       child: Column(
         children: [
-          SizedBox(
-            width: 120.w,
-            height: 120.h,
-            child: Lottie.network(AppLottie.emptyHistory),
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'No withdrawals yet',
-            style: GoogleFonts.inter(
-              color: AppColors.textPrimary,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Your withdrawal history will appear here',
-            style: GoogleFonts.inter(
-              color: AppColors.textSecondary,
-              fontSize: 13.sp,
-            ),
-          ),
+          SizedBox(width: 100.w, height: 100.h, child: Lottie.network(_L.emptyHistory)),
+          SizedBox(height: 14.h),
+          Text('No transactions yet', style: GoogleFonts.orbitron(color: _C.t1, fontSize: 14.sp, fontWeight: FontWeight.w600)),
+          SizedBox(height: 6.h),
+          Text('Your withdrawals will appear here', style: GoogleFonts.rajdhani(color: _C.t2, fontSize: 13.sp)),
           SizedBox(height: 20.h),
           GestureDetector(
-            onTap: () => _showWithdrawSheet(),
+            onTap: _showWithdrawSheet,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.accentRed.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+                gradient: const LinearGradient(colors: [_C.cyan, _C.purple]),
+                borderRadius: BorderRadius.circular(100),
               ),
               child: Text(
-                'Make First Withdrawal',
-                style: GoogleFonts.inter(
-                  color: AppColors.accentRed,
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+                'MAKE FIRST WITHDRAWAL',
+                style: GoogleFonts.orbitron(color: Colors.black, fontSize: 10.sp, fontWeight: FontWeight.w700, letterSpacing: 1),
               ),
             ),
           ),
@@ -779,171 +828,184 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
-    final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
-    final status = data['status']?.toString() ?? 'pending';
+  Widget _buildTxCard(Map<String, dynamic> data, int index) {
+    final amount  = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
+    final status  = data['status']?.toString() ?? 'pending';
     final address = data['wallet_address']?.toString() ?? '';
-    final date = data['created_at']?.toString() ?? '';
+    final date    = data['created_at']?.toString() ?? '';
     final network = data['network']?.toString() ?? 'BEP20';
 
-    final bool isApproved = status == 'approved';
-    final bool isRejected = status == 'rejected';
-    final bool isPending = status == 'pending';
+    final isApproved = status == 'approved';
+    final isRejected = status == 'rejected';
 
-    Color statusColor;
-    String statusLottie;
-    String statusText;
+    final Color statusColor;
+    final String statusLottie;
+    final String statusText;
 
     if (isApproved) {
-      statusColor = AppColors.accentGreen;
-      statusLottie = AppLottie.txSuccess;
-      statusText = 'Approved';
+      statusColor = _C.green; statusLottie = _L.txSuccess; statusText = 'APPROVED';
     } else if (isRejected) {
-      statusColor = AppColors.accentRed;
-      statusLottie = AppLottie.txFailed;
-      statusText = 'Rejected';
+      statusColor = _C.magenta; statusLottie = _L.txFailed; statusText = 'REJECTED';
     } else {
-      statusColor = AppColors.accentOrange;
-      statusLottie = AppLottie.txPending;
-      statusText = 'Pending';
+      statusColor = _C.amber; statusLottie = _L.txPending; statusText = 'PENDING';
     }
 
     return GestureDetector(
       onTap: () {
         Clipboard.setData(ClipboardData(text: address));
-        _showCopiedSnackBar();
+        _toast('Address copied!', _C.green);
       },
       child: Container(
-        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: _C.bg2,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.border),
+          border: Border(left: BorderSide(color: statusColor, width: 3)),
+          boxShadow: [BoxShadow(color: statusColor.withOpacity(0.06), blurRadius: 20)],
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48.w,
-              height: 48.h,
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Center(
-                child: SizedBox(
-                  width: 28.w,
-                  height: 28.h,
-                  child: Lottie.network(statusLottie, repeat: isPending),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: _C.b1),
+          ),
+          padding: EdgeInsets.all(14.w),
+          child: Row(
+            children: [
+              Container(
+                width: 46.w, height: 46.h,
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: statusColor.withOpacity(0.25)),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 26.w, height: 26.h,
+                    child: Lottie.network(statusLottie, repeat: status == 'pending'),
+                  ),
                 ),
               ),
-            ),
-            SizedBox(width: 14.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '\$${amount.toStringAsFixed(2)}',
+                      style: GoogleFonts.orbitron(
+                        color: _C.t1,
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 3.h),
+                    Text(
+                      _fmtAddr(address),
+                      style: GoogleFonts.spaceMono(color: _C.t3, fontSize: 10.sp),
+                    ),
+                    SizedBox(height: 3.h),
+                    Text(
+                      _fmtDate(date),
+                      style: GoogleFonts.rajdhani(color: _C.t2, fontSize: 11.sp),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '\$${amount.toStringAsFixed(2)}',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textPrimary,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: statusColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: GoogleFonts.orbitron(
+                        color: statusColor,
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 6.h),
                   Text(
-                    _formatAddress(address),
-                    style: GoogleFonts.spaceMono(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    _formatDate(date),
-                    style: GoogleFonts.inter(
-                      color: AppColors.textSecondary,
-                      fontSize: 11.sp,
-                    ),
+                    network,
+                    style: GoogleFonts.spaceMono(color: _C.t2, fontSize: 10.sp),
                   ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: GoogleFonts.inter(
-                      color: statusColor,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  network,
-                  style: GoogleFonts.spaceMono(
-                    color: AppColors.textSecondary,
-                    fontSize: 11.sp,
-                  ),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
+    ).animate().fadeIn(delay: (index * 80).ms).slideX(begin: 0.15, end: 0);
   }
 
-  String _formatAddress(String address) {
-    if (address.length < 20) return address;
-    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
-  }
-
-  String _formatDate(String date) {
-    try {
-      final dt = DateTime.parse(date);
-      return '\${dt.day}/\${dt.month}/\${dt.year} • \${dt.hour}:\${dt.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return date;
-    }
-  }
-
-  void _showCopiedSnackBar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 20.w,
-              height: 20.h,
-              child: Lottie.network(AppLottie.copy, repeat: false),
+  Widget _buildLoadMore() {
+    return Padding(
+      padding: EdgeInsets.all(16.w),
+      child: Center(
+        child: GestureDetector(
+          onTap: () {
+            if (_hasMoreData && !_isLoading) _loadAll(silent: true, loadMore: true);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+            decoration: BoxDecoration(
+              color: _C.bg2,
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: _C.b2),
             ),
-            SizedBox(width: 10.w),
-            Text(
-              'Address copied!',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 13.sp,
-              ),
+            child: Text(
+              'LOAD MORE',
+              style: GoogleFonts.orbitron(color: _C.cyan, fontSize: 10.sp, letterSpacing: 1.5),
             ),
-          ],
+          ),
         ),
-        backgroundColor: AppColors.accentGreen.withOpacity(0.9),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-        margin: EdgeInsets.all(16.w),
-        duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // ── SKELETON ─────────────────────────────────────────────────────────────
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _C.bg2,
+      highlightColor: _C.bg3,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        child: Column(
+          children: [
+            SizedBox(height: 60.h),
+            Container(height: 200.h, decoration: BoxDecoration(color: _C.bg2, borderRadius: BorderRadius.circular(24.r))),
+            SizedBox(height: 16.h),
+            Row(children: List.generate(3, (_) => Expanded(child: Container(
+              margin: EdgeInsets.only(right: _ < 2 ? 10.w : 0),
+              height: 70.h,
+              decoration: BoxDecoration(color: _C.bg2, borderRadius: BorderRadius.circular(14.r)),
+            )))),
+            SizedBox(height: 16.h),
+            Container(height: 58.h, decoration: BoxDecoration(color: _C.bg2, borderRadius: BorderRadius.circular(16.r))),
+            SizedBox(height: 24.h),
+            ...List.generate(3, (_) => Padding(
+              padding: EdgeInsets.only(bottom: 10.h),
+              child: Container(height: 76.h, decoration: BoxDecoration(color: _C.bg2, borderRadius: BorderRadius.circular(16.r))),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  String _fmtAddr(String a) => a.length < 20 ? a : '${a.substring(0, 8)}...${a.substring(a.length - 8)}';
+  String _fmtDate(String d) {
+    try {
+      final dt = DateTime.parse(d);
+      return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) { return d; }
   }
 
   void _showWithdrawSheet() {
@@ -963,7 +1025,33 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   }
 }
 
-// --- Withdraw Sheet Widget ------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+//  CIRCUIT PAINTER  (decorative)
+// ─────────────────────────────────────────────────────────────────────────────
+class _CircuitPainter extends CustomPainter {
+  final Color color;
+  const _CircuitPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color..strokeWidth = 1..style = PaintingStyle.stroke;
+    canvas.drawLine(const Offset(0, 20), Offset(size.width * 0.6, 20), p);
+    canvas.drawLine(Offset(size.width * 0.6, 20), Offset(size.width * 0.6, 45), p);
+    canvas.drawLine(Offset(size.width * 0.6, 45), Offset(size.width, 45), p);
+    canvas.drawLine(Offset(size.width * 0.3, 20), Offset(size.width * 0.3, 0), p);
+    canvas.drawCircle(Offset(size.width * 0.6, 20), 3, p..style = PaintingStyle.fill);
+    canvas.drawCircle(Offset(size.width * 0.3, 20), 3, p);
+    p.style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(size.width * 0.8, 45), Offset(size.width * 0.8, 70), p);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  WITHDRAW SHEET
+// ─────────────────────────────────────────────────────────────────────────────
 class WithdrawSheet extends StatefulWidget {
   final double balance;
   final Map<String, String> headers;
@@ -981,118 +1069,74 @@ class WithdrawSheet extends StatefulWidget {
 }
 
 class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateMixin {
-  int _step = 0;
-  WithdrawMethod _selectedMethod = _withdrawMethods[0];
-  final _amountController = TextEditingController();
-  final _addressController = TextEditingController();
-  bool _isProcessing = false;
-  String _errorMessage = '';
+  int    _step = 0;
+  WithdrawMethod _method = _withdrawMethods[0];
+  final _amtCtrl  = TextEditingController();
+  final _addrCtrl = TextEditingController();
+  bool   _busy    = false;
+  String _err     = '';
 
-  late AnimationController _confettiController;
+  late AnimationController _successCtrl;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
+    _successCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
   }
 
   @override
   void dispose() {
-    _amountController.dispose();
-    _addressController.dispose();
-    _confettiController.dispose();
+    _amtCtrl.dispose(); _addrCtrl.dispose(); _successCtrl.dispose();
     super.dispose();
   }
 
-  void _setMaxAmount() {
-    final maxAmount = widget.balance;
-    if (maxAmount > 0) {
-      _amountController.text = maxAmount.toStringAsFixed(2);
-    }
+  void _setMax() {
+    if (widget.balance > 0) _amtCtrl.text = widget.balance.toStringAsFixed(2);
   }
 
-  void _validateAndProceed() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    final address = _addressController.text.trim();
+  void _validate() {
+    final amt  = double.tryParse(_amtCtrl.text) ?? 0;
+    final addr = _addrCtrl.text.trim();
 
-    if (amount <= 0) {
-      setState(() => _errorMessage = 'Please enter a valid amount');
+    if (amt <= 0) { setState(() => _err = 'Enter a valid amount'); return; }
+    if (amt < _method.minAmount) { setState(() => _err = 'Minimum is \$${_method.minAmount}'); return; }
+    if (amt > _method.maxAmount) { setState(() => _err = 'Maximum is \$${_method.maxAmount}'); return; }
+    if (amt > widget.balance) { setState(() => _err = 'Insufficient balance'); return; }
+    if (addr.isEmpty || !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(addr)) {
+      setState(() => _err = 'Enter a valid BEP20 address (0x...)');
       return;
     }
-
-    if (amount < _selectedMethod.minAmount) {
-      setState(() => _errorMessage = 'Minimum withdrawal is \$\${_selectedMethod.minAmount}');
-      return;
-    }
-
-    if (amount > _selectedMethod.maxAmount) {
-      setState(() => _errorMessage = 'Maximum withdrawal limit is \$\${_selectedMethod.maxAmount}');
-      return;
-    }
-
-    if (amount > widget.balance) {
-      setState(() => _errorMessage = 'Insufficient balance');
-      return;
-    }
-
-    if (address.isEmpty || !RegExp(r'^0x[a-fA-F0-9]{40}\$').hasMatch(address)) {
-      setState(() => _errorMessage = 'Please enter a valid BEP20 wallet address (0x...)');
-      return;
-    }
-
-    setState(() {
-      _errorMessage = '';
-      _step = 1;
-    });
+    setState(() { _err = ''; _step = 1; });
   }
 
-  Future<void> _processWithdrawal() async {
-    setState(() => _isProcessing = true);
-
+  Future<void> _confirm() async {
+    setState(() => _busy = true);
     try {
       final res = await http.post(
-        Uri.parse('\$_baseUrl/api/withdraw'),
+        Uri.parse('$_baseUrl/api/withdraw'),
         headers: widget.headers,
-        body: jsonEncode({
-          'amount': double.parse(_amountController.text),
-          'wallet': _addressController.text.trim(),
-        }),
+        body: jsonEncode({'amount': double.parse(_amtCtrl.text), 'wallet': _addrCtrl.text.trim()}),
       ).timeout(const Duration(seconds: 20));
 
       if (!mounted) return;
-      final data = jsonDecode(res.body);
+      final d = jsonDecode(res.body);
 
-      if (res.statusCode == 200 && data['success'] == true) {
-        setState(() => _isProcessing = false);
-        _confettiController.forward();
-        _showSuccessDialog(data);
+      if (res.statusCode == 200 && d['success'] == true) {
+        setState(() => _busy = false);
+        _successCtrl.forward();
+        _showSuccess(d);
       } else {
-        setState(() {
-          _isProcessing = false;
-          _errorMessage = data['error'] ?? 'Withdrawal failed';
-          _step = 0;
-        });
+        setState(() { _busy = false; _err = d['error'] ?? 'Withdrawal failed'; _step = 0; });
       }
     } on Exception catch (e) {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-          _errorMessage = e.toString().contains('timeout') 
-              ? 'Connection timeout. Try again.' 
-              : 'Connection error. Try again.';
-          _step = 0;
-        });
-      }
+      if (mounted) setState(() { _busy = false; _err = e.toString().contains('timeout') ? 'Timeout. Try again.' : 'Connection error.'; _step = 0; });
     }
   }
 
-  void _showSuccessDialog(Map data) {
-    final amount = data['data']?['amount']?.toString() ?? '0';
-    final wallet = data['data']?['wallet']?.toString() ?? '';
-    final withdrawId = data['data']?['withdrawId']?.toString() ?? '';
+  void _showSuccess(Map d) {
+    final amount = d['data']?['amount']?.toString() ?? '0';
+    final wallet = d['data']?['wallet']?.toString() ?? '';
+    final id     = d['data']?['withdrawId']?.toString() ?? '';
 
     showDialog(
       context: context,
@@ -1103,126 +1147,85 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
             child: Material(
               color: Colors.transparent,
               child: Container(
-                width: MediaQuery.of(ctx).size.width * 0.85,
+                width: MediaQuery.of(ctx).size.width * 0.88,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: _C.bg1,
                   borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.2),
-                      blurRadius: 40,
-                      offset: const Offset(0, 20),
-                    ),
-                  ],
+                  border: Border.all(color: _C.green.withOpacity(0.4)),
+                  boxShadow: [BoxShadow(color: _C.green.withOpacity(0.15), blurRadius: 40)],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Header
                     Container(
                       width: double.infinity,
                       padding: EdgeInsets.all(24.w),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [
-                            AppColors.accentGreen.withOpacity(0.2),
-                            Colors.transparent,
-                          ],
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: [_C.green.withOpacity(0.15), Colors.transparent],
                         ),
                         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                       ),
                       child: Column(
                         children: [
                           SizedBox(
-                            width: 80.w,
-                            height: 80.h,
-                            child: Lottie.network(
-                              AppLottie.txSuccess,
-                              repeat: false,
-                              controller: _confettiController,
-                            ),
+                            width: 80.w, height: 80.h,
+                            child: Lottie.network(_L.txSuccess, repeat: false, controller: _successCtrl),
                           ),
-                          SizedBox(height: 16.h),
+                          SizedBox(height: 12.h),
                           Text(
-                            'Withdrawal Submitted!',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textPrimary,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
+                            'REQUEST SUBMITTED',
+                            style: GoogleFonts.orbitron(
+                              color: _C.t1, fontSize: 16.sp, fontWeight: FontWeight.w700, letterSpacing: 1,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    // Body
                     Padding(
                       padding: EdgeInsets.all(24.w),
                       child: Column(
                         children: [
                           Text(
-                            '-\$\$amount',
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentRed,
-                              fontSize: 36.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 16.w,
-                                height: 16.h,
-                                child: Lottie.network(AppLottie.coinSpin),
-                              ),
-                              SizedBox(width: 6.w),
-                              Text(
-                                'BEP20 withdrawal pending',
-                                style: GoogleFonts.spaceMono(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'ID: #\$withdrawId',
-                            style: GoogleFonts.spaceMono(
-                              color: AppColors.textMuted,
-                              fontSize: 12.sp,
+                            '-\$$amount',
+                            style: GoogleFonts.orbitron(
+                              color: _C.magenta, fontSize: 32.sp, fontWeight: FontWeight.w700,
                             ),
                           ),
                           SizedBox(height: 8.h),
                           Text(
-                            _formatAddress(wallet),
-                            style: GoogleFonts.spaceMono(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
+                            'BEP20 · PENDING APPROVAL',
+                            style: GoogleFonts.rajdhani(color: _C.t2, fontSize: 13.sp, letterSpacing: 1),
+                          ),
+                          SizedBox(height: 8.h),
+                          _fmtAddr(wallet).let((a) => Text(
+                            a,
+                            style: GoogleFonts.spaceMono(color: _C.t3, fontSize: 11.sp),
+                          )),
+                          SizedBox(height: 4.h),
+                          Text(
+                            'ID: #$id',
+                            style: GoogleFonts.orbitron(color: _C.t3, fontSize: 10.sp, letterSpacing: 0.5),
                           ),
                           SizedBox(height: 24.h),
                           GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              widget.onSuccess();
-                            },
+                            onTap: () { Navigator.pop(ctx); widget.onSuccess(); },
                             child: Container(
                               width: double.infinity,
-                              height: 52.h,
+                              height: 50.h,
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
-                                ),
+                                gradient: const LinearGradient(colors: [_C.green, _C.cyan]),
                                 borderRadius: BorderRadius.circular(14.r),
+                                boxShadow: [BoxShadow(color: _C.green.withOpacity(0.3), blurRadius: 20)],
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                'Got it!',
-                                style: GoogleFonts.inter(
-                                  color: Colors.black,
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
+                                'DONE',
+                                style: GoogleFonts.orbitron(
+                                  color: Colors.black, fontSize: 14.sp, fontWeight: FontWeight.w700, letterSpacing: 2,
                                 ),
                               ),
                             ),
@@ -1237,11 +1240,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           ),
           Positioned.fill(
             child: IgnorePointer(
-              child: Lottie.network(
-                AppLottie.confetti,
-                controller: _confettiController,
-                fit: BoxFit.cover,
-              ),
+              child: Lottie.network(_L.confetti, controller: _successCtrl, fit: BoxFit.cover),
             ),
           ),
         ],
@@ -1249,118 +1248,37 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  String _formatAddress(String address) {
-    if (address.length < 20) return address;
-    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
-  }
+  String _fmtAddr(String a) => a.length < 20 ? a : '${a.substring(0, 8)}...${a.substring(a.length - 8)}';
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.92,
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
-        border: Border.all(color: AppColors.border),
+        color: _C.bg1,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        border: Border(
+          top: BorderSide(color: _C.cyan.withOpacity(0.25), width: 1),
+          left: BorderSide(color: _C.b1),
+          right: BorderSide(color: _C.b1),
+        ),
       ),
       child: Column(
         children: [
           SizedBox(height: 12.h),
+          // Drag handle
           Container(
-            width: 40.w,
-            height: 4.h,
+            width: 36.w, height: 3.h,
             decoration: BoxDecoration(
-              color: AppColors.textMuted,
+              gradient: const LinearGradient(colors: [_C.cyan, _C.purple]),
               borderRadius: BorderRadius.circular(10.r),
             ),
           ),
           SizedBox(height: 20.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Row(
-              children: [
-                Container(
-                  width: 48.w,
-                  height: 48.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRed.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(14.r),
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      width: 28.w,
-                      height: 28.h,
-                      child: Lottie.network(AppLottie.moneyOut),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Withdraw Funds',
-                        style: GoogleFonts.inter(
-                          color: AppColors.textPrimary,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Available: \$\${widget.balance.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(
-                          color: AppColors.accentRed,
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildSheetHeader(),
           SizedBox(height: 24.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Row(
-              children: [
-                _buildStepIndicator(0, 'Amount', Icons.account_balance_wallet),
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    margin: EdgeInsets.symmetric(horizontal: 12.w),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: _step >= 1
-                            ? [AppColors.accentGreen, AppColors.accentBlue]
-                            : [AppColors.border, AppColors.border],
-                      ),
-                    ),
-                  ),
-                ),
-                _buildStepIndicator(1, 'Confirm', Icons.check_circle),
-              ],
-            ),
-          ),
-          SizedBox(height: 32.h),
+          _buildStepBar(),
+          SizedBox(height: 24.h),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -1372,220 +1290,190 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  Widget _buildStepIndicator(int step, String label, IconData icon) {
-    final bool isActive = _step >= step;
-    final bool isCurrent = _step == step;
+  Widget _buildSheetHeader() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Row(
+        children: [
+          Container(
+            width: 46.w, height: 46.h,
+            decoration: BoxDecoration(
+              color: _C.magenta.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: _C.magenta.withOpacity(0.3)),
+            ),
+            child: Center(child: SizedBox(width: 26.w, height: 26.h, child: Lottie.network(_L.moneyOut))),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'WITHDRAW FUNDS',
+                  style: GoogleFonts.orbitron(color: _C.t1, fontSize: 16.sp, fontWeight: FontWeight.w700, letterSpacing: 1),
+                ),
+                Text(
+                  'Balance: \$${widget.balance.toStringAsFixed(2)}',
+                  style: GoogleFonts.rajdhani(color: _C.cyan, fontSize: 13.sp, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _C.bg2,
+                shape: BoxShape.circle,
+                border: Border.all(color: _C.b2),
+              ),
+              child: const Icon(Icons.close, color: _C.t2, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildStepBar() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Row(
+        children: [
+          _stepDot(0, 'AMOUNT'),
+          Expanded(
+            child: Stack(
+              children: [
+                Container(height: 1, color: _C.b1),
+                if (_step >= 1)
+                  Container(
+                    height: 1,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(colors: [_C.cyan, _C.purple]),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          _stepDot(1, 'CONFIRM'),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepDot(int s, String label) {
+    final active  = _step >= s;
+    final current = _step == s;
     return Column(
       children: [
         Container(
-          width: 44.w,
-          height: 44.h,
+          width: 36.w, height: 36.h,
           decoration: BoxDecoration(
-            gradient: isActive
-                ? LinearGradient(
-                    colors: [AppColors.accentGreen, AppColors.accentBlue],
-                  )
+            gradient: active
+                ? const LinearGradient(colors: [_C.cyan, _C.purple])
                 : null,
-            color: isActive ? null : AppColors.surface,
+            color: active ? null : _C.bg2,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? Colors.transparent : AppColors.border,
-              width: 2,
-            ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
+            border: Border.all(color: active ? Colors.transparent : _C.b2, width: 1.5),
+            boxShadow: active ? [BoxShadow(color: _C.cyan.withOpacity(0.3), blurRadius: 16)] : null,
           ),
           child: Center(
-            child: isActive
-                ? Icon(icon, color: Colors.black, size: 20)
-                : Text(
-                    '\${step + 1}',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textMuted,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+            child: active
+                ? Icon(s == 0 ? Icons.account_balance_wallet_outlined : Icons.check_rounded,
+                    color: Colors.black, size: 16)
+                : Text('${s + 1}', style: GoogleFonts.orbitron(color: _C.t3, fontSize: 12.sp)),
           ),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 6.h),
         Text(
           label,
-          style: GoogleFonts.inter(
-            color: isActive ? AppColors.accentGreen : AppColors.textMuted,
-            fontSize: 12.sp,
-            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+          style: GoogleFonts.orbitron(
+            color: active ? _C.cyan : _C.t3,
+            fontSize: 8.sp,
+            fontWeight: current ? FontWeight.w700 : FontWeight.normal,
+            letterSpacing: 1,
           ),
         ),
       ],
     );
   }
 
+  // ── STEP 0 ────────────────────────────────────────────────────────────────
   Widget _buildStep0() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Select Network',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 12.h),
-        ..._withdrawMethods.map((method) => _buildMethodCard(method)),
-        SizedBox(height: 24.h),
-        Text(
-          'Amount (USD)',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 12.h),
-        _buildAmountInput(),
-        SizedBox(height: 24.h),
-        Text(
-          'BEP20 Wallet Address',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 12.h),
-        _buildAddressInput(),
-        if (_errorMessage.isNotEmpty) ...[
-          SizedBox(height: 16.h),
-          _buildErrorMessage(),
-        ],
-        SizedBox(height: 32.h),
-        GestureDetector(
-          onTap: _validateAndProceed,
-          child: Container(
-            width: double.infinity,
-            height: 56.h,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.accentGreen, AppColors.accentBlue],
-              ),
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentGreen.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Continue',
-                  style: GoogleFonts.inter(
-                    color: Colors.black,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                SizedBox(
-                  width: 20.w,
-                  height: 20.h,
-                  child: Lottie.network(AppLottie.arrowRight),
-                ),
-              ],
-            ),
-          ),
-        ),
+        _label('SELECT NETWORK'),
+        SizedBox(height: 10.h),
+        ..._withdrawMethods.map(_methodCard),
+        SizedBox(height: 20.h),
+        _label('AMOUNT (USD)'),
+        SizedBox(height: 10.h),
+        _amountField(),
+        SizedBox(height: 20.h),
+        _label('BEP20 WALLET ADDRESS'),
+        SizedBox(height: 10.h),
+        _addressField(),
+        if (_err.isNotEmpty) ...[SizedBox(height: 12.h), _errBox()],
+        SizedBox(height: 28.h),
+        _primaryBtn('CONTINUE', _validate),
         SizedBox(height: 24.h),
       ],
     );
   }
 
-  Widget _buildMethodCard(WithdrawMethod method) {
-    final bool isSelected = _selectedMethod.symbol == method.symbol;
+  Widget _label(String t) => Text(
+    t,
+    style: GoogleFonts.orbitron(color: _C.t2, fontSize: 10.sp, letterSpacing: 1.5, fontWeight: FontWeight.w600),
+  );
 
+  Widget _methodCard(WithdrawMethod m) {
+    final sel = _method.symbol == m.symbol;
     return GestureDetector(
-      onTap: () => setState(() => _selectedMethod = method),
+      onTap: () => setState(() => _method = m),
       child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(16.w),
+        margin: EdgeInsets.only(bottom: 8.h),
+        padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: isSelected ? method.color.withOpacity(0.15) : AppColors.surface,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: isSelected ? method.color.withOpacity(0.6) : AppColors.border,
-            width: isSelected ? 1.5 : 1,
-          ),
+          color: sel ? m.color.withOpacity(0.08) : _C.bg2,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: sel ? m.color.withOpacity(0.5) : _C.b1, width: sel ? 1.5 : 1),
+          boxShadow: sel ? [BoxShadow(color: m.color.withOpacity(0.1), blurRadius: 16)] : null,
         ),
         child: Row(
           children: [
             Container(
-              width: 44.w,
-              height: 44.h,
+              width: 42.w, height: 42.h,
               decoration: BoxDecoration(
-                color: method.color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12.r),
+                color: m.color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10.r),
               ),
-              child: Center(
-                child: SizedBox(
-                  width: 24.w,
-                  height: 24.h,
-                  child: Lottie.network(method.iconUrl),
-                ),
-              ),
+              child: Center(child: SizedBox(width: 24.w, height: 24.h, child: Lottie.network(m.iconUrl))),
             ),
-            SizedBox(width: 14.w),
+            SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    method.name,
-                    style: GoogleFonts.inter(
-                      color: AppColors.textPrimary,
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text(m.name, style: GoogleFonts.orbitron(color: _C.t1, fontSize: 13.sp, fontWeight: FontWeight.w600)),
                   SizedBox(height: 2.h),
                   Text(
-                    'Min: \$\${method.minAmount} • Max: \$\${method.maxAmount}',
-                    style: GoogleFonts.inter(
-                      color: AppColors.textSecondary,
-                      fontSize: 11.sp,
-                    ),
+                    'Min \$${m.minAmount}  ·  Max \$${m.maxAmount}',
+                    style: GoogleFonts.rajdhani(color: _C.t2, fontSize: 11.sp),
                   ),
                 ],
               ),
             ),
             Container(
-              width: 24.w,
-              height: 24.h,
+              width: 20.w, height: 20.h,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? method.color : AppColors.textMuted,
-                  width: 2,
-                ),
-                color: isSelected ? method.color : Colors.transparent,
+                border: Border.all(color: sel ? m.color : _C.t3, width: 2),
+                color: sel ? m.color : Colors.transparent,
               ),
-              child: isSelected
-                  ? Icon(Icons.check, color: Colors.black, size: 14.sp)
-                  : null,
+              child: sel ? const Center(child: Icon(Icons.check, color: Colors.black, size: 12)) : null,
             ),
           ],
         ),
@@ -1593,63 +1481,37 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  Widget _buildAmountInput() {
+  Widget _amountField() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: _errorMessage.isNotEmpty && _amountController.text.isEmpty
-              ? AppColors.accentRed
-              : AppColors.border,
-        ),
+        color: _C.bg2,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: _C.b2),
       ),
       child: TextField(
-        controller: _amountController,
-        keyboardType: TextInputType.numberWithOptions(decimal: true),
-        style: GoogleFonts.inter(
-          color: AppColors.textPrimary,
-          fontSize: 16.sp,
-        ),
+        controller: _amtCtrl,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: GoogleFonts.orbitron(color: _C.t1, fontSize: 18.sp, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: '0.00',
-          hintStyle: GoogleFonts.inter(
-            color: AppColors.textMuted,
-            fontSize: 16.sp,
-          ),
+          hintStyle: GoogleFonts.orbitron(color: _C.t3, fontSize: 18.sp),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16.w),
+          contentPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
           prefixIcon: Padding(
-            padding: EdgeInsets.only(left: 16.w, right: 8.w),
-            child: Text(
-              '\$',
-              style: GoogleFonts.inter(
-                color: AppColors.textPrimary,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            padding: EdgeInsets.only(left: 18.w, right: 6.w, top: 14.h),
+            child: Text('\$', style: GoogleFonts.orbitron(color: _C.cyan, fontSize: 18.sp, fontWeight: FontWeight.w700)),
           ),
-          prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+          prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           suffix: GestureDetector(
-            onTap: _setMaxAmount,
+            onTap: _setMax,
             child: Container(
-              margin: EdgeInsets.only(right: 16.w),
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              margin: EdgeInsets.only(right: 12.w),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.accentGreen, AppColors.accentBlue],
-                ),
-                borderRadius: BorderRadius.circular(8.r),
+                gradient: const LinearGradient(colors: [_C.cyan, _C.green]),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                'MAX',
-                style: GoogleFonts.inter(
-                  color: Colors.black,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: Text('MAX', style: GoogleFonts.orbitron(color: Colors.black, fontSize: 9.sp, fontWeight: FontWeight.w800, letterSpacing: 1)),
             ),
           ),
         ),
@@ -1657,52 +1519,36 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  Widget _buildAddressInput() {
+  Widget _addressField() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: _errorMessage.isNotEmpty && _addressController.text.isEmpty
-              ? AppColors.accentRed
-              : AppColors.border,
-        ),
+        color: _C.bg2,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: _C.b2),
       ),
       child: TextField(
-        controller: _addressController,
-        style: GoogleFonts.spaceMono(
-          color: AppColors.textPrimary,
-          fontSize: 13.sp,
-        ),
+        controller: _addrCtrl,
+        style: GoogleFonts.spaceMono(color: _C.t1, fontSize: 12.sp),
         maxLines: 2,
         decoration: InputDecoration(
-          hintText: 'Enter BEP20 wallet address (0x...)',
-          hintStyle: GoogleFonts.inter(
-            color: AppColors.textMuted,
-            fontSize: 13.sp,
-          ),
+          hintText: '0x... BEP20 wallet address',
+          hintStyle: GoogleFonts.spaceMono(color: _C.t3, fontSize: 12.sp),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16.w),
           suffix: GestureDetector(
             onTap: () async {
-              final data = await Clipboard.getData('text/plain');
-              if (data?.text != null) {
-                _addressController.text = data!.text!.trim();
-                setState(() {});
-              }
+              final d = await Clipboard.getData('text/plain');
+              if (d?.text != null) { _addrCtrl.text = d!.text!.trim(); setState(() {}); }
             },
             child: Container(
-              margin: EdgeInsets.all(12.w),
-              padding: EdgeInsets.all(8.w),
+              margin: EdgeInsets.all(10.w),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.accentPurple.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8.r),
+                color: _C.purple.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _C.purple.withOpacity(0.3)),
               ),
-              child: SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: Lottie.network(AppLottie.copy),
-              ),
+              child: SizedBox(width: 18.w, height: 18.h, child: Lottie.network(_L.copy)),
             ),
           ),
         ),
@@ -1710,164 +1556,127 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  Widget _buildErrorMessage() {
+  Widget _errBox() {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppColors.accentRed.withOpacity(0.1),
+        color: _C.magenta.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+        border: Border.all(color: _C.magenta.withOpacity(0.3)),
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 18.w,
-            height: 18.h,
-            child: Lottie.network(AppLottie.warning, repeat: false),
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              _errorMessage,
-              style: GoogleFonts.inter(
-                color: AppColors.accentRed,
-                fontSize: 12.sp,
-              ),
-            ),
-          ),
+          SizedBox(width: 16.w, height: 16.h, child: Lottie.network(_L.warning, repeat: false)),
+          SizedBox(width: 8.w),
+          Expanded(child: Text(_err, style: GoogleFonts.rajdhani(color: _C.magenta, fontSize: 13.sp, fontWeight: FontWeight.w600))),
         ],
       ),
     );
   }
 
+  Widget _primaryBtn(String label, VoidCallback onTap, {List<Color>? colors}) {
+    final c = colors ?? [_C.cyan, _C.purple];
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 56.h,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: c),
+          borderRadius: BorderRadius.circular(14.r),
+          boxShadow: [BoxShadow(color: c.first.withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 8))],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.orbitron(color: Colors.black, fontSize: 14.sp, fontWeight: FontWeight.w700, letterSpacing: 1.5),
+        ),
+      ),
+    );
+  }
+
+  // ── STEP 1 ────────────────────────────────────────────────────────────────
   Widget _buildStep1() {
-    final amount = double.tryParse(_amountController.text) ?? 0;
+    final amt = double.tryParse(_amtCtrl.text) ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Confirm Withdrawal',
-          style: GoogleFonts.inter(
-            color: AppColors.textPrimary,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
+        _label('TRANSACTION SUMMARY'),
+        SizedBox(height: 16.h),
+        Container(
+          decoration: BoxDecoration(
+            color: _C.bg2,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: _C.b1),
+          ),
+          child: Column(
+            children: [
+              _confirmRow('Network', _method.name),
+              Divider(color: _C.b1, height: 1),
+              _confirmRow('Amount', '\$${amt.toStringAsFixed(2)}'),
+              Divider(color: _C.b1, height: 1),
+              _confirmRow('To Wallet', _fmtAddr(_addrCtrl.text.trim())),
+              Divider(color: _C.b1, height: 1),
+              _confirmRow('Fee', 'ZERO', valueColor: _C.green),
+              Divider(color: _C.b1, height: 1),
+              _confirmRow('Total', '\$${amt.toStringAsFixed(2)}', valueColor: _C.magenta, bold: true),
+            ],
           ),
         ),
-        SizedBox(height: 24.h),
-        _buildConfirmRow('Network', _selectedMethod.name),
-        _buildConfirmRow('Amount', '\$\${amount.toStringAsFixed(2)}'),
-        _buildConfirmRow('Wallet', _formatAddress(_addressController.text.trim())),
-        Divider(color: AppColors.border, height: 24.h),
-        _buildConfirmRow('Total Deduction', '\$\${amount.toStringAsFixed(2)}', isTotal: true),
-        SizedBox(height: 24.h),
+        SizedBox(height: 16.h),
         Container(
-          padding: EdgeInsets.all(16.w),
+          padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
-            color: AppColors.accentOrange.withOpacity(0.1),
+            color: _C.amber.withOpacity(0.06),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
+            border: Border.all(color: _C.amber.withOpacity(0.2)),
           ),
           child: Row(
             children: [
-              SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: Lottie.network(AppLottie.warning),
-              ),
+              SizedBox(width: 18.w, height: 18.h, child: Lottie.network(_L.warning)),
               SizedBox(width: 10.w),
               Expanded(
                 child: Text(
-                  'Please verify the address. Transactions cannot be reversed.',
-                  style: GoogleFonts.inter(
-                    color: AppColors.accentOrange,
-                    fontSize: 12.sp,
-                  ),
+                  'Double-check the wallet address. Transactions cannot be reversed.',
+                  style: GoogleFonts.rajdhani(color: _C.amber, fontSize: 12.sp, fontWeight: FontWeight.w500),
                 ),
               ),
             ],
           ),
         ),
-        SizedBox(height: 32.h),
+        SizedBox(height: 28.h),
+        _busy
+            ? Container(
+                width: double.infinity, height: 56.h,
+                decoration: BoxDecoration(
+                  color: _C.bg3,
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(color: _C.b2),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(width: 20.w, height: 20.h, child: Lottie.network(_L.verifyLoading)),
+                    SizedBox(width: 10.w),
+                    Text('PROCESSING...', style: GoogleFonts.orbitron(color: _C.cyan, fontSize: 12.sp, letterSpacing: 1.5)),
+                  ],
+                ),
+              )
+            : _primaryBtn('CONFIRM WITHDRAWAL', _confirm, colors: [_C.magenta, _C.purple]),
+        SizedBox(height: 12.h),
         GestureDetector(
-          onTap: _isProcessing ? null : _processWithdrawal,
+          onTap: () => setState(() { _step = 0; _err = ''; }),
           child: Container(
-            width: double.infinity,
-            height: 56.h,
+            width: double.infinity, height: 48.h,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: _isProcessing
-                    ? [AppColors.textMuted, AppColors.textMuted]
-                    : [AppColors.accentRed, AppColors.accentOrange],
-              ),
-              borderRadius: BorderRadius.circular(16.r),
-              boxShadow: _isProcessing
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: AppColors.accentRed.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+              color: _C.bg2,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: _C.b2),
             ),
             alignment: Alignment.center,
-            child: _isProcessing
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 24.w,
-                        height: 24.h,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        'Processing...',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
-                    'Confirm Withdrawal',
-                    style: GoogleFonts.inter(
-                      color: Colors.black,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-          ),
-        ),
-        SizedBox(height: 16.h),
-        GestureDetector(
-          onTap: () => setState(() {
-            _step = 0;
-            _errorMessage = '';
-          }),
-          child: Container(
-            width: double.infinity,
-            height: 48.h,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: AppColors.border),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'Back',
-              style: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text('BACK', style: GoogleFonts.orbitron(color: _C.t2, fontSize: 12.sp, letterSpacing: 1.5)),
           ),
         ),
         SizedBox(height: 32.h),
@@ -1875,29 +1684,29 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
-  Widget _buildConfirmRow(String label, String value, {bool isTotal = false}) {
+  Widget _confirmRow(String label, String value, {Color? valueColor, bool bold = false}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              color: AppColors.textSecondary,
-              fontSize: 14.sp,
-            ),
-          ),
+          Text(label, style: GoogleFonts.rajdhani(color: _C.t2, fontSize: 14.sp, fontWeight: FontWeight.w500)),
           Text(
             value,
-            style: GoogleFonts.inter(
-              color: isTotal ? AppColors.accentRed : AppColors.textPrimary,
-              fontSize: isTotal ? 16.sp : 14.sp,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+            style: GoogleFonts.orbitron(
+              color: valueColor ?? _C.t1,
+              fontSize: bold ? 14.sp : 13.sp,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              letterSpacing: 0.3,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// Extension helper
+extension _Let<T> on T {
+  R let<R>(R Function(T) block) => block(this);
 }
