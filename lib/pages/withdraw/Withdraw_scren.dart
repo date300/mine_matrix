@@ -144,13 +144,13 @@ class _NeonBorder extends StatefulWidget {
   final Widget child;
   final double radius;
   final Color color;
-  final bool animate;
+  final bool isAnimated;
 
   const _NeonBorder({
     required this.child,
     this.radius = 20,
     this.color = _C.cyan,
-    this.animate = false,
+    this.isAnimated = false,
   });
 
   @override
@@ -175,7 +175,7 @@ class _NeonBorderState extends State<_NeonBorder> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.animate) {
+    if (!widget.isAnimated) {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.radius),
@@ -529,7 +529,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     return _NeonBorder(
       radius: 24,
       color: _C.cyan,
-      animate: true,
+      isAnimated: true,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24.r),
         child: BackdropFilter(
