@@ -12,7 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
-import 'deposit_sheet.dart'; // ← আলাদা ফাইল থেকে ইমপোর্ট
+import 'deposit_sheet.dart';
 
 // --- Colors ------------------------------------------------------------------
 class AppColors {
@@ -184,17 +184,17 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         content: Row(
           children: [
             SizedBox(
-              width: 20.w,
-              height: 20.h,
+              width: 18.w,
+              height: 18.h,
               child: Lottie.network(AppLottie.warning, repeat: false),
             ),
-            SizedBox(width: 10.w),
+            SizedBox(width: 8.w),
             Expanded(
               child: Text(
                 message,
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 13.sp,
+                  fontSize: 12.sp,
                 ),
               ),
             ),
@@ -218,7 +218,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: _isLoading
           ? _buildSkeletonLoading()
           : _hasError
@@ -237,22 +237,22 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: 60.h),
+                              SizedBox(height: 40.h),
                               _buildHeader(),
-                              SizedBox(height: 24.h),
-                              _buildBalanceCard(),
-                              SizedBox(height: 24.h),
-                              _buildActionButtons(),
-                              SizedBox(height: 32.h),
-                              _buildHistoryHeader(),
                               SizedBox(height: 16.h),
+                              _buildBalanceCard(),
+                              SizedBox(height: 16.h),
+                              _buildActionButtons(),
+                              SizedBox(height: 24.h),
+                              _buildHistoryHeader(),
+                              SizedBox(height: 12.h),
                             ],
                           ),
                         ),
                       ),
                       _buildHistoryList(),
                       SliverToBoxAdapter(
-                        child: SizedBox(height: 100.h),
+                        child: SizedBox(height: 80.h),
                       ),
                     ],
                   ),
@@ -268,57 +268,57 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         padding: EdgeInsets.symmetric(horizontal: 20.w),
         child: Column(
           children: [
-            SizedBox(height: 60.h),
+            SizedBox(height: 40.h),
             Container(
               width: double.infinity,
-              height: 200.h,
+              height: 160.h,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.circular(24.r),
+                borderRadius: BorderRadius.circular(20.r),
               ),
             ),
-            SizedBox(height: 24.h),
+            SizedBox(height: 16.h),
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    height: 60.h,
+                    height: 52.h,
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(14.r),
                     ),
                   ),
                 ),
                 SizedBox(width: 12.w),
                 Expanded(
                   child: Container(
-                    height: 60.h,
+                    height: 52.h,
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(14.r),
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 32.h),
+            SizedBox(height: 24.h),
             Container(
-              width: 120.w,
-              height: 24.h,
+              width: 100.w,
+              height: 20.h,
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(8.r),
               ),
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 12.h),
             ...List.generate(3, (index) => Padding(
-              padding: EdgeInsets.only(bottom: 12.h),
+              padding: EdgeInsets.only(bottom: 10.h),
               child: Container(
                 width: double.infinity,
-                height: 80.h,
+                height: 70.h,
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(14.r),
                 ),
               ),
             )),
@@ -339,16 +339,16 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
               'My Wallet',
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
-                fontSize: 28.sp,
+                fontSize: 24.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 4.h),
+            SizedBox(height: 2.h),
             Text(
               'Manage your SOL deposits',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
-                fontSize: 14.sp,
+                fontSize: 12.sp,
               ),
             ),
           ],
@@ -356,8 +356,8 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         GestureDetector(
           onTap: _isRefreshing ? null : _onRefresh,
           child: Container(
-            width: 44.w,
-            height: 44.h,
+            width: 40.w,
+            height: 40.h,
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12.r),
@@ -366,8 +366,8 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
             child: _isRefreshing
                 ? Center(
                     child: SizedBox(
-                      width: 20.w,
-                      height: 20.h,
+                      width: 18.w,
+                      height: 18.h,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
@@ -376,8 +376,8 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   )
                 : Center(
                     child: SizedBox(
-                      width: 24.w,
-                      height: 24.h,
+                      width: 22.w,
+                      height: 22.h,
                       child: Lottie.network(
                         AppLottie.refresh,
                         repeat: false,
@@ -394,7 +394,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(20.r),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -418,11 +418,11 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: BorderRadius.circular(20.r),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Padding(
-            padding: EdgeInsets.all(24.w),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -430,7 +430,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                       decoration: BoxDecoration(
                         color: AppColors.accentGreen.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20.r),
@@ -442,19 +442,19 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 6.w,
-                            height: 6.h,
+                            width: 5.w,
+                            height: 5.h,
                             decoration: BoxDecoration(
                               color: AppColors.accentGreen,
                               shape: BoxShape.circle,
                             ),
                           ),
-                          SizedBox(width: 6.w),
+                          SizedBox(width: 4.w),
                           Text(
                             'LIVE',
                             style: GoogleFonts.inter(
                               color: AppColors.accentGreen,
-                              fontSize: 10.sp,
+                              fontSize: 9.sp,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1,
                             ),
@@ -465,16 +465,16 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                     Row(
                       children: [
                         SizedBox(
-                          width: 20.w,
-                          height: 20.h,
+                          width: 18.w,
+                          height: 18.h,
                           child: Lottie.network(AppLottie.solCoin),
                         ),
-                        SizedBox(width: 6.w),
+                        SizedBox(width: 4.w),
                         Text(
                           '\$${_solPrice.toStringAsFixed(2)}',
                           style: GoogleFonts.inter(
                             color: AppColors.textSecondary,
-                            fontSize: 12.sp,
+                            fontSize: 11.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -482,15 +482,15 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                     ),
                   ],
                 ),
-                SizedBox(height: 20.h),
+                SizedBox(height: 12.h),
                 Text(
                   'Available Balance',
                   style: GoogleFonts.inter(
                     color: AppColors.textSecondary,
-                    fontSize: 14.sp,
+                    fontSize: 12.sp,
                   ),
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 6.h),
                 AnimatedBuilder(
                   animation: _balanceAnimation,
                   builder: (context, child) {
@@ -498,19 +498,19 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                       '\$${_displayBalance.toStringAsFixed(2)}',
                       style: GoogleFonts.inter(
                         color: AppColors.textPrimary,
-                        fontSize: 40.sp,
+                        fontSize: 32.sp,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -1,
                       ),
                     );
                   },
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 6.h),
                 Text(
                   '${(_displayBalance / (_solPrice > 0 ? _solPrice : 1)).toStringAsFixed(4)} SOL',
                   style: GoogleFonts.spaceMono(
                     color: AppColors.accentPurple,
-                    fontSize: 14.sp,
+                    fontSize: 12.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -555,10 +555,10 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 64.h,
+        height: 52.h,
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(14.r),
           border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
@@ -572,16 +572,16 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
-              width: 28.w,
-              height: 28.h,
+              width: 24.w,
+              height: 24.h,
               child: Lottie.network(lottieUrl),
             ),
-            SizedBox(width: 10.w),
+            SizedBox(width: 8.w),
             Text(
               label,
               style: GoogleFonts.inter(
                 color: AppColors.textPrimary,
-                fontSize: 15.sp,
+                fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -599,7 +599,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           'Recent Transactions',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
-            fontSize: 18.sp,
+            fontSize: 16.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -610,7 +610,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
               'View All',
               style: GoogleFonts.inter(
                 color: AppColors.accentGreen,
-                fontSize: 13.sp,
+                fontSize: 12.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -631,7 +631,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         (context, index) {
           final item = _history[index];
           return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
             child: _buildTransactionItem(item, index),
           );
         },
@@ -643,41 +643,41 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 40.h),
+      padding: EdgeInsets.symmetric(vertical: 32.h),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
           SizedBox(
-            width: 120.w,
-            height: 120.h,
+            width: 100.w,
+            height: 100.h,
             child: Lottie.network(AppLottie.emptyHistory),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 12.h),
           Text(
             'No transactions yet',
             style: GoogleFonts.inter(
               color: AppColors.textPrimary,
-              fontSize: 16.sp,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Text(
             'Your deposit history will appear here',
             style: GoogleFonts.inter(
               color: AppColors.textSecondary,
-              fontSize: 13.sp,
+              fontSize: 12.sp,
             ),
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: 16.h),
           GestureDetector(
             onTap: () => _showDepositSheet(),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: AppColors.accentGreen.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(20.r),
@@ -687,7 +687,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 'Make First Deposit',
                 style: GoogleFonts.inter(
                   color: AppColors.accentGreen,
-                  fontSize: 13.sp,
+                  fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -733,30 +733,30 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         _showCopiedSnackBar();
       },
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(14.r),
           border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
             Container(
-              width: 48.w,
-              height: 48.h,
+              width: 40.w,
+              height: 40.h,
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(10.r),
               ),
               child: Center(
                 child: SizedBox(
-                  width: 28.w,
-                  height: 28.h,
+                  width: 24.w,
+                  height: 24.h,
                   child: Lottie.network(statusLottie, repeat: isPending),
                 ),
               ),
             ),
-            SizedBox(width: 14.w),
+            SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -765,24 +765,24 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                     'SOL Deposit',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
-                      fontSize: 15.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 2.h),
                   Text(
                     _formatSignature(sig),
                     style: GoogleFonts.spaceMono(
                       color: AppColors.textMuted,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 2.h),
                   Text(
                     _formatDate(date),
                     style: GoogleFonts.inter(
                       color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                     ),
                   ),
                 ],
@@ -795,19 +795,19 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   '+\$${usd.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
                     color: AppColors.accentGreen,
-                    fontSize: 15.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   '${sol.toStringAsFixed(4)} SOL',
                   style: GoogleFonts.spaceMono(
                     color: AppColors.textSecondary,
-                    fontSize: 12.sp,
+                    fontSize: 11.sp,
                   ),
                 ),
-                SizedBox(height: 6.h),
+                SizedBox(height: 4.h),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
@@ -818,7 +818,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                     statusText,
                     style: GoogleFonts.inter(
                       color: statusColor,
-                      fontSize: 10.sp,
+                      fontSize: 9.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -839,7 +839,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   String _formatDate(String date) {
     try {
       final dt = DateTime.parse(date);
-      return '${dt.day}/${dt.month}/${dt.year} • ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${dt.day}/${dt.month}/${dt.year} ? ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return date;
     }
@@ -851,16 +851,16 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         content: Row(
           children: [
             SizedBox(
-              width: 20.w,
-              height: 20.h,
+              width: 18.w,
+              height: 18.h,
               child: Lottie.network(AppLottie.copy, repeat: false),
             ),
-            SizedBox(width: 10.w),
+            SizedBox(width: 8.w),
             Text(
               'Transaction hash copied!',
               style: GoogleFonts.inter(
                 color: Colors.white,
-                fontSize: 13.sp,
+                fontSize: 12.sp,
               ),
             ),
           ],
