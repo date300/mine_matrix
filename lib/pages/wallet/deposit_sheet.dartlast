@@ -8,37 +8,39 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
 
-// --- Colors ------------------------------------------------------------------
+// --- Colors (শেয়ার করা) ------------------------------------------------------
 class AppColors {
-  static const Color background = Color(0xFF0A0A0F);
-  static const Color surface = Color(0xFF12121A);
-  static const Color accentGreen = Color(0xFF00FFA3);
+  static const Color background   = Color(0xFF0A0A0F);
+  static const Color surface      = Color(0xFF12121A);
+  static const Color accentGreen  = Color(0xFF00FFA3);
   static const Color accentPurple = Color(0xFFB829F7);
-  static const Color accentBlue = Color(0xFF00D4FF);
+  static const Color accentBlue   = Color(0xFF00D4FF);
   static const Color accentOrange = Color(0xFFFF9500);
-  static const Color accentRed = Color(0xFFFF4D4D);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF8B8B9E);
-  static const Color textMuted = Color(0xFF4A4A5A);
-  static const Color border = Color(0xFF2A2A3A);
-  static const Color cardBg = Color(0xFF161620);
+  static const Color accentRed    = Color(0xFFFF4D4D);
+  static const Color textPrimary  = Color(0xFFFFFFFF);
+  static const Color textSecondary= Color(0xFF8B8B9E);
+  static const Color textMuted    = Color(0xFF4A4A5A);
+  static const Color border       = Color(0xFF2A2A3A);
+  static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie URLs (only essential animations kept)
+// Lottie URLs
 class AppLottie {
-  static const String solCoin =
-      'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String txSuccess =
-      'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
-  static const String txFailed =
-      'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
-  static const String confetti =
-      'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String txSuccess    = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
+  static const String txFailed     = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
+  static const String copy         = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
+  static const String info         = 'https://assets10.lottiefiles.com/packages/lf20_b6cz19m8.json';
+  static const String warning      = 'https://assets10.lottiefiles.com/packages/lf20_Tkwjw8.json';
+  static const String secure       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
+  static const String question     = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
+  static const String arrowRight   = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
+  static const String confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// --- Deposit Sheet Widget ----------------------------------------------------
+// --- Deposit Sheet Widget ------------------------------------------------------
 class DepositSheet extends StatefulWidget {
   final String platformWallet;
   final double solPrice;
@@ -57,14 +59,13 @@ class DepositSheet extends StatefulWidget {
   State<DepositSheet> createState() => _DepositSheetState();
 }
 
-class _DepositSheetState extends State<DepositSheet>
-    with TickerProviderStateMixin {
+class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMixin {
   int _step = 0;
   final _sigController = TextEditingController();
   bool _verifying = false;
   String _verifyError = '';
   bool _copied = false;
-
+  
   late AnimationController _confettiController;
 
   @override
@@ -90,10 +91,7 @@ class _DepositSheetState extends State<DepositSheet>
       return;
     }
 
-    setState(() {
-      _verifying = true;
-      _verifyError = '';
-    });
+    setState(() { _verifying = true; _verifyError = ''; });
 
     try {
       final res = await http.post(
@@ -119,8 +117,8 @@ class _DepositSheetState extends State<DepositSheet>
       if (mounted) {
         setState(() {
           _verifying = false;
-          _verifyError = e.toString().contains('timeout')
-              ? 'Connection timeout. Try again.'
+          _verifyError = e.toString().contains('timeout') 
+              ? 'Connection timeout. Try again.' 
               : 'Connection error. Try again.';
         });
       }
@@ -143,14 +141,13 @@ class _DepositSheetState extends State<DepositSheet>
                 width: MediaQuery.of(ctx).size.width * 0.85,
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20.r),
-                  border:
-                      Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(24.r),
+                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.accentGreen.withOpacity(0.2),
-                      blurRadius: 30,
-                      offset: const Offset(0, 15),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
                     ),
                   ],
                 ),
@@ -159,7 +156,7 @@ class _DepositSheetState extends State<DepositSheet>
                   children: [
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(20.w),
+                      padding: EdgeInsets.all(24.w),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -167,26 +164,25 @@ class _DepositSheetState extends State<DepositSheet>
                             Colors.transparent,
                           ],
                         ),
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(20.r)),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                       ),
                       child: Column(
                         children: [
                           SizedBox(
-                            width: 70.w,
-                            height: 70.h,
+                            width: 80.w,
+                            height: 80.h,
                             child: Lottie.network(
                               AppLottie.txSuccess,
                               repeat: false,
                               controller: _confettiController,
                             ),
                           ),
-                          SizedBox(height: 12.h),
+                          SizedBox(height: 16.h),
                           Text(
                             'Deposit Successful!',
                             style: GoogleFonts.inter(
                               color: AppColors.textPrimary,
-                              fontSize: 18.sp,
+                              fontSize: 20.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -194,14 +190,14 @@ class _DepositSheetState extends State<DepositSheet>
                       ),
                     ),
                     Padding(
-                      padding: EdgeInsets.all(20.w),
+                      padding: EdgeInsets.all(24.w),
                       child: Column(
                         children: [
                           Text(
                             '+\$$usd',
                             style: GoogleFonts.inter(
                               color: AppColors.accentGreen,
-                              fontSize: 30.sp,
+                              fontSize: 36.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -210,22 +206,21 @@ class _DepositSheetState extends State<DepositSheet>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               SizedBox(
-                                width: 14.w,
-                                height: 14.h,
-                                child:
-                                    Lottie.network(AppLottie.solCoin),
+                                width: 16.w,
+                                height: 16.h,
+                                child: Lottie.network(AppLottie.solCoin),
                               ),
                               SizedBox(width: 6.w),
                               Text(
                                 '$sol SOL deposited',
                                 style: GoogleFonts.spaceMono(
                                   color: AppColors.textSecondary,
-                                  fontSize: 12.sp,
+                                  fontSize: 14.sp,
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 20.h),
+                          SizedBox(height: 24.h),
                           GestureDetector(
                             onTap: () {
                               Navigator.pop(ctx);
@@ -233,22 +228,19 @@ class _DepositSheetState extends State<DepositSheet>
                             },
                             child: Container(
                               width: double.infinity,
-                              height: 46.h,
+                              height: 52.h,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.accentGreen,
-                                    AppColors.accentBlue
-                                  ],
+                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
                                 ),
-                                borderRadius: BorderRadius.circular(12.r),
+                                borderRadius: BorderRadius.circular(14.r),
                               ),
                               alignment: Alignment.center,
                               child: Text(
                                 'Awesome!',
                                 style: GoogleFonts.inter(
                                   color: Colors.black,
-                                  fontSize: 14.sp,
+                                  fontSize: 16.sp,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -279,44 +271,44 @@ class _DepositSheetState extends State<DepositSheet>
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
           Container(
-            width: 36.w,
+            width: 40.w,
             height: 4.h,
             decoration: BoxDecoration(
               color: AppColors.textMuted,
               borderRadius: BorderRadius.circular(10.r),
             ),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 20.h),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
               children: [
                 Container(
-                  width: 40.w,
-                  height: 40.h,
+                  width: 48.w,
+                  height: 48.h,
                   decoration: BoxDecoration(
                     color: AppColors.accentPurple.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(14.r),
                   ),
                   child: Center(
                     child: SizedBox(
-                      width: 24.w,
-                      height: 24.h,
+                      width: 28.w,
+                      height: 28.h,
                       child: Lottie.network(AppLottie.solCoin),
                     ),
                   ),
                 ),
-                SizedBox(width: 12.w),
+                SizedBox(width: 14.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,7 +317,7 @@ class _DepositSheetState extends State<DepositSheet>
                         'Deposit SOL',
                         style: GoogleFonts.inter(
                           color: AppColors.textPrimary,
-                          fontSize: 18.sp,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -333,7 +325,7 @@ class _DepositSheetState extends State<DepositSheet>
                         '1 SOL = \$${widget.solPrice.toStringAsFixed(2)}',
                         style: GoogleFonts.inter(
                           color: AppColors.accentPurple,
-                          fontSize: 11.sp,
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -343,7 +335,7 @@ class _DepositSheetState extends State<DepositSheet>
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    padding: EdgeInsets.all(6.w),
+                    padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       shape: BoxShape.circle,
@@ -352,23 +344,23 @@ class _DepositSheetState extends State<DepositSheet>
                     child: Icon(
                       Icons.close,
                       color: AppColors.textSecondary,
-                      size: 18.sp,
+                      size: 20,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: 24.h),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
               children: [
-                _buildStepIndicator(0, 'Send', Icons.send),
+                _buildStepIndicator(0, 'Send SOL', Icons.send),
                 Expanded(
                   child: Container(
                     height: 2,
-                    margin: EdgeInsets.symmetric(horizontal: 8.w),
+                    margin: EdgeInsets.symmetric(horizontal: 12.w),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: _step >= 1
@@ -382,10 +374,10 @@ class _DepositSheetState extends State<DepositSheet>
               ],
             ),
           ),
-          SizedBox(height: 24.h),
+          SizedBox(height: 32.h),
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: _step == 0 ? _buildStep0() : _buildStep1(),
             ),
           ),
@@ -401,12 +393,13 @@ class _DepositSheetState extends State<DepositSheet>
     return Column(
       children: [
         Container(
-          width: 38.w,
-          height: 38.h,
+          width: 44.w,
+          height: 44.h,
           decoration: BoxDecoration(
             gradient: isActive
                 ? LinearGradient(
-                    colors: [AppColors.accentGreen, AppColors.accentBlue])
+                    colors: [AppColors.accentGreen, AppColors.accentBlue],
+                  )
                 : null,
             color: isActive ? null : AppColors.surface,
             shape: BoxShape.circle,
@@ -418,31 +411,31 @@ class _DepositSheetState extends State<DepositSheet>
                 ? [
                     BoxShadow(
                       color: AppColors.accentGreen.withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    )
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
                   ]
                 : null,
           ),
           child: Center(
             child: isActive
-                ? Icon(icon, color: Colors.black, size: 18.sp)
+                ? Icon(icon, color: Colors.black, size: 20)
                 : Text(
                     '${step + 1}',
                     style: GoogleFonts.inter(
                       color: AppColors.textMuted,
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
           ),
         ),
-        SizedBox(height: 6.h),
+        SizedBox(height: 8.h),
         Text(
           label,
           style: GoogleFonts.inter(
             color: isActive ? AppColors.accentGreen : AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: 12.sp,
             fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -454,40 +447,39 @@ class _DepositSheetState extends State<DepositSheet>
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.all(16.w),
+          padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accentPurple.withOpacity(0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                color: AppColors.accentPurple.withOpacity(0.2),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: QrImageView(
             data: widget.platformWallet,
             version: QrVersions.auto,
-            size: 160.w,
+            size: 180.w,
             backgroundColor: Colors.white,
             foregroundColor: Colors.black,
           ),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 24.h),
         Text(
           'Send SOL to this address',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
-            fontSize: 15.sp,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w600,
           ),
         ),
-        SizedBox(height: 12.h),
+        SizedBox(height: 16.h),
         GestureDetector(
           onTap: () {
-            Clipboard.setData(
-                ClipboardData(text: widget.platformWallet));
+            Clipboard.setData(ClipboardData(text: widget.platformWallet));
             setState(() => _copied = true);
             Future.delayed(const Duration(seconds: 2), () {
               if (mounted) setState(() => _copied = false);
@@ -495,10 +487,10 @@ class _DepositSheetState extends State<DepositSheet>
           },
           child: Container(
             width: double.infinity,
-            padding: EdgeInsets.all(14.w),
+            padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(14.r),
+              borderRadius: BorderRadius.circular(16.r),
               border: Border.all(
                 color: _copied ? AppColors.accentGreen : AppColors.border,
               ),
@@ -510,68 +502,68 @@ class _DepositSheetState extends State<DepositSheet>
                     widget.platformWallet,
                     style: GoogleFonts.spaceMono(
                       color: AppColors.textPrimary,
-                      fontSize: 11.sp,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ),
-                SizedBox(width: 10.w),
+                SizedBox(width: 12.w),
                 Container(
-                  padding: EdgeInsets.all(7.w),
+                  padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
                     color: _copied
                         ? AppColors.accentGreen.withOpacity(0.2)
                         : AppColors.accentPurple.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: Icon(
-                    _copied ? Icons.check : Icons.copy,
-                    color: _copied
-                        ? AppColors.accentGreen
-                        : AppColors.accentPurple,
-                    size: 16.sp,
-                  ),
+                  child: _copied
+                      ? Icon(Icons.check, color: AppColors.accentGreen, size: 18)
+                      : SizedBox(
+                          width: 18.w,
+                          height: 18.h,
+                          child: Lottie.network(AppLottie.copy),
+                        ),
                 ),
               ],
             ),
           ),
         ),
-        SizedBox(height: 16.h),
+        SizedBox(height: 20.h),
         _buildInfoCard(
-          Icons.info_outline,
+          AppLottie.info,
           'Minimum Deposit',
           '0.001 SOL required',
           AppColors.accentOrange,
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 10.h),
         _buildInfoCard(
-          Icons.warning_amber,
+          AppLottie.warning,
           'Network',
           'Only Solana Mainnet',
           AppColors.accentRed,
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 10.h),
         _buildInfoCard(
-          Icons.lock_outline,
+          AppLottie.secure,
           'Confirmation',
-          'Usually 5-30 seconds',
+          'Usually takes 5-30 seconds',
           AppColors.accentGreen,
         ),
-        SizedBox(height: 28.h),
+        SizedBox(height: 32.h),
         GestureDetector(
           onTap: () => setState(() => _step = 1),
           child: Container(
             width: double.infinity,
-            height: 50.h,
+            height: 56.h,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.accentGreen, AppColors.accentBlue],
               ),
-              borderRadius: BorderRadius.circular(14.r),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.accentGreen.withOpacity(0.3),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -583,17 +575,21 @@ class _DepositSheetState extends State<DepositSheet>
                   "I've Sent SOL",
                   style: GoogleFonts.inter(
                     color: Colors.black,
-                    fontSize: 14.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 8.w),
-                Icon(Icons.arrow_forward, color: Colors.black, size: 18.sp),
+                SizedBox(width: 10.w),
+                SizedBox(
+                  width: 20.w,
+                  height: 20.h,
+                  child: Lottie.network(AppLottie.arrowRight),
+                ),
               ],
             ),
           ),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 24.h),
       ],
     );
   }
@@ -606,62 +602,64 @@ class _DepositSheetState extends State<DepositSheet>
           'Enter Transaction Signature',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
-            fontSize: 17.sp,
+            fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: 6.h),
+        SizedBox(height: 8.h),
         Text(
           'Paste the transaction hash from your wallet to verify and credit your deposit.',
           style: GoogleFonts.inter(
             color: AppColors.textSecondary,
-            fontSize: 12.sp,
-            height: 1.4,
+            fontSize: 13.sp,
+            height: 1.5,
           ),
         ),
-        SizedBox(height: 16.h),
+        SizedBox(height: 20.h),
         Container(
-          padding: EdgeInsets.all(14.w),
+          padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.accentBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10.r),
-            border:
-                Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.help_outline,
-                      color: AppColors.accentBlue, size: 18.sp),
+                  SizedBox(
+                    width: 20.w,
+                    height: 20.h,
+                    child: Lottie.network(AppLottie.question),
+                  ),
                   SizedBox(width: 8.w),
                   Text(
                     'How to find your signature?',
                     style: GoogleFonts.inter(
                       color: AppColors.accentBlue,
-                      fontSize: 12.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: 6.h),
+              SizedBox(height: 8.h),
               Text(
                 'Phantom/Solflare: Activity → Tap transaction → Copy Signature',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
-                  fontSize: 11.sp,
+                  fontSize: 12.sp,
                 ),
               ),
             ],
           ),
         ),
-        SizedBox(height: 20.h),
+        SizedBox(height: 24.h),
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14.r),
+            borderRadius: BorderRadius.circular(16.r),
             border: Border.all(
               color: _verifyError.isNotEmpty
                   ? AppColors.accentRed
@@ -675,7 +673,7 @@ class _DepositSheetState extends State<DepositSheet>
             controller: _sigController,
             style: GoogleFonts.spaceMono(
               color: AppColors.textPrimary,
-              fontSize: 11.sp,
+              fontSize: 12.sp,
             ),
             maxLines: 3,
             onChanged: (_) => setState(() {}),
@@ -683,10 +681,10 @@ class _DepositSheetState extends State<DepositSheet>
               hintText: 'Paste transaction signature here...',
               hintStyle: GoogleFonts.inter(
                 color: AppColors.textMuted,
-                fontSize: 12.sp,
+                fontSize: 13.sp,
               ),
               border: InputBorder.none,
-              contentPadding: EdgeInsets.all(14.w),
+              contentPadding: EdgeInsets.all(16.w),
               suffixIcon: GestureDetector(
                 onTap: () async {
                   final data = await Clipboard.getData('text/plain');
@@ -696,40 +694,45 @@ class _DepositSheetState extends State<DepositSheet>
                   }
                 },
                 child: Container(
-                  margin: EdgeInsets.all(10.w),
+                  margin: EdgeInsets.all(12.w),
                   padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
                     color: AppColors.accentPurple.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: Icon(Icons.content_paste,
-                      color: AppColors.accentPurple, size: 18.sp),
+                  child: SizedBox(
+                    width: 20.w,
+                    height: 20.h,
+                    child: Lottie.network(AppLottie.copy),
+                  ),
                 ),
               ),
             ),
           ),
         ),
         if (_verifyError.isNotEmpty) ...[
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
               color: AppColors.accentRed.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10.r),
-              border:
-                  Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+              border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.error_outline,
-                    color: AppColors.accentRed, size: 18.sp),
-                SizedBox(width: 8.w),
+                SizedBox(
+                  width: 18.w,
+                  height: 18.h,
+                  child: Lottie.network(AppLottie.txFailed, repeat: false),
+                ),
+                SizedBox(width: 10.w),
                 Expanded(
                   child: Text(
                     _verifyError,
                     style: GoogleFonts.inter(
                       color: AppColors.accentRed,
-                      fontSize: 11.sp,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ),
@@ -737,26 +740,26 @@ class _DepositSheetState extends State<DepositSheet>
             ),
           ),
         ],
-        SizedBox(height: 28.h),
+        SizedBox(height: 32.h),
         GestureDetector(
           onTap: _verifying ? null : _verifyDeposit,
           child: Container(
             width: double.infinity,
-            height: 50.h,
+            height: 56.h,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: _verifying
                     ? [AppColors.textMuted, AppColors.textMuted]
                     : [AppColors.accentGreen, AppColors.accentBlue],
               ),
-              borderRadius: BorderRadius.circular(14.r),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: _verifying
                   ? null
                   : [
                       BoxShadow(
                         color: AppColors.accentGreen.withOpacity(0.3),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
             ),
@@ -766,20 +769,19 @@ class _DepositSheetState extends State<DepositSheet>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: 20.w,
-                        height: 20.h,
+                        width: 24.w,
+                        height: 24.h,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
-                      SizedBox(width: 10.w),
+                      SizedBox(width: 12.w),
                       Text(
                         'Verifying...',
                         style: GoogleFonts.inter(
                           color: Colors.white,
-                          fontSize: 14.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -789,13 +791,13 @@ class _DepositSheetState extends State<DepositSheet>
                     'Verify & Credit',
                     style: GoogleFonts.inter(
                       color: Colors.black,
-                      fontSize: 14.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
           ),
         ),
-        SizedBox(height: 14.h),
+        SizedBox(height: 16.h),
         GestureDetector(
           onTap: () => setState(() {
             _step = 0;
@@ -803,10 +805,10 @@ class _DepositSheetState extends State<DepositSheet>
           }),
           child: Container(
             width: double.infinity,
-            height: 44.h,
+            height: 48.h,
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12.r),
+              borderRadius: BorderRadius.circular(14.r),
               border: Border.all(color: AppColors.border),
             ),
             alignment: Alignment.center,
@@ -814,40 +816,43 @@ class _DepositSheetState extends State<DepositSheet>
               'Back',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
-                fontSize: 13.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ),
-        SizedBox(height: 24.h),
+        SizedBox(height: 32.h),
       ],
     );
   }
 
-  Widget _buildInfoCard(
-      IconData icon, String title, String subtitle, Color color) {
+  Widget _buildInfoCard(String lottieUrl, String title, String subtitle, Color color) {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10.r),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         children: [
           Container(
-            width: 32.w,
-            height: 32.h,
+            width: 36.w,
+            height: 36.h,
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: Center(
-              child: Icon(icon, color: color, size: 18.sp),
+              child: SizedBox(
+                width: 20.w,
+                height: 20.h,
+                child: Lottie.network(lottieUrl),
+              ),
             ),
           ),
-          SizedBox(width: 10.w),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -856,7 +861,7 @@ class _DepositSheetState extends State<DepositSheet>
                   title,
                   style: GoogleFonts.inter(
                     color: AppColors.textPrimary,
-                    fontSize: 12.sp,
+                    fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -865,7 +870,7 @@ class _DepositSheetState extends State<DepositSheet>
                   subtitle,
                   style: GoogleFonts.inter(
                     color: color,
-                    fontSize: 10.sp,
+                    fontSize: 11.sp,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -877,3 +882,4 @@ class _DepositSheetState extends State<DepositSheet>
     );
   }
 }
+
