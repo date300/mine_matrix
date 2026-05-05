@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -8,12 +9,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
-import '../../services/withdraw_api_service.dart'; // <-- API service
 import '../../widgets/custom_error_widget.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DESIGN TOKENS
+//  DESIGN TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 class _C {
   static const bg0     = Color(0xFF060609);
@@ -36,7 +37,16 @@ class _C {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LOTTIE URLs
+//  LOTTIE — only where animation genuinely adds value
+//
+//  ✅ txPending  — looping animation shows "in progress" — meaningful
+//  ✅ txSuccess  — plays once on approved items & success dialog
+//  ✅ txFailed   — plays once on rejected items
+//  ✅ emptyHistory — welcoming empty state
+//  ✅ confetti   — celebratory success overlay
+//  ✅ withdrawCta — hero CTA button, single animated accent
+//
+//  ❌ refresh, wallet, copy, warning, arrowRight, verifyLoading → Icons
 // ─────────────────────────────────────────────────────────────────────────────
 class _L {
   static const txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
@@ -47,8 +57,10 @@ class _L {
   static const withdrawCta  = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
 }
 
+const String _baseUrl = 'https://web3.ltcminematrix.com';
+
 // ─────────────────────────────────────────────────────────────────────────────
-// MODEL
+//  MODEL
 // ─────────────────────────────────────────────────────────────────────────────
 class WithdrawMethod {
   final String name, symbol;
@@ -71,7 +83,7 @@ final List<WithdrawMethod> _withdrawMethods = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HEX GRID BACKGROUND PAINTER
+//  HEX GRID BACKGROUND PAINTER
 // ─────────────────────────────────────────────────────────────────────────────
 class _HexPainter extends CustomPainter {
   @override
@@ -103,7 +115,7 @@ class _HexPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ROTATING NEON BORDER
+//  ROTATING NEON BORDER
 // ─────────────────────────────────────────────────────────────────────────────
 class _SpinBorder extends StatefulWidget {
   final Widget child;
@@ -154,7 +166,10 @@ class _SpinBorderState extends State<_SpinBorder> with SingleTickerProviderState
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEXT STYLE HELPERS
+//  TEXT STYLE HELPERS
+//  Outfit = body, labels, buttons (readable, modern)
+//  Orbitron = screen title + balance number only (Web3 identity)
+//  SpaceMono = wallet addresses only
 // ─────────────────────────────────────────────────────────────────────────────
 TextStyle _ts(double size, Color color, {FontWeight w = FontWeight.w400, double spacing = 0}) =>
     GoogleFonts.outfit(fontSize: size.sp, color: color, fontWeight: w, letterSpacing: spacing);
@@ -163,7 +178,7 @@ TextStyle _mono(double size, Color color) =>
     GoogleFonts.spaceMono(fontSize: size.sp, color: color);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WITHDRAW SCREEN
+//  WITHDRAW SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
@@ -172,8 +187,6 @@ class WithdrawScreen extends StatefulWidget {
 }
 
 class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStateMixin {
-  final _api = WithdrawApiService();   // API service instance
-
   bool   _loading    = true;
   bool   _hasError   = false;
   bool   _refreshing = false;
@@ -196,6 +209,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   @override void dispose() { _balCtrl.dispose(); super.dispose(); }
 
   String? get _token => Provider.of<AuthProvider>(context, listen: false).token;
+  Map<String, String> get _hdrs => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $_token',
+  };
 
   void _animateBal(double nv) {
     final old = _displayBal;
@@ -205,50 +222,33 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     _balCtrl.forward(from: 0);
   }
 
-  // ──────────────────────────────────────────────────────────────────
-  // LOAD DATA FROM API
-  // ──────────────────────────────────────────────────────────────────
   Future<void> _load({bool silent = false, bool more = false}) async {
     if (!silent) setState(() { _loading = true; _hasError = false; });
     try {
-      final token = _token;
-      if (token == null) {
-        setState(() { _loading = false; _hasError = true; });
-        return;
-      }
-      if (!more) {
-        _page = 1;
-        _hasMore = true;
-      }
+      if (_token == null) { setState(() { _loading = false; _hasError = true; }); return; }
+      if (!more) { _page = 1; _hasMore = true; }
+      final pg = more ? _page + 1 : 1;
 
-      final results = await Future.wait([
-        _api.getWithdrawableBalance(token),
-        _api.getHistory(token, page: more ? _page + 1 : 1),
+      final res = await Future.wait([
+        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _hdrs).timeout(15.seconds),
+        http.get(Uri.parse('$_baseUrl/api/withdraw/history?page=$pg&limit=10'), headers: _hdrs).timeout(15.seconds),
       ]);
-
       if (!mounted) return;
 
-      final newBalance = results[0] as double;
-      final (historyData, hasMorePages) = results[1] as (List<Map<String, dynamic>>, bool);
-
-      if (_balance != newBalance) {
-        _balance = newBalance;
-        _animateBal(newBalance);
+      if (res[0].statusCode == 200) {
+        final s = jsonDecode(res[0].body);
+        final nb = double.tryParse(s['withdrawable']?.toString() ?? '0') ?? 0;
+        if (_balance != nb) { _balance = nb; _animateBal(nb); }
       }
-
-      if (more) {
-        if (historyData.isEmpty) {
-          _hasMore = false;
+      if (res[1].statusCode == 200) {
+        final h = jsonDecode(res[1].body);
+        final nd = List<Map<String, dynamic>>.from(h['data'] ?? []);
+        if (more) {
+          if (nd.isEmpty) { _hasMore = false; } else { _history.addAll(nd); _page = pg; }
         } else {
-          _history.addAll(historyData);
-          _page++;
+          _history = nd; _page = 1; _hasMore = nd.length >= 10;
         }
-      } else {
-        _history = historyData;
-        _page = 1;
-        _hasMore = hasMorePages;
       }
-
       setState(() => _loading = false);
     } catch (e) {
       if (mounted) {
@@ -279,20 +279,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     setState(() => _refreshing = false);
   }
 
-  void _showSheet() {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => WithdrawSheet(
-        balance: _balance,
-        token: _token!, // safe because widget only appears when logged in
-        onSuccess: () { Navigator.pop(context); _load(silent: true); },
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // BUILD
-  // ──────────────────────────────────────────────────────────────────
+  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -332,6 +319,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     ),
   );
 
+  // ── TOP SECTION ───────────────────────────────────────────────────────────
   Widget _topSection() => Padding(
     padding: EdgeInsets.symmetric(horizontal: 20.w),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -349,10 +337,12 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     ]),
   );
 
+  // ── HEADER ────────────────────────────────────────────────────────────────
   Widget _header() => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Orbitron only for the screen title
         Text('Withdraw',
           style: GoogleFonts.orbitron(
             fontSize: 26.sp, color: _C.t1,
@@ -369,9 +359,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
             ),
           ),
           SizedBox(width: 7.w),
-          Text('BEP20 – BSC Network', style: _ts(12, _C.t2)),
+          Text('BEP20 · BSC Network', style: _ts(12, _C.t2)),
         ]),
       ]),
+      // Refresh — Icon is correct here, simple and fast
       GestureDetector(
         onTap: _refreshing ? null : _refresh,
         child: Container(
@@ -390,6 +381,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     ],
   );
 
+  // ── BALANCE CARD ──────────────────────────────────────────────────────────
   Widget _balanceCard() {
     return _SpinBorder(
       radius: 22,
@@ -407,7 +399,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
             padding: EdgeInsets.all(22.w),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                _pill('💎 AVAILABLE', _C.green),
+                _pill('● AVAILABLE', _C.green),
+                // Icon: static decorative label — no animation needed
                 Row(children: [
                   const Icon(Icons.account_balance_wallet_outlined, color: _C.t2, size: 16),
                   SizedBox(width: 6.w),
@@ -417,6 +410,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
               SizedBox(height: 18.h),
               Text('Available Balance', style: _ts(13, _C.t2)),
               SizedBox(height: 6.h),
+              // Orbitron only for the balance number
               AnimatedBuilder(
                 animation: _balAnim,
                 builder: (_, __) => RichText(text: TextSpan(children: [
@@ -467,6 +461,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     child: Text(label, style: _ts(10, c.withOpacity(0.85), w: FontWeight.w500)),
   );
 
+  // ── STATS ROW ─────────────────────────────────────────────────────────────
   Widget _statsRow() {
     final pending  = _history.where((h) => h['status'] == 'pending').length;
     final approved = _history.where((h) => h['status'] == 'approved').length;
@@ -507,6 +502,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     ).animate().fadeIn(delay: 150.ms);
   }
 
+  // ── CTA BUTTON ────────────────────────────────────────────────────────────
   Widget _ctaButton() => GestureDetector(
     onTap: _showSheet,
     child: Container(
@@ -520,6 +516,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
         ],
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        // ✅ Lottie: Hero CTA — the one animated element that draws attention
         SizedBox(width: 30.w, height: 30.h,
           child: Lottie.network(_L.withdrawCta, fit: BoxFit.contain)),
         SizedBox(width: 10.w),
@@ -545,6 +542,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     Text(t, style: _ts(16, _C.t1, w: FontWeight.w600)),
   ]);
 
+  // ── HISTORY ───────────────────────────────────────────────────────────────
   Widget _historySliver() {
     if (_history.isEmpty) {
       return SliverToBoxAdapter(child: Padding(
@@ -569,6 +567,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
       border: Border.all(color: _C.b1),
     ),
     child: Column(children: [
+      // ✅ Lottie: Empty state — welcoming animation, great UX moment
       SizedBox(width: 110.w, height: 110.h, child: Lottie.network(_L.emptyHistory)),
       SizedBox(height: 12.h),
       Text('No withdrawals yet', style: _ts(15, _C.t1, w: FontWeight.w600)),
@@ -624,6 +623,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16.r),
           child: Stack(children: [
+            // Left status accent bar
             Positioned(left: 0, top: 0, bottom: 0,
               child: Container(
                 width: 3.5,
@@ -636,6 +636,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
             Padding(
               padding: EdgeInsets.fromLTRB(18.w, 14.h, 14.w, 14.h),
               child: Row(children: [
+                // ✅ Lottie: TX status icon — pending loops (shows live state),
+                //    success/failed play once (communicates outcome)
                 Container(
                   width: 44.w, height: 44.h,
                   decoration: BoxDecoration(
@@ -705,10 +707,20 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
       return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (_) { return d; }
   }
+
+  void _showSheet() {
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => WithdrawSheet(
+        balance: _balance, headers: _hdrs,
+        onSuccess: () { Navigator.pop(context); _load(silent: true); },
+      ),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SKELETON LOADER
+//  SKELETON LOADER
 // ─────────────────────────────────────────────────────────────────────────────
 class _Skeleton extends StatelessWidget {
   const _Skeleton();
@@ -745,25 +757,18 @@ class _Skeleton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WITHDRAW SHEET
+//  WITHDRAW SHEET
 // ─────────────────────────────────────────────────────────────────────────────
 class WithdrawSheet extends StatefulWidget {
   final double balance;
-  final String token;
+  final Map<String, String> headers;
   final VoidCallback onSuccess;
-  const WithdrawSheet({
-    super.key,
-    required this.balance,
-    required this.token,
-    required this.onSuccess,
-  });
+  const WithdrawSheet({super.key, required this.balance, required this.headers, required this.onSuccess});
   @override
   State<WithdrawSheet> createState() => _WithdrawSheetState();
 }
 
 class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateMixin {
-  final _api = WithdrawApiService();
-
   int    _step = 0;
   WithdrawMethod _method = _withdrawMethods[0];
   final _amtCtrl  = TextEditingController();
@@ -801,26 +806,33 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
   Future<void> _confirm() async {
     setState(() => _busy = true);
     try {
-      final data = await _api.requestWithdraw(
-        widget.token,
-        double.parse(_amtCtrl.text),
-        _addrCtrl.text.trim(),
-      );
+      final res = await http.post(
+        Uri.parse('$_baseUrl/api/withdraw'),
+        headers: widget.headers,
+        body: jsonEncode({'amount': double.parse(_amtCtrl.text), 'wallet': _addrCtrl.text.trim()}),
+      ).timeout(20.seconds);
       if (!mounted) return;
-      setState(() => _busy = false);
-      _successCtrl.forward();
-      _showSuccess(data);
-    } catch (e) {
-      if (mounted) {
-        setState(() { _busy = false; _err = e.toString().replaceFirst('Exception: ', ''); _step = 0; });
+      final d = jsonDecode(res.body);
+      if (res.statusCode == 200 && d['success'] == true) {
+        setState(() => _busy = false);
+        _successCtrl.forward();
+        _showSuccess(d);
+      } else {
+        setState(() { _busy = false; _err = d['error'] ?? 'Withdrawal failed'; _step = 0; });
       }
+    } catch (e) {
+      if (mounted) setState(() {
+        _busy = false;
+        _err = e.toString().contains('timeout') ? 'Timeout. Try again.' : 'Connection error.';
+        _step = 0;
+      });
     }
   }
 
-  void _showSuccess(Map<String, dynamic> data) {
-    final amount = data['amount']?.toString() ?? '0';
-    final wallet = data['wallet']?.toString() ?? '';
-    final id     = data['withdrawId']?.toString() ?? '';
+  void _showSuccess(Map d) {
+    final amount = d['data']?['amount']?.toString() ?? '0';
+    final wallet = d['data']?['wallet']?.toString() ?? '';
+    final id     = d['data']?['withdrawId']?.toString() ?? '';
     final addr   = wallet.length >= 20
         ? '${wallet.substring(0, 8)}...${wallet.substring(wallet.length - 8)}'
         : wallet;
@@ -839,6 +851,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
               boxShadow: [BoxShadow(color: _C.green.withOpacity(0.1), blurRadius: 40)],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Header
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(24.w),
@@ -850,6 +863,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                 ),
                 child: Column(children: [
+                  // ✅ Lottie: Success animation — meaningful, plays once, celebratory
                   SizedBox(width: 78.w, height: 78.h,
                     child: Lottie.network(_L.txSuccess, repeat: false, controller: _successCtrl)),
                   SizedBox(height: 10.h),
@@ -858,6 +872,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
                   Text('Processing your withdrawal', style: _ts(12, _C.t2)),
                 ]),
               ),
+              // Body
               Padding(
                 padding: EdgeInsets.fromLTRB(24.w, 14.h, 24.w, 24.h),
                 child: Column(children: [
@@ -886,6 +901,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
             ]),
           ),
         )),
+        // ✅ Lottie: Confetti — perfect celebratory overlay, plays once
         Positioned.fill(child: IgnorePointer(
           child: Lottie.network(_L.confetti, controller: _successCtrl, fit: BoxFit.cover),
         )),
@@ -901,6 +917,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     ]),
   );
 
+  // ── SHEET BUILD ───────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -936,6 +953,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
   Widget _sheetHeader() => Padding(
     padding: EdgeInsets.symmetric(horizontal: 22.w),
     child: Row(children: [
+      // Icon: sheet header — static context, clean
       Container(
         width: 46.w, height: 46.h,
         decoration: BoxDecoration(
@@ -999,6 +1017,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     ]);
   }
 
+  // ── STEP 0 ────────────────────────────────────────────────────────────────
   Widget _step0() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     _lbl('Network'),
     SizedBox(height: 10.h),
@@ -1032,6 +1051,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           border: Border.all(color: sel ? m.color.withOpacity(0.42) : _C.b1, width: sel ? 1.5 : 1),
         ),
         child: Row(children: [
+          // Icon: network selector — static branded icon, clean and fast
           Container(
             width: 42.w, height: 42.h,
             decoration: BoxDecoration(
@@ -1044,7 +1064,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(m.name, style: _ts(14, _C.t1, w: FontWeight.w600)),
             SizedBox(height: 2.h),
-            Text('Min \$${m.minAmount}  –  Max \$${m.maxAmount}', style: _ts(11, _C.t2)),
+            Text('Min \$${m.minAmount}  ·  Max \$${m.maxAmount}', style: _ts(11, _C.t2)),
           ])),
           Container(
             width: 22.w, height: 22.h,
@@ -1111,6 +1131,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           contentPadding: EdgeInsets.all(16.w),
         ),
       )),
+      // Icon: paste — functional action, icon is clear and instant
       GestureDetector(
         onTap: () async {
           final d = await Clipboard.getData('text/plain');
@@ -1138,6 +1159,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
       border: Border.all(color: _C.magenta.withOpacity(0.22)),
     ),
     child: Row(children: [
+      // Icon: static error message — no animation needed here
       const Icon(Icons.error_outline_rounded, color: _C.magenta, size: 18),
       SizedBox(width: 10.w),
       Expanded(child: Text(_err, style: _ts(12, _C.magenta, w: FontWeight.w500))),
@@ -1168,6 +1190,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
     );
   }
 
+  // ── STEP 1 ────────────────────────────────────────────────────────────────
   Widget _step1() {
     final amt = double.tryParse(_amtCtrl.text) ?? 0;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1199,6 +1222,7 @@ class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateM
           border: Border.all(color: _C.amber.withOpacity(0.18)),
         ),
         child: Row(children: [
+          // Icon: static warning message — no animation needed
           const Icon(Icons.warning_amber_rounded, color: _C.amber, size: 20),
           SizedBox(width: 10.w),
           Expanded(child: Text(
