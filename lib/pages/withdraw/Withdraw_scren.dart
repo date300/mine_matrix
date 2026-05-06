@@ -96,6 +96,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     super.dispose();
   }
 
+  // ═══ TOKEN (exactly like ReferScreen) ═══
   String? _token() =>
       Provider.of<AuthProvider>(context, listen: false).token;
 
@@ -104,7 +105,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         'Authorization': 'Bearer ${_token()}',
       };
 
-  // ─── DATA FETCH ────────────────────────
+  // ═══ DATA FETCH ═══════════════════════
   Future<void> _load({bool silent = false}) async {
     if (!silent) setState(() { _isLoading = true; _hasError = false; });
     try {
@@ -187,7 +188,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     setState(() => _isRefreshing = false);
   }
 
-  // ─── WITHDRAW REQUEST ─────────────────
+  // ═══ WITHDRAW REQUEST ═════════════════
   Future<void> _submitWithdraw() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -252,7 +253,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     ));
   }
 
-  // ─── BUILD ─────────────────────────────
+  // ═══ BUILD ═════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,7 +331,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ─── SKELETON ─────────────────────────
+  // ═══ SKELETON ══════════════════════════
   Widget _skeleton() => Shimmer.fromColors(
         baseColor: AppColors.surface,
         highlightColor: AppColors.cardBg.withOpacity(0.5),
@@ -357,7 +358,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20.r)));
 
-  // ─── HEADER ───────────────────────────
+  // ═══ HEADER ════════════════════════════
   Widget _header() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -398,7 +399,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ],
       );
 
-  // ─── BALANCE CARD (glass) ────────────
+  // ═══ BALANCE CARD (glass) ═════════════
   Widget _balanceCard() => AnimatedBuilder(
         animation: _balanceAnim,
         builder: (_, __) => Container(
@@ -493,7 +494,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ]),
       );
 
-  // ─── WITHDRAW FORM CARD ─────────────
+  // ═══ WITHDRAW FORM CARD ═══════════════
   Widget _withdrawFormCard() => Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
@@ -602,7 +603,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ),
       );
 
-  // ─── HISTORY ITEM ────────────────────
+  // ═══ HISTORY ITEM ═════════════════════
   Widget _historyItem(Map<String, dynamic> item) {
     final status = item['status'] ?? 'pending';
     final Color statusColor = status == 'approved'
