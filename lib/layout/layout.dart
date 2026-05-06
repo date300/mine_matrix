@@ -7,7 +7,7 @@ import '../pages/home/home_screen.dart';
 import '../pages/mining/mining_screen.dart';
 import '../pages/wallet/wallet_screen.dart';
 import '../pages/refer/refer_screen.dart';
-import '../pages/withdraw/Withdraw_scren.dart';
+import '../pages/cash/Cash_scren.dart';
 
 class AppColors {
   static const Color background = Color(0xFF0D0D12);
@@ -35,7 +35,7 @@ class _AppLayoutState extends State<AppLayout> with TickerProviderStateMixin {
     const MiningScreen(),    // Index 1
     const ReferScreen(),     // Index 2
     const WalletScreen(),    // Index 3
-    const WithdrawScreen(),  // Index 4
+    const CashScreen(),  // Index 4
   ];
 
   @override
