@@ -17,12 +17,21 @@ class AppColors {
   static const Color background    = Color(0xFF0A0A0F);
   static const Color surface       = Color(0xFF12121A);
   static const Color accentGreen   = Color(0xFF00FFA3);
+  static const Color accentPurple  = Color(0xFFB829F7);
   static const Color accentBlue    = Color(0xFF00D4FF);
   static const Color accentRed     = Color(0xFFFF4D4D);
   static const Color textPrimary   = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8B8B9E);
+  static const Color textMuted     = Color(0xFF4A4A5A);
   static const Color border        = Color(0xFF2A2A3A);
   static const Color cardBg        = Color(0xFF161620);
+}
+
+class AppLottie {
+  static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
+  static const String success      = 'https://assets10.lottiefiles.com/packages/lf20_kz9pjc9p.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
@@ -34,19 +43,40 @@ class WithdrawScreen extends StatefulWidget {
   State<WithdrawScreen> createState() => _WithdrawScreenState();
 }
 
-class _WithdrawScreenState extends State<WithdrawScreen> {
+class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStateMixin {
   final _amountController = TextEditingController();
   final _walletController = TextEditingController();
   
-  bool _isLoading = true;
+  bool _isLoading    = true;
   bool _isSubmitting = false;
+  bool _hasError     = false;
+  
   double _withdrawableBalance = 0.0;
-  List<dynamic> _history = [];
+  List<dynamic> _withdrawHistory = [];
+
+  // Animation controller for balance
+  late AnimationController _balanceCtrl;
+  late Animation<double>   _balanceAnim;
+  double _displayBalance = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _balanceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _balanceAnim = CurvedAnimation(parent: _balanceCtrl, curve: Curves.easeOutExpo);
+    _balanceAnim.addListener(() {
+      if (mounted) setState(() => _displayBalance = _withdrawableBalance * _balanceAnim.value);
+    });
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _walletController.dispose();
+    _balanceCtrl.dispose();
+    super.dispose();
   }
 
   String? _token() => Provider.of<AuthProvider>(context, listen: false).token;
@@ -57,48 +87,51 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
   };
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    await Future.wait([
-      _fetchBalance(),
-      _fetchHistory(),
-    ]);
-    if (mounted) setState(() => _isLoading = false);
+    setState(() { _isLoading = true; _hasError = false; });
+    try {
+      await Future.wait([
+        _fetchBalance(),
+        _fetchHistory(),
+      ]);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _balanceCtrl.forward(from: 0);
+      }
+    } catch (e) {
+      if (mounted) setState(() { _isLoading = false; _hasError = true; });
+    }
   }
 
-  // আপনার API অনুযায়ী ব্যালেন্স ফেচ করা (Mining Stats থেকে)
   Future<void> _fetchBalance() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/api/mining/stats'), headers: _headers());
-      if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        _withdrawableBalance = double.tryParse(d['withdrawable'].toString()) ?? 0.0;
-      }
-    } catch (e) { debugPrint(e.toString()); }
+    final res = await http.get(Uri.parse('$_baseUrl/api/mining/stats'), headers: _headers());
+    if (res.statusCode == 200) {
+      final d = jsonDecode(res.body);
+      _withdrawableBalance = double.tryParse(d['withdrawable']?.toString() ?? '0') ?? 0.0;
+    }
   }
 
-  // হিস্ট্রি ফেচ করা (GET /withdraw/history)
   Future<void> _fetchHistory() async {
-    try {
-      final res = await http.get(Uri.parse('$_baseUrl/api/withdraw/history'), headers: _headers());
-      if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        _history = d['data'] ?? [];
-      }
-    } catch (e) { debugPrint(e.toString()); }
+    final res = await http.get(Uri.parse('$_baseUrl/api/withdraw/history'), headers: _headers());
+    if (res.statusCode == 200) {
+      final d = jsonDecode(res.body);
+      _withdrawHistory = d['data'] ?? [];
+    }
   }
 
-  // উইথড্র রিকোয়েস্ট সাবমিট (POST /withdraw)
   Future<void> _submitWithdraw() async {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final wallet = _walletController.text.trim();
 
-    // Frontend Validation (API লজিক অনুযায়ী)
     if (amount < 5) {
-      _showToast("Minimum withdraw is \$5", isError: true);
+      _showSnack("Minimum withdrawal is \$5", isError: true);
       return;
     }
     if (!RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(wallet)) {
-      _showToast("Invalid BEP20 Wallet Address", isError: true);
+      _showSnack("Invalid BEP20 address", isError: true);
+      return;
+    }
+    if (amount > _withdrawableBalance) {
+      _showSnack("Insufficient balance", isError: true);
       return;
     }
 
@@ -112,26 +145,27 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
       final d = jsonDecode(res.body);
       if (res.statusCode == 200 && d['success'] == true) {
-        _showToast("Withdrawal request submitted!");
+        _showSnack("Withdrawal request submitted successfully!");
         _amountController.clear();
         _walletController.clear();
         _loadData();
       } else {
-        _showToast(d['error'] ?? "Withdrawal failed", isError: true);
+        _showSnack(d['error'] ?? "Failed to process withdrawal", isError: true);
       }
     } catch (e) {
-      _showToast("Connection error", isError: true);
+      _showSnack("Network error. Please try again.", isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  void _showToast(String msg, {bool isError = false}) {
+  void _showSnack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.inter(color: Colors.white)),
+      content: Text(msg, style: GoogleFonts.inter(fontSize: 13.sp, fontWeight: FontWeight.w500)),
       backgroundColor: isError ? AppColors.accentRed : AppColors.accentGreen,
       behavior: SnackBarBehavior.floating,
-      margin: EdgeInsets.all(20.w),
+      margin: EdgeInsets.all(16.w),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
     ));
   }
 
@@ -140,161 +174,245 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: AppColors.accentGreen))
-        : RefreshIndicator(
-            onRefresh: _loadData,
-            color: AppColors.accentGreen,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 60.h),
-                  _header(),
-                  SizedBox(height: 24.h),
-                  _balanceCard(),
-                  SizedBox(height: 24.h),
-                  _inputForm(),
-                  SizedBox(height: 32.h),
-                  _sectionTitle("Recent History"),
-                  SizedBox(height: 12.h),
-                  _historyList(),
-                  SizedBox(height: 100.h),
+        ? _skeleton()
+        : _hasError 
+          ? CustomErrorWidget(onRetry: _loadData)
+          : RefreshIndicator(
+              onRefresh: _loadData,
+              color: AppColors.accentGreen,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 60.h),
+                          _header(),
+                          SizedBox(height: 24.h),
+                          _balanceHero().animate().fadeIn().slideY(begin: 0.1, end: 0),
+                          SizedBox(height: 24.h),
+                          _inputForm().animate().fadeIn(delay: 200.ms),
+                          SizedBox(height: 32.h),
+                          _sec("Withdrawal History"),
+                          SizedBox(height: 16.h),
+                          _historyList(),
+                          SizedBox(height: 100.h),
+                        ],
+                      ),
+                    ),
+                  )
                 ],
               ),
             ),
-          ),
     );
   }
 
-  Widget _header() => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _header() => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text('Withdraw', style: GoogleFonts.inter(color: Colors.white, fontSize: 28.sp, fontWeight: FontWeight.bold)),
-      Text('Cash out your earnings to BEP20', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14.sp)),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Withdraw', style: GoogleFonts.inter(color: Colors.white, fontSize: 28.sp, fontWeight: FontWeight.bold)),
+        Text('Transfer funds to your BEP20 wallet', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 13.sp)),
+      ]),
+      _iconBtn(Icons.refresh_rounded, _loadData),
     ],
   );
 
-  Widget _balanceCard() => Container(
+  Widget _balanceHero() => Container(
     width: double.infinity,
     padding: EdgeInsets.all(24.w),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(24.r),
-      gradient: LinearGradient(colors: [AppColors.accentBlue.withOpacity(0.2), AppColors.surface]),
+      gradient: LinearGradient(
+        colors: [AppColors.accentBlue.withOpacity(0.2), AppColors.surface],
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
       border: Border.all(color: AppColors.accentBlue.withOpacity(0.3)),
+      boxShadow: [BoxShadow(color: AppColors.accentBlue.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
     ),
     child: Column(
       children: [
-        Text('Withdrawable Balance', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14.sp)),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.account_balance_wallet_outlined, color: AppColors.accentBlue, size: 18.sp),
+          SizedBox(width: 8.w),
+          Text('WITHDRAWABLE BALANCE', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11.sp, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        ]),
+        SizedBox(height: 12.h),
+        Text('\$${_displayBalance.toStringAsFixed(2)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 42.sp, fontWeight: FontWeight.bold)),
         SizedBox(height: 8.h),
-        Text('\$${_withdrawableBalance.toStringAsFixed(2)}', 
-          style: GoogleFonts.inter(color: Colors.white, fontSize: 36.sp, fontWeight: FontWeight.bold)),
+        Text('Available for instant withdrawal', style: GoogleFonts.inter(color: AppColors.accentGreen.withOpacity(0.8), fontSize: 12.sp)),
       ],
     ),
   );
 
-  Widget _inputForm() => Column(
-    children: [
-      _customTextField(
+  Widget _inputForm() => Container(
+    padding: EdgeInsets.all(20.w),
+    decoration: BoxDecoration(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(24.r),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Column(children: [
+      _customField(
         controller: _amountController,
-        label: "Amount to Withdraw",
+        label: "Amount",
         hint: "Min \$5.00",
-        icon: Icons.attach_money_rounded,
+        icon: Icons.monetization_on_outlined,
         isNumber: true,
       ),
-      SizedBox(height: 16.h),
-      _customTextField(
+      SizedBox(height: 20.h),
+      _customField(
         controller: _walletController,
         label: "BEP20 Wallet Address",
         hint: "0x...",
         icon: Icons.account_balance_wallet_rounded,
       ),
       SizedBox(height: 24.h),
-      GestureDetector(
-        onTap: _isSubmitting ? null : _submitWithdraw,
-        child: Container(
-          width: double.infinity,
-          height: 56.h,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [AppColors.accentBlue, Color(0xFF0066FF)]),
-            borderRadius: BorderRadius.circular(16.r),
-            boxShadow: [BoxShadow(color: AppColors.accentBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
-          ),
-          child: Center(
-            child: _isSubmitting 
-              ? const CircularProgressIndicator(color: Colors.black)
-              : Text('Confirm Withdrawal', style: GoogleFonts.inter(color: Colors.black, fontSize: 16.sp, fontWeight: FontWeight.bold)),
-          ),
-        ),
-      ),
-    ],
+      _withdrawBtn(),
+    ]),
   );
 
-  Widget _customTextField({required TextEditingController controller, required String label, required String hint, required IconData icon, bool isNumber = false}) => Column(
+  Widget _withdrawBtn() => GestureDetector(
+    onTap: _isSubmitting ? null : _submitWithdraw,
+    child: Container(
+      width: double.infinity,
+      height: 56.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: _isSubmitting ? [AppColors.border, AppColors.border] : [AppColors.accentBlue, AppColors.accentPurple]),
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: _isSubmitting ? [] : [BoxShadow(color: AppColors.accentBlue.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+      ),
+      child: Center(
+        child: _isSubmitting 
+          ? SizedBox(width: 24.w, height: 24.w, child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : Text('Confirm Withdrawal', style: GoogleFonts.inter(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+      ),
+    ),
+  );
+
+  Widget _customField({required TextEditingController controller, required String label, required String hint, required IconData icon, bool isNumber = false}) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12.sp)),
-      SizedBox(height: 8.h),
+      Text(label, style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12.sp, fontWeight: FontWeight.w600)),
+      SizedBox(height: 10.h),
       TextField(
         controller: controller,
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: GoogleFonts.inter(color: Colors.white),
+        keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+        style: GoogleFonts.inter(color: Colors.white, fontSize: 15.sp),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.inter(color: AppColors.textMuted),
           prefixIcon: Icon(icon, color: AppColors.accentBlue, size: 20.sp),
           filled: true,
-          fillColor: AppColors.surface,
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: const BorderSide(color: AppColors.border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r), borderSide: const BorderSide(color: AppColors.accentBlue)),
+          fillColor: AppColors.background,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14.r), borderSide: const BorderSide(color: AppColors.border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14.r), borderSide: const BorderSide(color: AppColors.accentBlue)),
         ),
       ),
     ],
   );
 
   Widget _historyList() {
-    if (_history.isEmpty) {
-      return Center(child: Text("No withdrawal records found", style: GoogleFonts.inter(color: AppColors.textSecondary)));
-    }
+    if (_withdrawHistory.isEmpty) return _emptyState();
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _history.length,
+      itemCount: _withdrawHistory.length,
       itemBuilder: (context, index) {
-        final item = _history[index];
-        final status = item['status'].toString().toLowerCase();
-        Color statusColor = AppColors.textSecondary;
-        if (status == 'pending') statusColor = Colors.orange;
-        if (status == 'approved') statusColor = AppColors.accentGreen;
-        if (status == 'rejected') statusColor = AppColors.accentRed;
-
-        return Container(
-          margin: EdgeInsets.only(bottom: 12.h),
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16.r), border: Border.all(color: AppColors.border)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('\$${item['amount']}', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp)),
-                  SizedBox(height: 4.h),
-                  Text(item['created_at'].toString().substring(0, 10), style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11.sp)),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8.r), border: Border.all(color: statusColor.withOpacity(0.3))),
-                child: Text(status.toUpperCase(), style: GoogleFonts.inter(color: statusColor, fontSize: 10.sp, fontWeight: FontWeight.bold)),
-              )
-            ],
-          ),
-        );
+        final item = _withdrawHistory[index];
+        return _historyItem(item).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideX(begin: 0.1, end: 0);
       },
     );
   }
 
-  Widget _sectionTitle(String title) => Text(title, style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold));
+  Widget _historyItem(Map<String, dynamic> item) {
+    final status = item['status'].toString().toLowerCase();
+    Color statusColor = AppColors.textSecondary;
+    if (status == 'pending') statusColor = Colors.orange;
+    if (status == 'approved') statusColor = AppColors.accentGreen;
+    if (status == 'rejected') statusColor = AppColors.accentRed;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48.w, height: 48.w,
+            decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(14.r)),
+            child: Icon(
+              status == 'approved' ? Icons.check_circle_outline : status == 'rejected' ? Icons.error_outline : Icons.pending_actions_rounded,
+              color: statusColor, size: 24.sp,
+            ),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('\$${item['amount']}', style: GoogleFonts.inter(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+            SizedBox(height: 4.h),
+            Text(item['wallet_address'].toString().replaceRange(6, 36, '...'), style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11.sp)),
+          ])),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6.r)),
+              child: Text(status.toUpperCase(), style: GoogleFonts.inter(color: statusColor, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+            ),
+            SizedBox(height: 6.h),
+            Text(item['created_at'].toString().substring(0, 10), style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 10.sp)),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyState() => Center(
+    child: Column(children: [
+      SizedBox(height: 20.h),
+      Opacity(opacity: 0.5, child: Icon(Icons.history_rounded, size: 60.sp, color: AppColors.textMuted)),
+      SizedBox(height: 12.h),
+      Text("No withdrawal history found", style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14.sp)),
+    ]),
+  );
+
+  Widget _skeleton() => Shimmer.fromColors(
+    baseColor: AppColors.surface,
+    highlightColor: AppColors.cardBg,
+    child: Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Column(children: [
+        SizedBox(height: 60.h),
+        _skelBox(height: 80.h),
+        SizedBox(height: 24.h),
+        _skelBox(height: 180.h),
+        SizedBox(height: 24.h),
+        _skelBox(height: 250.h),
+      ]),
+    ),
+  );
+
+  Widget _skelBox({required double height}) => Container(
+    width: double.infinity, height: height,
+    margin: EdgeInsets.only(bottom: 20.h),
+    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20.r)),
+  );
+
+  Widget _iconBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12.r), border: Border.all(color: AppColors.border)),
+      child: Icon(icon, color: Colors.white, size: 20.sp),
+    ),
+  );
+
+  Widget _sec(String title) => Text(title, style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold));
 }
