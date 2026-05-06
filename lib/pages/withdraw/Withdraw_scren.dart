@@ -29,11 +29,11 @@ class AppColors {
 }
 
 class AppLottie {
-  static const String refresh     = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
-  static const String successAnim = 'https://assets10.lottiefiles.com/packages/lf20_touohxv0.json'; // success check
-  static const String coinSpin    = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String emptyHistory= 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
-  static const String withdrawAnim= 'https://assets10.lottiefiles.com/packages/lf20_i2eyxukf.json'; // sending money
+  static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const String successAnim  = 'https://assets10.lottiefiles.com/packages/lf20_touohxv0.json';
+  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
+  static const String withdrawAnim = 'https://assets10.lottiefiles.com/packages/lf20_i2eyxukf.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
@@ -108,11 +108,9 @@ class _WithdrawScreenState extends State<WithdrawScreen>
   Future<void> _load({bool silent = false}) async {
     if (!silent) setState(() { _isLoading = true; _hasError = false; });
     try {
-      // Fetch balance + stats (you need to implement this endpoint)
       final statsRes = await http
           .get(Uri.parse('$_baseUrl/api/mining/stats'), headers: _headers())
           .timeout(const Duration(seconds: 15));
-      // Fetch history page 1
       final histRes = await http
           .get(Uri.parse('$_baseUrl/api/withdraw/history?page=1&limit=10'),
                headers: _headers())
@@ -130,8 +128,11 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         final pending = int.tryParse(
             statsData['pendingCount']?.toString() ?? '0') ?? 0;
 
-        final List rawHistory = List<Map<String, dynamic>>.from(
-            histData['data'] ?? []);
+        // ✅ Fixed type casting
+        final List<Map<String, dynamic>> rawHistory =
+          (histData['data'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ?? [];
 
         setState(() {
           _withdrawable = newBalance;
@@ -140,7 +141,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           _history = rawHistory;
           _isLoading = false;
           _currentPage = 1;
-          _hasMoreHistory = rawHistory.length >= 10; // assume limit=10
+          _hasMoreHistory = rawHistory.length >= 10;
         });
 
         _balanceCtrl.forward(from: 0);
@@ -163,7 +164,13 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       if (!mounted) return;
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List newItems = List<Map<String, dynamic>>.from(data['data'] ?? []);
+
+        // ✅ Fixed type casting
+        final List<Map<String, dynamic>> newItems =
+          (data['data'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ?? [];
+
         setState(() {
           _history.addAll(newItems);
           _currentPage = nextPage;
@@ -216,7 +223,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           margin: EdgeInsets.all(16.w),
           duration: const Duration(seconds: 2),
         ));
-        // Clear form & refresh
         _amountCtrl.clear();
         _walletCtrl.clear();
         await _load(silent: true);
@@ -246,7 +252,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     ));
   }
 
-  // ─── BUILD (scaffold same pattern) ──
+  // ─── BUILD ─────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -324,7 +330,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ─── SKELETON (matching refer) ──────
+  // ─── SKELETON ─────────────────────────
   Widget _skeleton() => Shimmer.fromColors(
         baseColor: AppColors.surface,
         highlightColor: AppColors.cardBg.withOpacity(0.5),
@@ -351,7 +357,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20.r)));
 
-  // ─── HEADER (like refer header) ────
+  // ─── HEADER ───────────────────────────
   Widget _header() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -392,7 +398,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ],
       );
 
-  // ─── BALANCE CARD (glass, like hero) ──
+  // ─── BALANCE CARD (glass) ────────────
   Widget _balanceCard() => AnimatedBuilder(
         animation: _balanceAnim,
         builder: (_, __) => Container(
@@ -487,7 +493,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ]),
       );
 
-  // ─── WITHDRAW FORM CARD ───────────
+  // ─── WITHDRAW FORM CARD ─────────────
   Widget _withdrawFormCard() => Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
@@ -596,7 +602,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ),
       );
 
-  // ─── HISTORY ITEM ─────────────────
+  // ─── HISTORY ITEM ────────────────────
   Widget _historyItem(Map<String, dynamic> item) {
     final status = item['status'] ?? 'pending';
     final Color statusColor = status == 'approved'
