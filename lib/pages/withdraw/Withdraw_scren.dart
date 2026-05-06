@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,1278 +13,1891 @@ import 'package:http/http.dart' as http;
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  DESIGN TOKENS
-// ─────────────────────────────────────────────────────────────────────────────
-class _C {
-  static const bg0     = Color(0xFF060609);
-  static const bg1     = Color(0xFF0E0E17);
-  static const bg2     = Color(0xFF141421);
-  static const bg3     = Color(0xFF1C1C2E);
-
-  static const cyan    = Color(0xFF00D4FF);
-  static const green   = Color(0xFF00E87A);
-  static const purple  = Color(0xFF8B5CF6);
-  static const magenta = Color(0xFFFF3B6B);
-  static const amber   = Color(0xFFF59E0B);
-
-  static const t1 = Color(0xFFF0F0FF);
-  static const t2 = Color(0xFF6B6B90);
-  static const t3 = Color(0xFF32324A);
-
-  static const b1 = Color(0xFF222235);
-  static const b2 = Color(0xFF2E2E48);
+// --- Colors ---------------------------------------------------------------
+class AppColors {
+  static const Color background   = Color(0xFF0A0A0F);
+  static const Color surface      = Color(0xFF12121A);
+  static const Color accentGreen  = Color(0xFF00FFA3);
+  static const Color accentPurple = Color(0xFFB829F7);
+  static const Color accentBlue   = Color(0xFF00D4FF);
+  static const Color accentOrange = Color(0xFFFF9500);
+  static const Color accentRed    = Color(0xFFFF4D4D);
+  static const Color textPrimary  = Color(0xFFFFFFFF);
+  static const Color textSecondary= Color(0xFF8B8B9E);
+  static const Color textMuted    = Color(0xFF4A4A5A);
+  static const Color border       = Color(0xFF2A2A3A);
+  static const Color cardBg       = Color(0xFF161620);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  LOTTIE — only where animation genuinely adds value
-//
-//  ✅ txPending  — looping animation shows "in progress" — meaningful
-//  ✅ txSuccess  — plays once on approved items & success dialog
-//  ✅ txFailed   — plays once on rejected items
-//  ✅ emptyHistory — welcoming empty state
-//  ✅ confetti   — celebratory success overlay
-//  ✅ withdrawCta — hero CTA button, single animated accent
-//
-//  ❌ refresh, wallet, copy, warning, arrowRight, verifyLoading → Icons
-// ─────────────────────────────────────────────────────────────────────────────
-class _L {
-  static const txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
-  static const txSuccess    = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
-  static const txFailed     = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
-  static const emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
-  static const confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
-  static const withdrawCta  = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
+// Lottie URLs
+class AppLottie {
+  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
+  static const String txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
+  static const String txSuccess    = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
+  static const String txFailed     = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
+  static const String errorCloud   = 'https://assets10.lottiefiles.com/packages/lf20_kcsr6fcp.json';
+  static const String copy         = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
+  static const String info         = 'https://assets10.lottiefiles.com/packages/lf20_b6cz19m8.json';
+  static const String warning      = 'https://assets10.lottiefiles.com/packages/lf20_Tkwjw8.json';
+  static const String secure       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
+  static const String question     = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
+  static const String verifyLoading= 'https://assets10.lottiefiles.com/packages/lf20_p8bfn5to.json';
+  static const String arrowRight   = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
+  static const String confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+  static const String loadingSpinner='https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const String coinSpin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String wallet       = 'https://assets10.lottiefiles.com/packages/lf20_hu7birqV.json';
+  static const String send         = 'https://assets10.lottiefiles.com/packages/lf20_3rlc1l.json';
+  static const String moneyOut     = 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json';
 }
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  MODEL
-// ─────────────────────────────────────────────────────────────────────────────
+// --- Withdraw Methods (BEP20 Network) -------------------------------------
 class WithdrawMethod {
-  final String name, symbol;
-  final Color  color;
-  final IconData icon;
-  final double minAmount, maxAmount;
+  final String name;
+  final String symbol;
+  final String iconUrl;
+  final Color color;
+  final double minAmount;
+  final double maxAmount;
+  final double fee;
+
   const WithdrawMethod({
-    required this.name, required this.symbol,
-    required this.color, required this.icon,
-    required this.minAmount, required this.maxAmount,
+    required this.name,
+    required this.symbol,
+    required this.iconUrl,
+    required this.color,
+    required this.minAmount,
+    required this.maxAmount,
+    required this.fee,
   });
 }
 
 final List<WithdrawMethod> _withdrawMethods = [
   WithdrawMethod(
-    name: 'BEP20 (BSC)', symbol: 'BEP20',
-    color: _C.amber, icon: Icons.currency_bitcoin_rounded,
-    minAmount: 5, maxAmount: 10000,
+    name: 'BEP20 (BSC)',
+    symbol: 'BEP20',
+    iconUrl: AppLottie.coinSpin,
+    color: AppColors.accentGreen,
+    minAmount: 5,
+    maxAmount: 10000,
+    fee: 0,
   ),
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  HEX GRID BACKGROUND PAINTER
-// ─────────────────────────────────────────────────────────────────────────────
-class _HexPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = _C.cyan.withOpacity(0.028)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7;
-    const r = 26.0;
-    const dx = r * 1.732;
-    const dy = r * 1.5;
-    int row = 0;
-    for (double y = -r; y < size.height + r; y += dy) {
-      final offset = (row % 2 == 0) ? 0.0 : dx / 2;
-      for (double x = -r + offset; x < size.width + r; x += dx) {
-        final path = Path();
-        for (int i = 0; i < 6; i++) {
-          final a = math.pi / 180 * (60 * i - 30);
-          final pt = Offset(x + r * math.cos(a), y + r * math.sin(a));
-          i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
-        }
-        path.close();
-        canvas.drawPath(path, p);
-      }
-      row++;
-    }
-  }
-  @override bool shouldRepaint(_) => false;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  ROTATING NEON BORDER
-// ─────────────────────────────────────────────────────────────────────────────
-class _SpinBorder extends StatefulWidget {
-  final Widget child;
-  final double radius;
-  final Color color;
-  const _SpinBorder({required this.child, this.radius = 20, this.color = _C.cyan});
-  @override
-  State<_SpinBorder> createState() => _SpinBorderState();
-}
-
-class _SpinBorderState extends State<_SpinBorder> with SingleTickerProviderStateMixin {
-  late AnimationController _ac;
-  @override
-  void initState() {
-    super.initState();
-    _ac = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
-  }
-  @override void dispose() { _ac.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ac,
-      builder: (_, __) => Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(widget.radius),
-          gradient: SweepGradient(
-            transform: GradientRotation(_ac.value * math.pi * 2),
-            colors: [
-              widget.color.withOpacity(0.0),
-              widget.color.withOpacity(0.65),
-              widget.color.withOpacity(0.0),
-            ],
-          ),
-          boxShadow: [BoxShadow(color: widget.color.withOpacity(0.1), blurRadius: 18)],
-        ),
-        padding: const EdgeInsets.all(1.2),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _C.bg2,
-            borderRadius: BorderRadius.circular(widget.radius - 1.2),
-          ),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  TEXT STYLE HELPERS
-//  Outfit = body, labels, buttons (readable, modern)
-//  Orbitron = screen title + balance number only (Web3 identity)
-//  SpaceMono = wallet addresses only
-// ─────────────────────────────────────────────────────────────────────────────
-TextStyle _ts(double size, Color color, {FontWeight w = FontWeight.w400, double spacing = 0}) =>
-    GoogleFonts.outfit(fontSize: size.sp, color: color, fontWeight: w, letterSpacing: spacing);
-
-TextStyle _mono(double size, Color color) =>
-    GoogleFonts.spaceMono(fontSize: size.sp, color: color);
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  WITHDRAW SCREEN
-// ─────────────────────────────────────────────────────────────────────────────
+// --- Main Screen ----------------------------------------------------------
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
+
   @override
   State<WithdrawScreen> createState() => _WithdrawScreenState();
 }
 
 class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStateMixin {
-  bool   _loading    = true;
-  bool   _hasError   = false;
-  bool   _refreshing = false;
-  double _balance    = 0;
-  double _displayBal = 0;
+  bool   _isLoading      = true;
+  bool   _hasError       = false;
+  bool   _isRefreshing   = false;
+  double _balance        = 0;
+  double _displayBalance = 0;
   List<Map<String, dynamic>> _history = [];
-  int  _page    = 1;
-  bool _hasMore = true;
+  int _currentPage = 1;
+  bool _hasMoreData = true;
 
-  late AnimationController _balCtrl;
-  late Animation<double>   _balAnim;
+  late AnimationController _balanceController;
+  late Animation<double> _balanceAnimation;
 
   @override
   void initState() {
     super.initState();
-    _balCtrl = AnimationController(vsync: this, duration: 1400.ms);
-    _balAnim = CurvedAnimation(parent: _balCtrl, curve: Curves.easeOutCubic);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-  }
-  @override void dispose() { _balCtrl.dispose(); super.dispose(); }
+    _balanceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _balanceAnimation = CurvedAnimation(
+      parent: _balanceController,
+      curve: Curves.easeOutCubic,
+    );
 
-  String? get _token => Provider.of<AuthProvider>(context, listen: false).token;
-  Map<String, String> get _hdrs => {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
+  }
+
+  @override
+  void dispose() {
+    _balanceController.dispose();
+    super.dispose();
+  }
+
+  String? _getToken() =>
+      Provider.of<AuthProvider>(context, listen: false).token;
+
+  Map<String, String> _headers() => {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer $_token',
+    'Authorization': 'Bearer \${_getToken()}',
   };
 
-  void _animateBal(double nv) {
-    final old = _displayBal;
-    _balAnim.addListener(() {
-      if (mounted) setState(() => _displayBal = old + (nv - old) * _balAnim.value);
+  void _animateBalance(double newValue) {
+    final double oldValue = _displayBalance;
+    _balanceAnimation.addListener(() {
+      if (mounted) {
+        setState(() {
+          _displayBalance = oldValue + (newValue - oldValue) * _balanceAnimation.value;
+        });
+      }
     });
-    _balCtrl.forward(from: 0);
+    _balanceController.forward(from: 0);
   }
 
-  Future<void> _load({bool silent = false, bool more = false}) async {
-    if (!silent) setState(() { _loading = true; _hasError = false; });
-    try {
-      if (_token == null) { setState(() { _loading = false; _hasError = true; }); return; }
-      if (!more) { _page = 1; _hasMore = true; }
-      final pg = more ? _page + 1 : 1;
+  Future<void> _loadAll({bool silent = false, bool loadMore = false}) async {
+    if (!silent) {
+      setState(() { _isLoading = true; _hasError = false; });
+    }
 
-      final res = await Future.wait([
-        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _hdrs).timeout(15.seconds),
-        http.get(Uri.parse('$_baseUrl/api/withdraw/history?page=$pg&limit=10'), headers: _hdrs).timeout(15.seconds),
+    try {
+      final token = _getToken();
+      if (token == null) { 
+        setState(() { _isLoading = false; _hasError = true; }); 
+        return; 
+      }
+
+      if (!loadMore) {
+        _currentPage = 1;
+        _hasMoreData = true;
+      }
+
+      final page = loadMore ? _currentPage + 1 : 1;
+
+      final results = await Future.wait([
+        http.get(Uri.parse('\$_baseUrl/api/mining/status'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
+        http.get(
+          Uri.parse('\$_baseUrl/api/withdraw/history?page=\$page&limit=10'),
+          headers: _headers(),
+        ).timeout(const Duration(seconds: 15)),
       ]);
+
       if (!mounted) return;
 
-      if (res[0].statusCode == 200) {
-        final s = jsonDecode(res[0].body);
-        final nb = double.tryParse(s['withdrawable']?.toString() ?? '0') ?? 0;
-        if (_balance != nb) { _balance = nb; _animateBal(nb); }
-      }
-      if (res[1].statusCode == 200) {
-        final h = jsonDecode(res[1].body);
-        final nd = List<Map<String, dynamic>>.from(h['data'] ?? []);
-        if (more) {
-          if (nd.isEmpty) { _hasMore = false; } else { _history.addAll(nd); _page = pg; }
-        } else {
-          _history = nd; _page = 1; _hasMore = nd.length >= 10;
+      final statusRes = results[0];
+      final histRes = results[1];
+
+      if (statusRes.statusCode == 200) {
+        final status = jsonDecode(statusRes.body);
+        final newBalance = double.tryParse(status['withdrawable']?.toString() ?? '0') ?? 0;
+        if (_balance != newBalance) {
+          _balance = newBalance;
+          _animateBalance(newBalance);
         }
       }
-      setState(() => _loading = false);
-    } catch (e) {
+
+      if (histRes.statusCode == 200) {
+        final h = jsonDecode(histRes.body);
+        final List<Map<String, dynamic>> newData = 
+            List<Map<String, dynamic>>.from(h['data'] ?? []);
+
+        if (loadMore) {
+          if (newData.isEmpty) {
+            _hasMoreData = false;
+          } else {
+            _history.addAll(newData);
+            _currentPage = page;
+          }
+        } else {
+          _history = newData;
+          _currentPage = 1;
+          _hasMoreData = newData.length >= 10;
+        }
+      }
+
+      setState(() => _isLoading = false);
+    } on Exception catch (e) {
       if (mounted) {
-        setState(() { _loading = false; _hasError = true; });
-        _snack(e.toString().contains('timeout') ? 'Connection timeout.' : 'Network error.', _C.magenta);
+        setState(() { _isLoading = false; _hasError = true; });
+        String errorMsg = 'Connection error. Please retry.';
+        if (e.toString().contains('timeout')) {
+          errorMsg = 'Connection timeout. Please try again.';
+        } else if (e.toString().contains('Socket') || e.toString().contains('Network')) {
+          errorMsg = 'No internet connection.';
+        }
+        _showErrorSnackBar(errorMsg);
       }
     }
   }
 
-  void _snack(String msg, Color color, {IconData icon = Icons.info_outline_rounded}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        Icon(icon, color: Colors.white, size: 18),
-        SizedBox(width: 10.w),
-        Expanded(child: Text(msg, style: _ts(13, Colors.white, w: FontWeight.w500))),
-      ]),
-      backgroundColor: color.withOpacity(0.92),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-      margin: EdgeInsets.all(16.w),
-      duration: 3.seconds,
-    ));
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _refreshing = true);
-    await _load(silent: true);
-    setState(() => _refreshing = false);
-  }
-
-  // ── BUILD ─────────────────────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _C.bg0,
-      body: Stack(children: [
-        Positioned.fill(child: CustomPaint(painter: _HexPainter())),
-        Positioned(top: -140, left: -100, child: _glow(_C.cyan, 300, 0.055)),
-        Positioned(bottom: -100, right: -80, child: _glow(_C.purple, 260, 0.045)),
-        if (_loading)
-          const _Skeleton()
-        else if (_hasError)
-          CustomErrorWidget(onRetry: _load)
-        else
-          RefreshIndicator(
-            color: _C.cyan, backgroundColor: _C.bg2, strokeWidth: 2,
-            onRefresh: _refresh,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(child: _topSection()),
-                _historySliver(),
-                if (_hasMore && _history.isNotEmpty)
-                  SliverToBoxAdapter(child: _loadMoreBtn()),
-                SliverToBoxAdapter(child: SizedBox(height: 100.h)),
-              ],
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20.w,
+              height: 20.h,
+              child: Lottie.network(AppLottie.warning, repeat: false),
             ),
-          ),
-      ]),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 13.sp,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.accentRed.withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        margin: EdgeInsets.all(16.w),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
-  Widget _glow(Color c, double s, double o) => Container(
-    width: s, height: s,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [c.withOpacity(o), Colors.transparent]),
-    ),
-  );
+  Future<void> _onRefresh() async {
+    setState(() => _isRefreshing = true);
+    await _loadAll(silent: true);
+    setState(() => _isRefreshing = false);
+  }
 
-  // ── TOP SECTION ───────────────────────────────────────────────────────────
-  Widget _topSection() => Padding(
-    padding: EdgeInsets.symmetric(horizontal: 20.w),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(height: 56.h),
-      _header(),
-      SizedBox(height: 22.h),
-      _balanceCard(),
-      SizedBox(height: 16.h),
-      _statsRow(),
-      SizedBox(height: 18.h),
-      _ctaButton(),
-      SizedBox(height: 32.h),
-      _sectionTitle('Recent Withdrawals'),
-      SizedBox(height: 14.h),
-    ]),
-  );
+  void _loadMore() {
+    if (_hasMoreData && !_isLoading) {
+      _loadAll(silent: true, loadMore: true);
+    }
+  }
 
-  // ── HEADER ────────────────────────────────────────────────────────────────
-  Widget _header() => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Orbitron only for the screen title
-        Text('Withdraw',
-          style: GoogleFonts.orbitron(
-            fontSize: 26.sp, color: _C.t1,
-            fontWeight: FontWeight.w700, letterSpacing: 0.5,
-          ),
-        ),
-        SizedBox(height: 5.h),
-        Row(children: [
-          Container(
-            width: 7, height: 7,
-            decoration: BoxDecoration(
-              color: _C.green, shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: _C.green.withOpacity(0.55), blurRadius: 8)],
-            ),
-          ),
-          SizedBox(width: 7.w),
-          Text('BEP20 · BSC Network', style: _ts(12, _C.t2)),
-        ]),
-      ]),
-      // Refresh — Icon is correct here, simple and fast
-      GestureDetector(
-        onTap: _refreshing ? null : _refresh,
-        child: Container(
-          width: 44.w, height: 44.h,
-          decoration: BoxDecoration(
-            color: _C.bg2,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: _C.b1),
-          ),
-          child: _refreshing
-              ? Center(child: SizedBox(width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: _C.cyan)))
-              : const Center(child: Icon(Icons.sync_rounded, color: _C.t2, size: 20)),
-        ),
-      ),
-    ],
-  );
-
-  // ── BALANCE CARD ──────────────────────────────────────────────────────────
-  Widget _balanceCard() {
-    return _SpinBorder(
-      radius: 22,
-      color: _C.cyan,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20.8.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: _C.bg3.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(20.8.r),
-            ),
-            padding: EdgeInsets.all(22.w),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                _pill('● AVAILABLE', _C.green),
-                // Icon: static decorative label — no animation needed
-                Row(children: [
-                  const Icon(Icons.account_balance_wallet_outlined, color: _C.t2, size: 16),
-                  SizedBox(width: 6.w),
-                  Text('Withdrawable', style: _ts(12, _C.t2)),
-                ]),
-              ]),
-              SizedBox(height: 18.h),
-              Text('Available Balance', style: _ts(13, _C.t2)),
-              SizedBox(height: 6.h),
-              // Orbitron only for the balance number
-              AnimatedBuilder(
-                animation: _balAnim,
-                builder: (_, __) => RichText(text: TextSpan(children: [
-                  TextSpan(
-                    text: '\$',
-                    style: GoogleFonts.orbitron(
-                      fontSize: 20.sp, color: _C.cyan.withOpacity(0.6), fontWeight: FontWeight.w400),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: _isLoading
+          ? _buildSkeletonLoading()
+          : _hasError
+              ? CustomErrorWidget(onRetry: _loadAll)
+              : RefreshIndicator(
+                  color: AppColors.accentGreen,
+                  backgroundColor: AppColors.surface,
+                  strokeWidth: 3,
+                  onRefresh: _onRefresh,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 60.h),
+                              _buildHeader(),
+                              SizedBox(height: 24.h),
+                              _buildBalanceCard(),
+                              SizedBox(height: 24.h),
+                              _buildActionButtons(),
+                              SizedBox(height: 32.h),
+                              _buildHistoryHeader(),
+                              SizedBox(height: 16.h),
+                            ],
+                          ),
+                        ),
+                      ),
+                      _buildHistoryList(),
+                      if (_hasMoreData && _history.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.w),
+                            child: Center(
+                              child: GestureDetector(
+                                onTap: _loadMore,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: Text(
+                                    'Load More',
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.accentGreen,
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(height: 100.h),
+                      ),
+                    ],
                   ),
-                  TextSpan(
-                    text: _displayBal.toStringAsFixed(2),
-                    style: GoogleFonts.orbitron(
-                      fontSize: 36.sp, color: _C.t1, fontWeight: FontWeight.w700, letterSpacing: -0.5),
-                  ),
-                ])),
+                ),
+    );
+  }
+
+  Widget _buildSkeletonLoading() {
+    return Shimmer.fromColors(
+      baseColor: AppColors.surface,
+      highlightColor: AppColors.cardBg.withOpacity(0.5),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w),
+        child: Column(
+          children: [
+            SizedBox(height: 60.h),
+            Container(
+              width: double.infinity,
+              height: 200.h,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(24.r),
               ),
-              SizedBox(height: 14.h),
-              Row(children: [
-                _chip('Min \$5', _C.green),
-                SizedBox(width: 8.w),
-                _chip('Max \$10,000', _C.cyan),
-                SizedBox(width: 8.w),
-                _chip('Zero Fee', _C.amber),
-              ]),
-            ]),
-          ),
+            ),
+            SizedBox(height: 24.h),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 60.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Container(
+                    height: 60.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 32.h),
+            Container(
+              width: 120.w,
+              height: 24.h,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            ...List.generate(3, (index) => Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: Container(
+                width: double.infinity,
+                height: 80.h,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+              ),
+            )),
+          ],
         ),
       ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.12, end: 0);
+    );
   }
 
-  Widget _pill(String label, Color c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: c.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(100),
-      border: Border.all(color: c.withOpacity(0.28)),
-    ),
-    child: Text(label, style: _ts(10, c, w: FontWeight.w600, spacing: 0.3)),
-  );
-
-  Widget _chip(String label, Color c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-    decoration: BoxDecoration(
-      color: c.withOpacity(0.07),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: c.withOpacity(0.18)),
-    ),
-    child: Text(label, style: _ts(10, c.withOpacity(0.85), w: FontWeight.w500)),
-  );
-
-  // ── STATS ROW ─────────────────────────────────────────────────────────────
-  Widget _statsRow() {
-    final pending  = _history.where((h) => h['status'] == 'pending').length;
-    final approved = _history.where((h) => h['status'] == 'approved').length;
-    final rejected = _history.where((h) => h['status'] == 'rejected').length;
-
-    return Row(children: [
-      Expanded(child: _statCard('Pending',  '$pending',  _C.amber,   Icons.hourglass_empty_rounded)),
-      SizedBox(width: 10.w),
-      Expanded(child: _statCard('Approved', '$approved', _C.green,   Icons.check_circle_outline_rounded)),
-      SizedBox(width: 10.w),
-      Expanded(child: _statCard('Rejected', '$rejected', _C.magenta, Icons.cancel_outlined)),
-    ]);
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Withdraw',
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 28.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Withdraw your earnings securely',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 14.sp,
+              ),
+            ),
+          ],
+        ),
+        GestureDetector(
+          onTap: _isRefreshing ? null : _onRefresh,
+          child: Container(
+            width: 44.w,
+            height: 44.h,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: _isRefreshing
+                ? Center(
+                    child: SizedBox(
+                      width: 20.w,
+                      height: 20.h,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentGreen),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: SizedBox(
+                      width: 24.w,
+                      height: 24.h,
+                      child: Lottie.network(
+                        AppLottie.refresh,
+                        repeat: false,
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _statCard(String label, String val, Color c, IconData icon) {
+  Widget _buildBalanceCard() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 13.h, horizontal: 12.w),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: _C.bg2,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: c.withOpacity(0.16)),
-      ),
-      child: Row(children: [
-        Container(
-          width: 34.w, height: 34.h,
-          decoration: BoxDecoration(
-            color: c.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(9.r),
-          ),
-          child: Icon(icon, color: c, size: 17),
+        borderRadius: BorderRadius.circular(24.r),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.accentRed.withOpacity(0.3),
+            AppColors.accentOrange.withOpacity(0.1),
+            AppColors.surface,
+          ],
+          stops: const [0.0, 0.5, 1.0],
         ),
-        SizedBox(width: 9.w),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(val, style: _ts(18, c, w: FontWeight.w700)),
-          Text(label, style: _ts(10, _C.t2, w: FontWeight.w500)),
-        ]),
-      ]),
-    ).animate().fadeIn(delay: 150.ms);
-  }
-
-  // ── CTA BUTTON ────────────────────────────────────────────────────────────
-  Widget _ctaButton() => GestureDetector(
-    onTap: _showSheet,
-    child: Container(
-      width: double.infinity, height: 56.h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF00D4FF), Color(0xFF8B5CF6)]),
-        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: AppColors.accentRed.withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
-          BoxShadow(color: _C.cyan.withOpacity(0.2), blurRadius: 24, offset: const Offset(0, 6)),
-          BoxShadow(color: _C.purple.withOpacity(0.16), blurRadius: 24, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: AppColors.accentRed.withOpacity(0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        // ✅ Lottie: Hero CTA — the one animated element that draws attention
-        SizedBox(width: 30.w, height: 30.h,
-          child: Lottie.network(_L.withdrawCta, fit: BoxFit.contain)),
-        SizedBox(width: 10.w),
-        Text('Withdraw Now', style: _ts(15, Colors.black, w: FontWeight.w700)),
-        SizedBox(width: 8.w),
-        const Icon(Icons.arrow_forward_rounded, color: Colors.black, size: 18),
-      ]),
-    ),
-  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.08, end: 0);
-
-  Widget _sectionTitle(String t) => Row(children: [
-    Container(
-      width: 3, height: 16,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [_C.cyan, _C.purple],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24.r),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Padding(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentGreen.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20.r),
+                        border: Border.all(
+                          color: AppColors.accentGreen.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6.w,
+                            height: 6.h,
+                            decoration: BoxDecoration(
+                              color: AppColors.accentGreen,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'AVAILABLE',
+                            style: GoogleFonts.inter(
+                              color: AppColors.accentGreen,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 20.w,
+                          height: 20.h,
+                          child: Lottie.network(AppLottie.wallet),
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Withdrawable',
+                          style: GoogleFonts.inter(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20.h),
+                Text(
+                  'Available Balance',
+                  style: GoogleFonts.inter(
+                    color: AppColors.textSecondary,
+                    fontSize: 14.sp,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                AnimatedBuilder(
+                  animation: _balanceAnimation,
+                  builder: (context, child) {
+                    return Text(
+                      '\$\${_displayBalance.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(
+                        color: AppColors.textPrimary,
+                        fontSize: 40.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -1,
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Ready to withdraw',
+                  style: GoogleFonts.spaceMono(
+                    color: AppColors.accentRed,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        borderRadius: BorderRadius.circular(2),
       ),
-    ),
-    SizedBox(width: 10.w),
-    Text(t, style: _ts(16, _C.t1, w: FontWeight.w600)),
-  ]);
-
-  // ── HISTORY ───────────────────────────────────────────────────────────────
-  Widget _historySliver() {
-    if (_history.isEmpty) {
-      return SliverToBoxAdapter(child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        child: _emptyState(),
-      ));
-    }
-    return SliverList(delegate: SliverChildBuilderDelegate(
-      (_, i) => Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
-        child: _txCard(_history[i], i),
-      ),
-      childCount: _history.length,
-    ));
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0);
   }
 
-  Widget _emptyState() => Container(
-    padding: EdgeInsets.symmetric(vertical: 40.h),
-    decoration: BoxDecoration(
-      color: _C.bg2,
-      borderRadius: BorderRadius.circular(20.r),
-      border: Border.all(color: _C.b1),
-    ),
-    child: Column(children: [
-      // ✅ Lottie: Empty state — welcoming animation, great UX moment
-      SizedBox(width: 110.w, height: 110.h, child: Lottie.network(_L.emptyHistory)),
-      SizedBox(height: 12.h),
-      Text('No withdrawals yet', style: _ts(15, _C.t1, w: FontWeight.w600)),
-      SizedBox(height: 5.h),
-      Text('Your transaction history will appear here', style: _ts(13, _C.t2)),
-      SizedBox(height: 20.h),
-      GestureDetector(
-        onTap: _showSheet,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_C.cyan, _C.purple]),
-            borderRadius: BorderRadius.circular(100),
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            'Withdraw Now',
+            AppColors.accentRed,
+            AppLottie.moneyOut,
+            () => _showWithdrawSheet(),
           ),
-          child: Text('Make First Withdrawal', style: _ts(12, Colors.black, w: FontWeight.w700)),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: _buildActionButton(
+            'History',
+            AppColors.accentBlue,
+            AppLottie.wallet,
+            () {},
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    String label,
+    Color color,
+    String lottieUrl,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 64.h,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 28.w,
+              height: 28.h,
+              child: Lottie.network(lottieUrl),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
-    ]),
-  );
+    ).animate().fadeIn(delay: 200.ms).slideX(begin: label == 'Withdraw Now' ? -0.2 : 0.2, end: 0);
+  }
 
-  Widget _txCard(Map<String, dynamic> data, int index) {
-    final amount  = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
-    final status  = data['status']?.toString() ?? 'pending';
+  Widget _buildHistoryHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Recent Withdrawals',
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (_history.isNotEmpty)
+          GestureDetector(
+            onTap: () {},
+            child: Text(
+              'View All',
+              style: GoogleFonts.inter(
+                color: AppColors.accentGreen,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryList() {
+    if (_history.isEmpty) {
+      return SliverToBoxAdapter(
+        child: _buildEmptyState(),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final item = _history[index];
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 6.h),
+            child: _buildTransactionItem(item, index),
+          );
+        },
+        childCount: _history.length,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 40.h),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 120.w,
+            height: 120.h,
+            child: Lottie.network(AppLottie.emptyHistory),
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'No withdrawals yet',
+            style: GoogleFonts.inter(
+              color: AppColors.textPrimary,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Your withdrawal history will appear here',
+            style: GoogleFonts.inter(
+              color: AppColors.textSecondary,
+              fontSize: 13.sp,
+            ),
+          ),
+          SizedBox(height: 20.h),
+          GestureDetector(
+            onTap: () => _showWithdrawSheet(),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: AppColors.accentRed.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20.r),
+                border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+              ),
+              child: Text(
+                'Make First Withdrawal',
+                style: GoogleFonts.inter(
+                  color: AppColors.accentRed,
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
+    final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
+    final status = data['status']?.toString() ?? 'pending';
     final address = data['wallet_address']?.toString() ?? '';
-    final date    = data['created_at']?.toString() ?? '';
+    final date = data['created_at']?.toString() ?? '';
     final network = data['network']?.toString() ?? 'BEP20';
 
-    final Color c;
-    final String lottieUrl;
-    final String statusLabel;
-    final bool   loopAnim;
+    final bool isApproved = status == 'approved';
+    final bool isRejected = status == 'rejected';
+    final bool isPending = status == 'pending';
 
-    switch (status) {
-      case 'approved':
-        c = _C.green;   lottieUrl = _L.txSuccess; statusLabel = 'Approved'; loopAnim = false; break;
-      case 'rejected':
-        c = _C.magenta; lottieUrl = _L.txFailed;  statusLabel = 'Rejected'; loopAnim = false; break;
-      default:
-        c = _C.amber;   lottieUrl = _L.txPending; statusLabel = 'Pending';  loopAnim = true;
+    Color statusColor;
+    String statusLottie;
+    String statusText;
+
+    if (isApproved) {
+      statusColor = AppColors.accentGreen;
+      statusLottie = AppLottie.txSuccess;
+      statusText = 'Approved';
+    } else if (isRejected) {
+      statusColor = AppColors.accentRed;
+      statusLottie = AppLottie.txFailed;
+      statusText = 'Rejected';
+    } else {
+      statusColor = AppColors.accentOrange;
+      statusLottie = AppLottie.txPending;
+      statusText = 'Pending';
     }
 
     return GestureDetector(
       onTap: () {
         Clipboard.setData(ClipboardData(text: address));
-        _snack('Address copied!', _C.green, icon: Icons.copy_rounded);
+        _showCopiedSnackBar();
       },
       child: Container(
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: _C.bg2,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: _C.b1),
+          border: Border.all(color: AppColors.border),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16.r),
-          child: Stack(children: [
-            // Left status accent bar
-            Positioned(left: 0, top: 0, bottom: 0,
-              child: Container(
-                width: 3.5,
-                decoration: BoxDecoration(
-                  color: c,
-                  boxShadow: [BoxShadow(color: c.withOpacity(0.45), blurRadius: 8)],
+        child: Row(
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.h,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 28.w,
+                  height: 28.h,
+                  child: Lottie.network(statusLottie, repeat: isPending),
                 ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(18.w, 14.h, 14.w, 14.h),
-              child: Row(children: [
-                // ✅ Lottie: TX status icon — pending loops (shows live state),
-                //    success/failed play once (communicates outcome)
-                Container(
-                  width: 44.w, height: 44.h,
-                  decoration: BoxDecoration(
-                    color: c.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Center(child: SizedBox(
-                    width: 26.w, height: 26.h,
-                    child: Lottie.network(lottieUrl, repeat: loopAnim),
-                  )),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('\$${amount.toStringAsFixed(2)}',
-                      style: _ts(15, _C.t1, w: FontWeight.w700)),
-                  SizedBox(height: 3.h),
-                  Text(_fmtAddr(address), style: _mono(10, _C.t3)),
-                  SizedBox(height: 3.h),
-                  Text(_fmtDate(date), style: _ts(11, _C.t2)),
-                ])),
-                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: c.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: c.withOpacity(0.28)),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '\$${amount.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      color: AppColors.textPrimary,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Text(statusLabel, style: _ts(10, c, w: FontWeight.w600)),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(network, style: _mono(10, _C.t2)),
-                ]),
-              ]),
+                  SizedBox(height: 4.h),
+                  Text(
+                    _formatAddress(address),
+                    style: GoogleFonts.spaceMono(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    _formatDate(date),
+                    style: GoogleFonts.inter(
+                      color: AppColors.textSecondary,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ]),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: GoogleFonts.inter(
+                      color: statusColor,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  network,
+                  style: GoogleFonts.spaceMono(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.sp,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-    ).animate().fadeIn(delay: (index * 70).ms).slideX(begin: 0.1, end: 0);
+    ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
   }
 
-  Widget _loadMoreBtn() => Padding(
-    padding: EdgeInsets.all(16.w),
-    child: Center(child: GestureDetector(
-      onTap: () { if (_hasMore && !_loading) _load(silent: true, more: true); },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 11),
-        decoration: BoxDecoration(
-          color: _C.bg2,
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: _C.b2),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text('Load More', style: _ts(13, _C.cyan, w: FontWeight.w600)),
-          SizedBox(width: 6.w),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: _C.cyan, size: 18),
-        ]),
-      ),
-    )),
-  );
+  String _formatAddress(String address) {
+    if (address.length < 20) return address;
+    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
+  }
 
-  String _fmtAddr(String a) =>
-      a.length < 20 ? a : '${a.substring(0, 8)}...${a.substring(a.length - 8)}';
-  String _fmtDate(String d) {
+  String _formatDate(String date) {
     try {
-      final dt = DateTime.parse(d);
-      return '${dt.day}/${dt.month}/${dt.year}  ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) { return d; }
+      final dt = DateTime.parse(date);
+      return '\${dt.day}/\${dt.month}/\${dt.year} • \${dt.hour}:\${dt.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return date;
+    }
   }
 
-  void _showSheet() {
+  void _showCopiedSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20.w,
+              height: 20.h,
+              child: Lottie.network(AppLottie.copy, repeat: false),
+            ),
+            SizedBox(width: 10.w),
+            Text(
+              'Address copied!',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.accentGreen.withOpacity(0.9),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        margin: EdgeInsets.all(16.w),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showWithdrawSheet() {
     showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => WithdrawSheet(
-        balance: _balance, headers: _hdrs,
-        onSuccess: () { Navigator.pop(context); _load(silent: true); },
+        balance: _balance,
+        headers: _headers(),
+        onSuccess: () {
+          Navigator.pop(context);
+          _loadAll(silent: true);
+        },
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  SKELETON LOADER
-// ─────────────────────────────────────────────────────────────────────────────
-class _Skeleton extends StatelessWidget {
-  const _Skeleton();
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: _C.bg2, highlightColor: _C.bg3,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
-        child: Column(children: [
-          SizedBox(height: 60.h),
-          _b(200), SizedBox(height: 14.h),
-          Row(children: [
-            Expanded(child: _b(72, r: 14)),
-            SizedBox(width: 10.w),
-            Expanded(child: _b(72, r: 14)),
-            SizedBox(width: 10.w),
-            Expanded(child: _b(72, r: 14)),
-          ]),
-          SizedBox(height: 14.h),
-          _b(56, r: 16),
-          SizedBox(height: 28.h),
-          ...List.generate(3, (_) => Padding(
-            padding: EdgeInsets.only(bottom: 10.h), child: _b(74),
-          )),
-        ]),
-      ),
-    );
-  }
-  Widget _b(double h, {double r = 20}) => Container(
-    width: double.infinity, height: h.h,
-    decoration: BoxDecoration(color: _C.bg2, borderRadius: BorderRadius.circular(r.r)),
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  WITHDRAW SHEET
-// ─────────────────────────────────────────────────────────────────────────────
+// --- Withdraw Sheet Widget ------------------------------------------------
 class WithdrawSheet extends StatefulWidget {
   final double balance;
   final Map<String, String> headers;
   final VoidCallback onSuccess;
-  const WithdrawSheet({super.key, required this.balance, required this.headers, required this.onSuccess});
+
+  const WithdrawSheet({
+    super.key,
+    required this.balance,
+    required this.headers,
+    required this.onSuccess,
+  });
+
   @override
   State<WithdrawSheet> createState() => _WithdrawSheetState();
 }
 
 class _WithdrawSheetState extends State<WithdrawSheet> with TickerProviderStateMixin {
-  int    _step = 0;
-  WithdrawMethod _method = _withdrawMethods[0];
-  final _amtCtrl  = TextEditingController();
-  final _addrCtrl = TextEditingController();
-  bool   _busy = false;
-  String _err  = '';
+  int _step = 0;
+  WithdrawMethod _selectedMethod = _withdrawMethods[0];
+  final _amountController = TextEditingController();
+  final _addressController = TextEditingController();
+  bool _isProcessing = false;
+  String _errorMessage = '';
 
-  late AnimationController _successCtrl;
+  late AnimationController _confettiController;
 
   @override
   void initState() {
     super.initState();
-    _successCtrl = AnimationController(vsync: this, duration: 2.seconds);
-  }
-  @override void dispose() {
-    _amtCtrl.dispose(); _addrCtrl.dispose(); _successCtrl.dispose(); super.dispose();
-  }
-
-  void _setMax() {
-    if (widget.balance > 0) _amtCtrl.text = widget.balance.toStringAsFixed(2);
+    _confettiController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
   }
 
-  void _validate() {
-    final amt  = double.tryParse(_amtCtrl.text) ?? 0;
-    final addr = _addrCtrl.text.trim();
-    if (amt <= 0)                        { setState(() => _err = 'Enter a valid amount'); return; }
-    if (amt < _method.minAmount)         { setState(() => _err = 'Minimum withdrawal is \$${_method.minAmount}'); return; }
-    if (amt > _method.maxAmount)         { setState(() => _err = 'Maximum limit is \$${_method.maxAmount}'); return; }
-    if (amt > widget.balance)            { setState(() => _err = 'Insufficient balance'); return; }
-    if (!RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(addr))
-                                         { setState(() => _err = 'Enter a valid BEP20 address (0x...)'); return; }
-    setState(() { _err = ''; _step = 1; });
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _addressController.dispose();
+    _confettiController.dispose();
+    super.dispose();
   }
 
-  Future<void> _confirm() async {
-    setState(() => _busy = true);
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/api/withdraw'),
-        headers: widget.headers,
-        body: jsonEncode({'amount': double.parse(_amtCtrl.text), 'wallet': _addrCtrl.text.trim()}),
-      ).timeout(20.seconds);
-      if (!mounted) return;
-      final d = jsonDecode(res.body);
-      if (res.statusCode == 200 && d['success'] == true) {
-        setState(() => _busy = false);
-        _successCtrl.forward();
-        _showSuccess(d);
-      } else {
-        setState(() { _busy = false; _err = d['error'] ?? 'Withdrawal failed'; _step = 0; });
-      }
-    } catch (e) {
-      if (mounted) setState(() {
-        _busy = false;
-        _err = e.toString().contains('timeout') ? 'Timeout. Try again.' : 'Connection error.';
-        _step = 0;
-      });
+  void _setMaxAmount() {
+    final maxAmount = widget.balance;
+    if (maxAmount > 0) {
+      _amountController.text = maxAmount.toStringAsFixed(2);
     }
   }
 
-  void _showSuccess(Map d) {
-    final amount = d['data']?['amount']?.toString() ?? '0';
-    final wallet = d['data']?['wallet']?.toString() ?? '';
-    final id     = d['data']?['withdrawId']?.toString() ?? '';
-    final addr   = wallet.length >= 20
-        ? '${wallet.substring(0, 8)}...${wallet.substring(wallet.length - 8)}'
-        : wallet;
+  void _validateAndProceed() {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+    final address = _addressController.text.trim();
+
+    if (amount <= 0) {
+      setState(() => _errorMessage = 'Please enter a valid amount');
+      return;
+    }
+
+    if (amount < _selectedMethod.minAmount) {
+      setState(() => _errorMessage = 'Minimum withdrawal is \$\${_selectedMethod.minAmount}');
+      return;
+    }
+
+    if (amount > _selectedMethod.maxAmount) {
+      setState(() => _errorMessage = 'Maximum withdrawal limit is \$\${_selectedMethod.maxAmount}');
+      return;
+    }
+
+    if (amount > widget.balance) {
+      setState(() => _errorMessage = 'Insufficient balance');
+      return;
+    }
+
+    if (address.isEmpty || !RegExp(r'^0x[a-fA-F0-9]{40}\$').hasMatch(address)) {
+      setState(() => _errorMessage = 'Please enter a valid BEP20 wallet address (0x...)');
+      return;
+    }
+
+    setState(() {
+      _errorMessage = '';
+      _step = 1;
+    });
+  }
+
+  Future<void> _processWithdrawal() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final res = await http.post(
+        Uri.parse('\$_baseUrl/api/withdraw'),
+        headers: widget.headers,
+        body: jsonEncode({
+          'amount': double.parse(_amountController.text),
+          'wallet': _addressController.text.trim(),
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+      final data = jsonDecode(res.body);
+
+      if (res.statusCode == 200 && data['success'] == true) {
+        setState(() => _isProcessing = false);
+        _confettiController.forward();
+        _showSuccessDialog(data);
+      } else {
+        setState(() {
+          _isProcessing = false;
+          _errorMessage = data['error'] ?? 'Withdrawal failed';
+          _step = 0;
+        });
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _errorMessage = e.toString().contains('timeout') 
+              ? 'Connection timeout. Try again.' 
+              : 'Connection error. Try again.';
+          _step = 0;
+        });
+      }
+    }
+  }
+
+  void _showSuccessDialog(Map data) {
+    final amount = data['data']?['amount']?.toString() ?? '0';
+    final wallet = data['data']?['wallet']?.toString() ?? '';
+    final withdrawId = data['data']?['withdrawId']?.toString() ?? '';
 
     showDialog(
-      context: context, barrierDismissible: false,
-      builder: (ctx) => Stack(children: [
-        Center(child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: MediaQuery.of(ctx).size.width * 0.88,
-            decoration: BoxDecoration(
-              color: _C.bg1,
-              borderRadius: BorderRadius.circular(24.r),
-              border: Border.all(color: _C.green.withOpacity(0.32)),
-              boxShadow: [BoxShadow(color: _C.green.withOpacity(0.1), blurRadius: 40)],
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Header
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(24.w),
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Stack(
+        children: [
+          Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: MediaQuery.of(ctx).size.width * 0.85,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    colors: [_C.green.withOpacity(0.1), Colors.transparent],
-                  ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                ),
-                child: Column(children: [
-                  // ✅ Lottie: Success animation — meaningful, plays once, celebratory
-                  SizedBox(width: 78.w, height: 78.h,
-                    child: Lottie.network(_L.txSuccess, repeat: false, controller: _successCtrl)),
-                  SizedBox(height: 10.h),
-                  Text('Request Submitted', style: _ts(18, _C.t1, w: FontWeight.w700)),
-                  SizedBox(height: 4.h),
-                  Text('Processing your withdrawal', style: _ts(12, _C.t2)),
-                ]),
-              ),
-              // Body
-              Padding(
-                padding: EdgeInsets.fromLTRB(24.w, 14.h, 24.w, 24.h),
-                child: Column(children: [
-                  Text('-\$$amount',
-                    style: GoogleFonts.orbitron(color: _C.magenta, fontSize: 28.sp, fontWeight: FontWeight.w700)),
-                  SizedBox(height: 16.h),
-                  _dRow('Network', 'BEP20 (BSC)', _C.amber),
-                  _dRow('Wallet',  addr,          _C.t1),
-                  _dRow('Ref ID',  '#$id',         _C.cyan),
-                  SizedBox(height: 20.h),
-                  GestureDetector(
-                    onTap: () { Navigator.pop(ctx); widget.onSuccess(); },
-                    child: Container(
-                      width: double.infinity, height: 50.h,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [_C.green, _C.cyan]),
-                        borderRadius: BorderRadius.circular(14.r),
-                        boxShadow: [BoxShadow(color: _C.green.withOpacity(0.25), blurRadius: 20)],
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('Got it!', style: _ts(15, Colors.black, w: FontWeight.w700)),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(24.r),
+                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentGreen.withOpacity(0.2),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(24.w),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.accentGreen.withOpacity(0.2),
+                            Colors.transparent,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                      ),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: 80.w,
+                            height: 80.h,
+                            child: Lottie.network(
+                              AppLottie.txSuccess,
+                              repeat: false,
+                              controller: _confettiController,
+                            ),
+                          ),
+                          SizedBox(height: 16.h),
+                          Text(
+                            'Withdrawal Submitted!',
+                            style: GoogleFonts.inter(
+                              color: AppColors.textPrimary,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        children: [
+                          Text(
+                            '-\$\$amount',
+                            style: GoogleFonts.inter(
+                              color: AppColors.accentRed,
+                              fontSize: 36.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 16.w,
+                                height: 16.h,
+                                child: Lottie.network(AppLottie.coinSpin),
+                              ),
+                              SizedBox(width: 6.w),
+                              Text(
+                                'BEP20 withdrawal pending',
+                                style: GoogleFonts.spaceMono(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'ID: #\$withdrawId',
+                            style: GoogleFonts.spaceMono(
+                              color: AppColors.textMuted,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            _formatAddress(wallet),
+                            style: GoogleFonts.spaceMono(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          SizedBox(height: 24.h),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              widget.onSuccess();
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              height: 52.h,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
+                                ),
+                                borderRadius: BorderRadius.circular(14.r),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Got it!',
+                                style: GoogleFonts.inter(
+                                  color: Colors.black,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ]),
+            ),
           ),
-        )),
-        // ✅ Lottie: Confetti — perfect celebratory overlay, plays once
-        Positioned.fill(child: IgnorePointer(
-          child: Lottie.network(_L.confetti, controller: _successCtrl, fit: BoxFit.cover),
-        )),
-      ]),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Lottie.network(
+                AppLottie.confetti,
+                controller: _confettiController,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _dRow(String label, String val, Color c) => Padding(
-    padding: EdgeInsets.symmetric(vertical: 6.h),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: _ts(13, _C.t2)),
-      Text(val,   style: _ts(13, c, w: FontWeight.w600)),
-    ]),
-  );
+  String _formatAddress(String address) {
+    if (address.length < 20) return address;
+    return '\${address.substring(0, 8)}...\${address.substring(address.length - 8)}';
+  }
 
-  // ── SHEET BUILD ───────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
-        color: _C.bg1,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26.r)),
-        border: Border(
-          top:   BorderSide(color: _C.cyan.withOpacity(0.18)),
-          left:  BorderSide(color: _C.b1),
-          right: BorderSide(color: _C.b1),
-        ),
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32.r)),
+        border: Border.all(color: AppColors.border),
       ),
-      child: Column(children: [
-        SizedBox(height: 12.h),
-        Container(
-          width: 36.w, height: 4.h,
-          decoration: BoxDecoration(color: _C.b2, borderRadius: BorderRadius.circular(10.r)),
-        ),
-        SizedBox(height: 18.h),
-        _sheetHeader(),
-        SizedBox(height: 20.h),
-        _stepBar(),
-        SizedBox(height: 20.h),
-        Expanded(child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 22.w),
-          child: _step == 0 ? _step0() : _step1(),
-        )),
-      ]),
-    );
-  }
-
-  Widget _sheetHeader() => Padding(
-    padding: EdgeInsets.symmetric(horizontal: 22.w),
-    child: Row(children: [
-      // Icon: sheet header — static context, clean
-      Container(
-        width: 46.w, height: 46.h,
-        decoration: BoxDecoration(
-          color: _C.magenta.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(13.r),
-          border: Border.all(color: _C.magenta.withOpacity(0.22)),
-        ),
-        child: const Icon(Icons.account_balance_wallet_outlined, color: _C.magenta, size: 22),
-      ),
-      SizedBox(width: 14.w),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Withdraw Funds', style: _ts(17, _C.t1, w: FontWeight.w700)),
-        Text('Balance: \$${widget.balance.toStringAsFixed(2)}',
-            style: _ts(12, _C.cyan, w: FontWeight.w600)),
-      ])),
-      GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: _C.bg2, shape: BoxShape.circle, border: Border.all(color: _C.b2)),
-          child: const Icon(Icons.close, color: _C.t2, size: 17),
-        ),
-      ),
-    ]),
-  );
-
-  Widget _stepBar() => Padding(
-    padding: EdgeInsets.symmetric(horizontal: 22.w),
-    child: Row(children: [
-      _dot(0, 'Amount',  Icons.attach_money_rounded),
-      Expanded(child: Stack(children: [
-        Container(height: 1.5, color: _C.b1),
-        if (_step >= 1) Container(height: 1.5,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_C.cyan, _C.purple]),
-          )),
-      ])),
-      _dot(1, 'Confirm', Icons.check_rounded),
-    ]),
-  );
-
-  Widget _dot(int s, String label, IconData icon) {
-    final active  = _step >= s;
-    final current = _step == s;
-    return Column(children: [
-      Container(
-        width: 38.w, height: 38.h,
-        decoration: BoxDecoration(
-          gradient: active ? const LinearGradient(colors: [_C.cyan, _C.purple]) : null,
-          color: active ? null : _C.bg2,
-          shape: BoxShape.circle,
-          border: Border.all(color: active ? Colors.transparent : _C.b2, width: 1.5),
-          boxShadow: active ? [BoxShadow(color: _C.cyan.withOpacity(0.28), blurRadius: 14)] : null,
-        ),
-        child: Icon(icon, color: active ? Colors.black : _C.t3, size: 17),
-      ),
-      SizedBox(height: 5.h),
-      Text(label, style: _ts(10, active ? _C.cyan : _C.t3,
-          w: current ? FontWeight.w600 : FontWeight.w400)),
-    ]);
-  }
-
-  // ── STEP 0 ────────────────────────────────────────────────────────────────
-  Widget _step0() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    _lbl('Network'),
-    SizedBox(height: 10.h),
-    ..._withdrawMethods.map(_networkCard),
-    SizedBox(height: 18.h),
-    _lbl('Amount (USD)'),
-    SizedBox(height: 10.h),
-    _amountField(),
-    SizedBox(height: 18.h),
-    _lbl('BEP20 Wallet Address'),
-    SizedBox(height: 10.h),
-    _addressField(),
-    if (_err.isNotEmpty) ...[SizedBox(height: 12.h), _errBox()],
-    SizedBox(height: 26.h),
-    _btnGrad('Continue', _validate, trailingIcon: Icons.arrow_forward_rounded),
-    SizedBox(height: 24.h),
-  ]);
-
-  Widget _lbl(String t) => Text(t, style: _ts(13, _C.t2, w: FontWeight.w600));
-
-  Widget _networkCard(WithdrawMethod m) {
-    final sel = _method.symbol == m.symbol;
-    return GestureDetector(
-      onTap: () => setState(() => _method = m),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 8.h),
-        padding: EdgeInsets.all(14.w),
-        decoration: BoxDecoration(
-          color: sel ? m.color.withOpacity(0.07) : _C.bg2,
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: sel ? m.color.withOpacity(0.42) : _C.b1, width: sel ? 1.5 : 1),
-        ),
-        child: Row(children: [
-          // Icon: network selector — static branded icon, clean and fast
+      child: Column(
+        children: [
+          SizedBox(height: 12.h),
           Container(
-            width: 42.w, height: 42.h,
+            width: 40.w,
+            height: 4.h,
             decoration: BoxDecoration(
-              color: m.color.withOpacity(0.1),
+              color: AppColors.textMuted,
               borderRadius: BorderRadius.circular(10.r),
             ),
-            child: Icon(m.icon, color: m.color, size: 22),
           ),
-          SizedBox(width: 12.w),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(m.name, style: _ts(14, _C.t1, w: FontWeight.w600)),
-            SizedBox(height: 2.h),
-            Text('Min \$${m.minAmount}  ·  Max \$${m.maxAmount}', style: _ts(11, _C.t2)),
-          ])),
-          Container(
-            width: 22.w, height: 22.h,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: sel ? m.color : _C.t3, width: 2),
-              color: sel ? m.color : Colors.transparent,
+          SizedBox(height: 20.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Row(
+              children: [
+                Container(
+                  width: 48.w,
+                  height: 48.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
+                  child: Center(
+                    child: SizedBox(
+                      width: 28.w,
+                      height: 28.h,
+                      child: Lottie.network(AppLottie.moneyOut),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Withdraw Funds',
+                        style: GoogleFonts.inter(
+                          color: AppColors.textPrimary,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Available: \$\${widget.balance.toStringAsFixed(2)}',
+                        style: GoogleFonts.inter(
+                          color: AppColors.accentRed,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: sel ? const Icon(Icons.check, color: Colors.black, size: 13) : null,
           ),
-        ]),
+          SizedBox(height: 24.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Row(
+              children: [
+                _buildStepIndicator(0, 'Amount', Icons.account_balance_wallet),
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    margin: EdgeInsets.symmetric(horizontal: 12.w),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _step >= 1
+                            ? [AppColors.accentGreen, AppColors.accentBlue]
+                            : [AppColors.border, AppColors.border],
+                      ),
+                    ),
+                  ),
+                ),
+                _buildStepIndicator(1, 'Confirm', Icons.check_circle),
+              ],
+            ),
+          ),
+          SizedBox(height: 32.h),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: _step == 0 ? _buildStep0() : _buildStep1(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _amountField() => Container(
-    decoration: BoxDecoration(
-      color: _C.bg2, borderRadius: BorderRadius.circular(14.r),
-      border: Border.all(color: _C.b2),
-    ),
-    child: Row(children: [
-      SizedBox(width: 16.w),
-      Text('\$', style: GoogleFonts.orbitron(color: _C.cyan, fontSize: 18.sp, fontWeight: FontWeight.w600)),
-      Expanded(child: TextField(
-        controller: _amtCtrl,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        style: GoogleFonts.orbitron(color: _C.t1, fontSize: 18.sp, fontWeight: FontWeight.w600),
+  Widget _buildStepIndicator(int step, String label, IconData icon) {
+    final bool isActive = _step >= step;
+    final bool isCurrent = _step == step;
+
+    return Column(
+      children: [
+        Container(
+          width: 44.w,
+          height: 44.h,
+          decoration: BoxDecoration(
+            gradient: isActive
+                ? LinearGradient(
+                    colors: [AppColors.accentGreen, AppColors.accentBlue],
+                  )
+                : null,
+            color: isActive ? null : AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isActive ? Colors.transparent : AppColors.border,
+              width: 2,
+            ),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: AppColors.accentGreen.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: isActive
+                ? Icon(icon, color: Colors.black, size: 20)
+                : Text(
+                    '\${step + 1}',
+                    style: GoogleFonts.inter(
+                      color: AppColors.textMuted,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: isActive ? AppColors.accentGreen : AppColors.textMuted,
+            fontSize: 12.sp,
+            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStep0() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Network',
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        ..._withdrawMethods.map((method) => _buildMethodCard(method)),
+        SizedBox(height: 24.h),
+        Text(
+          'Amount (USD)',
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        _buildAmountInput(),
+        SizedBox(height: 24.h),
+        Text(
+          'BEP20 Wallet Address',
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        _buildAddressInput(),
+        if (_errorMessage.isNotEmpty) ...[
+          SizedBox(height: 16.h),
+          _buildErrorMessage(),
+        ],
+        SizedBox(height: 32.h),
+        GestureDetector(
+          onTap: _validateAndProceed,
+          child: Container(
+            width: double.infinity,
+            height: 56.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentGreen, AppColors.accentBlue],
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accentGreen.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Continue',
+                  style: GoogleFonts.inter(
+                    color: Colors.black,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                SizedBox(
+                  width: 20.w,
+                  height: 20.h,
+                  child: Lottie.network(AppLottie.arrowRight),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 24.h),
+      ],
+    );
+  }
+
+  Widget _buildMethodCard(WithdrawMethod method) {
+    final bool isSelected = _selectedMethod.symbol == method.symbol;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedMethod = method),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 10.h),
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: isSelected ? method.color.withOpacity(0.15) : AppColors.surface,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isSelected ? method.color.withOpacity(0.6) : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44.w,
+              height: 44.h,
+              decoration: BoxDecoration(
+                color: method.color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Center(
+                child: SizedBox(
+                  width: 24.w,
+                  height: 24.h,
+                  child: Lottie.network(method.iconUrl),
+                ),
+              ),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    method.name,
+                    style: GoogleFonts.inter(
+                      color: AppColors.textPrimary,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Min: \$\${method.minAmount} • Max: \$\${method.maxAmount}',
+                    style: GoogleFonts.inter(
+                      color: AppColors.textSecondary,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 24.w,
+              height: 24.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? method.color : AppColors.textMuted,
+                  width: 2,
+                ),
+                color: isSelected ? method.color : Colors.transparent,
+              ),
+              child: isSelected
+                  ? Icon(Icons.check, color: Colors.black, size: 14.sp)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmountInput() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: _errorMessage.isNotEmpty && _amountController.text.isEmpty
+              ? AppColors.accentRed
+              : AppColors.border,
+        ),
+      ),
+      child: TextField(
+        controller: _amountController,
+        keyboardType: TextInputType.numberWithOptions(decimal: true),
+        style: GoogleFonts.inter(
+          color: AppColors.textPrimary,
+          fontSize: 16.sp,
+        ),
         decoration: InputDecoration(
           hintText: '0.00',
-          hintStyle: GoogleFonts.orbitron(color: _C.t3, fontSize: 18.sp),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 16.h),
-        ),
-      )),
-      GestureDetector(
-        onTap: _setMax,
-        child: Container(
-          margin: EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_C.cyan, _C.green]),
-            borderRadius: BorderRadius.circular(8),
+          hintStyle: GoogleFonts.inter(
+            color: AppColors.textMuted,
+            fontSize: 16.sp,
           ),
-          child: Text('MAX', style: _ts(10, Colors.black, w: FontWeight.w800, spacing: 0.5)),
-        ),
-      ),
-    ]),
-  );
-
-  Widget _addressField() => Container(
-    decoration: BoxDecoration(
-      color: _C.bg2, borderRadius: BorderRadius.circular(14.r),
-      border: Border.all(color: _C.b2),
-    ),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Expanded(child: TextField(
-        controller: _addrCtrl,
-        style: _mono(12, _C.t1),
-        maxLines: 2,
-        decoration: InputDecoration(
-          hintText: '0x... BEP20 wallet address',
-          hintStyle: _mono(12, _C.t3),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16.w),
-        ),
-      )),
-      // Icon: paste — functional action, icon is clear and instant
-      GestureDetector(
-        onTap: () async {
-          final d = await Clipboard.getData('text/plain');
-          if (d?.text != null) { _addrCtrl.text = d!.text!.trim(); setState(() {}); }
-        },
-        child: Container(
-          margin: EdgeInsets.all(10.w),
-          padding: const EdgeInsets.all(9),
-          decoration: BoxDecoration(
-            color: _C.purple.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: _C.purple.withOpacity(0.25)),
-          ),
-          child: const Icon(Icons.content_paste_rounded, color: _C.purple, size: 18),
-        ),
-      ),
-    ]),
-  );
-
-  Widget _errBox() => Container(
-    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 11.h),
-    decoration: BoxDecoration(
-      color: _C.magenta.withOpacity(0.07),
-      borderRadius: BorderRadius.circular(10.r),
-      border: Border.all(color: _C.magenta.withOpacity(0.22)),
-    ),
-    child: Row(children: [
-      // Icon: static error message — no animation needed here
-      const Icon(Icons.error_outline_rounded, color: _C.magenta, size: 18),
-      SizedBox(width: 10.w),
-      Expanded(child: Text(_err, style: _ts(12, _C.magenta, w: FontWeight.w500))),
-    ]),
-  );
-
-  Widget _btnGrad(String label, VoidCallback onTap,
-      {List<Color>? colors, IconData? trailingIcon}) {
-    final c = colors ?? [_C.cyan, _C.purple];
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity, height: 54.h,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: c),
-          borderRadius: BorderRadius.circular(14.r),
-          boxShadow: [BoxShadow(color: c.first.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 6))],
-        ),
-        alignment: Alignment.center,
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(label, style: _ts(15, Colors.black, w: FontWeight.w700)),
-          if (trailingIcon != null) ...[
-            SizedBox(width: 8.w),
-            Icon(trailingIcon, color: Colors.black, size: 18),
-          ],
-        ]),
-      ),
-    );
-  }
-
-  // ── STEP 1 ────────────────────────────────────────────────────────────────
-  Widget _step1() {
-    final amt = double.tryParse(_amtCtrl.text) ?? 0;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _lbl('Transaction Summary'),
-      SizedBox(height: 14.h),
-      Container(
-        decoration: BoxDecoration(
-          color: _C.bg2, borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: _C.b1),
-        ),
-        child: Column(children: [
-          _sRow('Network',         _method.name),
-          Divider(color: _C.b1, height: 1),
-          _sRow('Amount',          '\$${amt.toStringAsFixed(2)}'),
-          Divider(color: _C.b1, height: 1),
-          _sRow('To Wallet',       _fmtA(_addrCtrl.text.trim())),
-          Divider(color: _C.b1, height: 1),
-          _sRow('Fee',             'Zero',               vc: _C.green, icon: Icons.check_circle_outline_rounded),
-          Divider(color: _C.b1, height: 1),
-          _sRow('Total Deduction', '\$${amt.toStringAsFixed(2)}', vc: _C.magenta, bold: true),
-        ]),
-      ),
-      SizedBox(height: 14.h),
-      Container(
-        padding: EdgeInsets.all(14.w),
-        decoration: BoxDecoration(
-          color: _C.amber.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: _C.amber.withOpacity(0.18)),
-        ),
-        child: Row(children: [
-          // Icon: static warning message — no animation needed
-          const Icon(Icons.warning_amber_rounded, color: _C.amber, size: 20),
-          SizedBox(width: 10.w),
-          Expanded(child: Text(
-            'Verify the wallet address carefully. Transactions cannot be reversed.',
-            style: _ts(12, _C.amber),
-          )),
-        ]),
-      ),
-      SizedBox(height: 26.h),
-      _busy
-          ? Container(
-              width: double.infinity, height: 54.h,
-              decoration: BoxDecoration(
-                color: _C.bg3, borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(color: _C.b2),
+          prefixIcon: Padding(
+            padding: EdgeInsets.only(left: 16.w, right: 8.w),
+            child: Text(
+              '\$',
+              style: GoogleFonts.inter(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
               ),
-              alignment: Alignment.center,
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                SizedBox(width: 18, height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: _C.cyan)),
-                SizedBox(width: 12.w),
-                Text('Processing...', style: _ts(14, _C.cyan, w: FontWeight.w600)),
-              ]),
-            )
-          : _btnGrad('Confirm Withdrawal', _confirm,
-              colors: [_C.magenta, _C.purple],
-              trailingIcon: Icons.lock_outline_rounded),
-      SizedBox(height: 12.h),
-      GestureDetector(
-        onTap: () => setState(() { _step = 0; _err = ''; }),
-        child: Container(
-          width: double.infinity, height: 48.h,
-          decoration: BoxDecoration(
-            color: _C.bg2, borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: _C.b2),
+            ),
           ),
-          alignment: Alignment.center,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.arrow_back_rounded, color: _C.t2, size: 16),
-            SizedBox(width: 6.w),
-            Text('Back', style: _ts(14, _C.t2, w: FontWeight.w500)),
-          ]),
+          prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+          suffix: GestureDetector(
+            onTap: _setMaxAmount,
+            child: Container(
+              margin: EdgeInsets.only(right: 16.w),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.accentGreen, AppColors.accentBlue],
+                ),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Text(
+                'MAX',
+                style: GoogleFonts.inter(
+                  color: Colors.black,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
-      SizedBox(height: 32.h),
-    ]);
-  }
-
-  Widget _sRow(String label, String val, {Color? vc, bool bold = false, IconData? icon}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: _ts(13, _C.t2)),
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, color: vc ?? _C.t1, size: 14), SizedBox(width: 5.w)],
-          Text(val, style: _ts(bold ? 14 : 13, vc ?? _C.t1,
-              w: bold ? FontWeight.w700 : FontWeight.w600)),
-        ]),
-      ]),
     );
   }
 
-  String _fmtA(String a) =>
-      a.length < 20 ? a : '${a.substring(0, 8)}...${a.substring(a.length - 8)}';
+  Widget _buildAddressInput() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: _errorMessage.isNotEmpty && _addressController.text.isEmpty
+              ? AppColors.accentRed
+              : AppColors.border,
+        ),
+      ),
+      child: TextField(
+        controller: _addressController,
+        style: GoogleFonts.spaceMono(
+          color: AppColors.textPrimary,
+          fontSize: 13.sp,
+        ),
+        maxLines: 2,
+        decoration: InputDecoration(
+          hintText: 'Enter BEP20 wallet address (0x...)',
+          hintStyle: GoogleFonts.inter(
+            color: AppColors.textMuted,
+            fontSize: 13.sp,
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(16.w),
+          suffix: GestureDetector(
+            onTap: () async {
+              final data = await Clipboard.getData('text/plain');
+              if (data?.text != null) {
+                _addressController.text = data!.text!.trim();
+                setState(() {});
+              }
+            },
+            child: Container(
+              margin: EdgeInsets.all(12.w),
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: AppColors.accentPurple.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: SizedBox(
+                width: 20.w,
+                height: 20.h,
+                child: Lottie.network(AppLottie.copy),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorMessage() {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.accentRed.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.accentRed.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18.w,
+            height: 18.h,
+            child: Lottie.network(AppLottie.warning, repeat: false),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Text(
+              _errorMessage,
+              style: GoogleFonts.inter(
+                color: AppColors.accentRed,
+                fontSize: 12.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep1() {
+    final amount = double.tryParse(_amountController.text) ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Confirm Withdrawal',
+          style: GoogleFonts.inter(
+            color: AppColors.textPrimary,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 24.h),
+        _buildConfirmRow('Network', _selectedMethod.name),
+        _buildConfirmRow('Amount', '\$\${amount.toStringAsFixed(2)}'),
+        _buildConfirmRow('Wallet', _formatAddress(_addressController.text.trim())),
+        Divider(color: AppColors.border, height: 24.h),
+        _buildConfirmRow('Total Deduction', '\$\${amount.toStringAsFixed(2)}', isTotal: true),
+        SizedBox(height: 24.h),
+        Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.accentOrange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20.w,
+                height: 20.h,
+                child: Lottie.network(AppLottie.warning),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Text(
+                  'Please verify the address. Transactions cannot be reversed.',
+                  style: GoogleFonts.inter(
+                    color: AppColors.accentOrange,
+                    fontSize: 12.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 32.h),
+        GestureDetector(
+          onTap: _isProcessing ? null : _processWithdrawal,
+          child: Container(
+            width: double.infinity,
+            height: 56.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _isProcessing
+                    ? [AppColors.textMuted, AppColors.textMuted]
+                    : [AppColors.accentRed, AppColors.accentOrange],
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: _isProcessing
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: AppColors.accentRed.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+            ),
+            alignment: Alignment.center,
+            child: _isProcessing
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 24.w,
+                        height: 24.h,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Text(
+                        'Processing...',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    'Confirm Withdrawal',
+                    style: GoogleFonts.inter(
+                      color: Colors.black,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ),
+        SizedBox(height: 16.h),
+        GestureDetector(
+          onTap: () => setState(() {
+            _step = 0;
+            _errorMessage = '';
+          }),
+          child: Container(
+            width: double.infinity,
+            height: 48.h,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'Back',
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 32.h),
+      ],
+    );
+  }
+
+  Widget _buildConfirmRow(String label, String value, {bool isTotal = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: AppColors.textSecondary,
+              fontSize: 14.sp,
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              color: isTotal ? AppColors.accentRed : AppColors.textPrimary,
+              fontSize: isTotal ? 16.sp : 14.sp,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
