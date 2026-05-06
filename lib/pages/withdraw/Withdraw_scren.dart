@@ -39,14 +39,14 @@ class AppLottie {
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-class ReferScreen extends StatefulWidget {
+class WithdrawScreen extends StatefulWidget {
   const ReferScreen({super.key});
 
   @override
   State<ReferScreen> createState() => _ReferScreenState();
 }
 
-class _ReferScreenState extends State<ReferScreen>
+class _WithdrawScreenState extends State<WithdrawScreen>
     with TickerProviderStateMixin {
   bool _isLoading    = true;
   bool _hasError     = false;
