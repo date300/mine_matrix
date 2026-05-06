@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
 
 // --- Colors ---
@@ -35,14 +37,7 @@ class AppLottie {
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
 class WithdrawScreen extends StatefulWidget {
-  final Map<String, String> headers;
-  final VoidCallback? onSuccess;
-
-  const WithdrawScreen({
-    super.key,
-    required this.headers,
-    this.onSuccess,
-  });
+  const WithdrawScreen({super.key});
 
   @override
   State<WithdrawScreen> createState() => _WithdrawScreenState();
@@ -51,11 +46,11 @@ class WithdrawScreen extends StatefulWidget {
 class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStateMixin {
   final _amountController = TextEditingController();
   final _walletController = TextEditingController();
-
+  
   bool _isLoading    = true;
   bool _isSubmitting = false;
   bool _hasError     = false;
-
+  
   double _withdrawableBalance = 0.0;
   List<dynamic> _withdrawHistory = [];
 
@@ -72,7 +67,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     _balanceAnim.addListener(() {
       if (mounted) setState(() => _displayBalance = _withdrawableBalance * _balanceAnim.value);
     });
-
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
@@ -83,6 +78,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     _balanceCtrl.dispose();
     super.dispose();
   }
+
+  String? _token() => Provider.of<AuthProvider>(context, listen: false).token;
+
+  Map<String, String> _headers() => {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ${_token()}',
+  };
 
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _hasError = false; });
@@ -101,7 +103,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   }
 
   Future<void> _fetchBalance() async {
-    final res = await http.get(Uri.parse('\$_baseUrl/api/mining/stats'), headers: widget.headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/mining/stats'), headers: _headers());
     if (res.statusCode == 200) {
       final d = jsonDecode(res.body);
       _withdrawableBalance = double.tryParse(d['withdrawable']?.toString() ?? '0') ?? 0.0;
@@ -109,7 +111,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
   }
 
   Future<void> _fetchHistory() async {
-    final res = await http.get(Uri.parse('\$_baseUrl/api/withdraw/history'), headers: widget.headers);
+    final res = await http.get(Uri.parse('$_baseUrl/api/withdraw/history'), headers: _headers());
     if (res.statusCode == 200) {
       final d = jsonDecode(res.body);
       _withdrawHistory = d['data'] ?? [];
@@ -124,7 +126,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
       _showSnack("Minimum withdrawal is \$5", isError: true);
       return;
     }
-    if (!RegExp(r'^0x[a-fA-F0-9]{40}\$').hasMatch(wallet)) {
+    if (!RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(wallet)) {
       _showSnack("Invalid BEP20 address", isError: true);
       return;
     }
@@ -136,8 +138,8 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
     setState(() => _isSubmitting = true);
     try {
       final res = await http.post(
-        Uri.parse('\$_baseUrl/api/withdraw'),
-        headers: widget.headers,
+        Uri.parse('$_baseUrl/api/withdraw'),
+        headers: _headers(),
         body: jsonEncode({'amount': amount, 'wallet': wallet}),
       );
 
@@ -147,7 +149,6 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
         _amountController.clear();
         _walletController.clear();
         _loadData();
-        widget.onSuccess?.call();
       } else {
         _showSnack(d['error'] ?? "Failed to process withdrawal", isError: true);
       }
@@ -240,7 +241,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
           Text('WITHDRAWABLE BALANCE', style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11.sp, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
         ]),
         SizedBox(height: 12.h),
-        Text('\\$${_displayBalance.toStringAsFixed(2)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 42.sp, fontWeight: FontWeight.bold)),
+        Text('\$${_displayBalance.toStringAsFixed(2)}', style: GoogleFonts.inter(color: Colors.white, fontSize: 42.sp, fontWeight: FontWeight.bold)),
         SizedBox(height: 8.h),
         Text('Available for instant withdrawal', style: GoogleFonts.inter(color: AppColors.accentGreen.withOpacity(0.8), fontSize: 12.sp)),
       ],
@@ -355,7 +356,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
           ),
           SizedBox(width: 16.w),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('\\$${item['amount']}', style: GoogleFonts.inter(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+            Text('\$${item['amount']}', style: GoogleFonts.inter(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
             SizedBox(height: 4.h),
             Text(item['wallet_address'].toString().replaceRange(6, 36, '...'), style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 11.sp)),
           ])),
@@ -415,4 +416,3 @@ class _WithdrawScreenState extends State<WithdrawScreen> with TickerProviderStat
 
   Widget _sec(String title) => Text(title, style: GoogleFonts.inter(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold));
 }
-
