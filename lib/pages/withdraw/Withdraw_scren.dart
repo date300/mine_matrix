@@ -13,7 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_error_widget.dart';
 
-// ─── Colors (same as WalletScreen) ─────────────────────────────────────────
+// --- Colors ---
 class AppColors {
   static const Color background    = Color(0xFF0A0A0F);
   static const Color surface       = Color(0xFF12121A);
@@ -38,12 +38,12 @@ class AppLottie {
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// --- Main Screen (Fixed Naming) ---
 class WithdrawScreen extends StatefulWidget {
-  const ReferScreen({super.key});
+  const WithdrawScreen({super.key}); // Fixed: must match class name
 
   @override
-  State<ReferScreen> createState() => _ReferScreenState();
+  State<WithdrawScreen> createState() => _WithdrawScreenState(); // Fixed
 }
 
 class _WithdrawScreenState extends State<WithdrawScreen>
@@ -157,9 +157,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     ));
   }
 
-  // ════════════════════════════════════════════════════════════
-  // BUILD
-  // ════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,7 +192,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                                   .fadeIn(delay: 100.ms)
                                   .slideY(begin: 0.1),
                               SizedBox(height: 24.h),
-                              _sec('🌐 Network Overview'),
+                              _sec('📢 Network Overview'),
                               SizedBox(height: 12.h),
                               _networkRow()
                                   .animate().fadeIn(delay: 200.ms),
@@ -212,7 +209,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                                         .slideX(begin: 0.15, end: 0),
                                   )),
                               SizedBox(height: 12.h),
-                              _sec('💰 Commission Breakdown'),
+                              _sec('📊 Commission Breakdown'),
                               SizedBox(height: 12.h),
                               _commBreakdown()
                                   .animate().fadeIn(delay: 500.ms),
@@ -223,7 +220,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                                 _tree().animate().fadeIn(delay: 540.ms),
                                 SizedBox(height: 24.h),
                               ],
-                              _sec('📋 Commission History'),
+                              _sec('📝 Commission History'),
                               SizedBox(height: 12.h),
                               if (_commissionHistory.isEmpty)
                                 _emptyHistory().animate().fadeIn(delay: 580.ms)
@@ -237,7 +234,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                                               milliseconds: 580 + e.key * 60)),
                                     )),
                               SizedBox(height: 24.h),
-                              _sec('📖 How It Works'),
+                              _sec('❓ How It Works'),
                               SizedBox(height: 12.h),
                               _guide2().animate().fadeIn(delay: 660.ms),
                               SizedBox(height: 20.h),
@@ -260,9 +257,8 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // SKELETON
-  // ════════════════════════════════════════════════════════════
+  // --- UI Helpers (Keep as is, but ensure names are correct) ---
+
   Widget _skeleton() => Shimmer.fromColors(
         baseColor: AppColors.surface,
         highlightColor: AppColors.cardBg.withOpacity(0.5),
@@ -294,9 +290,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20.r)));
 
-  // ════════════════════════════════════════════════════════════
-  // HEADER
-  // ════════════════════════════════════════════════════════════
   Widget _header() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -337,9 +330,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ],
       );
 
-  // ════════════════════════════════════════════════════════════
-  // HERO — Commission total (glassmorphism, like WalletScreen balance card)
-  // ════════════════════════════════════════════════════════════
   Widget _heroCard() {
     final pays = _commission['totalPayouts'] ?? 0;
     return Container(
@@ -374,7 +364,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                 children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                // badge
                 Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: 12.w, vertical: 6.h),
@@ -433,9 +422,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // REFERRAL LINK CARD
-  // ════════════════════════════════════════════════════════════
   Widget _linkCard() => Container(
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
@@ -451,7 +437,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           ],
         ),
         child: Column(children: [
-          // Code
           Row(children: [
             _iconBox(Icons.tag_rounded, AppColors.accentPurple),
             SizedBox(width: 14.w),
@@ -476,7 +461,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           SizedBox(height: 14.h),
           Divider(color: AppColors.border),
           SizedBox(height: 14.h),
-          // Link
           Row(children: [
             _iconBox(Icons.link_rounded, AppColors.accentBlue),
             SizedBox(width: 14.w),
@@ -501,9 +485,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ]),
       );
 
-  // ════════════════════════════════════════════════════════════
-  // NETWORK ROW
-  // ════════════════════════════════════════════════════════════
   Widget _networkRow() => Row(children: [
         Expanded(child: _netCard('Total',
             (_network['totalReferred'] ?? 0).toString(),
@@ -547,9 +528,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ]),
       );
 
-  // ════════════════════════════════════════════════════════════
-  // LEVEL CARD
-  // ════════════════════════════════════════════════════════════
   Widget _levelCard(Map<String, dynamic> lv) {
     final lvNum    = (lv['level'] as int? ?? 1).clamp(1, 3);
     final colors   = [AppColors.accentGreen, AppColors.accentOrange, AppColors.accentBlue];
@@ -626,7 +604,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
           ),
         ]),
         SizedBox(height: 16.h),
-        // Progress bar
         Row(children: [
           Expanded(
             child: Stack(children: [
@@ -669,9 +646,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // COMMISSION BREAKDOWN
-  // ════════════════════════════════════════════════════════════
   Widget _commBreakdown() => Container(
         padding: EdgeInsets.all(18.w),
         decoration: BoxDecoration(
@@ -712,9 +686,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       margin: EdgeInsets.symmetric(horizontal: 6.w),
       color: AppColors.border);
 
-  // ════════════════════════════════════════════════════════════
-  // REFERRAL TREE
-  // ════════════════════════════════════════════════════════════
   Widget _tree() => Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
@@ -805,9 +776,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // COMMISSION HISTORY ITEM
-  // ════════════════════════════════════════════════════════════
   Widget _histItem(Map<String, dynamic> h) {
     final lvl    = (h['level'] as int? ?? 1).clamp(1, 3);
     final colors = [AppColors.accentGreen, AppColors.accentOrange, AppColors.accentBlue];
@@ -881,9 +849,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ),
       );
 
-  // ════════════════════════════════════════════════════════════
-  // GUIDE
-  // ════════════════════════════════════════════════════════════
   Widget _guide2() {
     final steps = [
       _guide?['step1'] ?? 'Share your referral link with friends',
@@ -959,9 +924,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
-  // ════════════════════════════════════════════════════════════
-  // REFERRED BY
-  // ════════════════════════════════════════════════════════════
   Widget _referredByCard() => Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
@@ -1005,9 +967,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ]),
       );
 
-  // ════════════════════════════════════════════════════════════
-  // SHARE BUTTON
-  // ════════════════════════════════════════════════════════════
   Widget _shareBtn() => GestureDetector(
         onTap: () => Share.share(
             'Join LTC Mine Matrix and start earning!\nUse my referral link: $_referralLink'),
@@ -1039,9 +998,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ),
       );
 
-  // ════════════════════════════════════════════════════════════
-  // SMALL HELPERS
-  // ════════════════════════════════════════════════════════════
   Widget _iconBox(IconData icon, Color color) => Container(
         width: 40.w, height: 40.h,
         decoration: BoxDecoration(
