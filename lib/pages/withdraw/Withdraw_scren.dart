@@ -81,12 +81,12 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     super.dispose();
   }
 
-  String? _token() =>
+  String? _getToken() =>
       Provider.of<AuthProvider>(context, listen: false).token;
 
   Map<String, String> _headers() => {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${_token()}',
+    'Authorization': 'Bearer ${_getToken()}',
   };
 
   // ── LOAD DATA ──────────────────────
@@ -96,6 +96,12 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       _hasError  = false;
     });
     try {
+      final token = _getToken();
+      if (token == null) {
+        setState(() { _isLoading = false; _hasError = true; });
+        return;
+      }
+
       await Future.wait([_fetchBalance(), _fetchHistory()]);
       if (mounted) {
         setState(() => _isLoading = false);
