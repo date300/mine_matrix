@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -180,7 +181,6 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     final wallet = _walletController.text.trim();
 
-    // ── Client-side validation (mirrors backend) ──
     if (amount < 5) {
       _showSnack("Minimum withdrawal is \$5", isError: true);
       return;
@@ -201,15 +201,20 @@ class _WithdrawScreenState extends State<WithdrawScreen>
 
     setState(() => _isSubmitting = true);
     try {
+      final body = jsonEncode({
+        'amount':  amount,
+        'wallet':  wallet,
+        'network': _selectedNetwork,
+      });
+      debugPrint('[Withdraw] POST body: $body');
+
       final res = await http.post(
         Uri.parse('$_baseUrl/api/withdraw'),
         headers: _headers(),
-        body: jsonEncode({
-          'amount':  amount,
-          'wallet':  wallet,
-          'network': _selectedNetwork,  // BEP20 | TRC20
-        }),
-      );
+        body: body,
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('[Withdraw] status=${res.statusCode} body=${res.body}');
 
       final d = jsonDecode(res.body);
 
@@ -219,9 +224,16 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         _walletController.clear();
         await _loadData();
       } else {
-        _showSnack(d['error'] ?? "Failed to process withdrawal", isError: true);
+        // Show exact backend error message
+        final errMsg = d['error'] ?? d['message'] ?? "Failed to process withdrawal";
+        debugPrint('[Withdraw] error: $errMsg');
+        _showSnack(errMsg, isError: true);
       }
-    } catch (_) {
+    } on TimeoutException {
+      debugPrint('[Withdraw] timeout');
+      _showSnack("Request timed out. Please try again.", isError: true);
+    } catch (e) {
+      debugPrint('[Withdraw] exception: $e');
       _showSnack("Network error. Please try again.", isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
