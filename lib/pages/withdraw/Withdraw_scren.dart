@@ -91,66 +91,84 @@ class _WithdrawScreenState extends State<WithdrawScreen>
 
   // ── LOAD DATA ──────────────────────
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _hasError  = false;
-    });
-    try {
-      final token = _getToken();
-      if (token == null) {
-        setState(() { _isLoading = false; _hasError = true; });
-        return;
-      }
+    setState(() { _isLoading = true; _hasError = false; });
 
-      await Future.wait([_fetchBalance(), _fetchHistory()]);
-      if (mounted) {
-        setState(() => _isLoading = false);
+    final token = _getToken();
+    if (token == null) {
+      debugPrint('[WithdrawScreen] token is null');
+      setState(() { _isLoading = false; _hasError = true; });
+      return;
+    }
+
+    // Both fetches run independently — one failing won't block the other
+    await Future.wait([_fetchBalance(), _fetchHistory()]);
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (_withdrawableBalance > 0) {
         _balanceCtrl.forward(from: 0);
+      } else {
+        setState(() => _displayBalance = 0);
       }
-    } catch (_) {
-      if (mounted) setState(() { _isLoading = false; _hasError = true; });
     }
   }
 
   // ── GET /api/withdraw/balance ──────
-  // Response: { success, data: { balance, withdrawable } }
+  // Response: { success: true, data: { balance, withdrawable } }
   Future<void> _fetchBalance() async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/withdraw/balance'),
-      headers: _headers(),
-    );
+    try {
+      final res = await http
+          .get(Uri.parse('$_baseUrl/api/withdraw/balance'), headers: _headers())
+          .timeout(const Duration(seconds: 15));
 
-    if (res.statusCode == 200) {
-      final d = jsonDecode(res.body);
-      if (d['success'] == true && d['data'] != null) {
-        _withdrawableBalance =
-            double.tryParse(d['data']['withdrawable']?.toString() ?? '0') ?? 0.0;
+      debugPrint('[Balance] status=${res.statusCode} body=${res.body}');
+
+      if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        if (d['success'] == true && d['data'] != null) {
+          _withdrawableBalance =
+              double.tryParse(d['data']['withdrawable']?.toString() ?? '0') ?? 0.0;
+          debugPrint('[Balance] withdrawable=$_withdrawableBalance');
+        } else {
+          debugPrint('[Balance] unexpected: ${d['error']}');
+          if (mounted) _showSnack(d['error'] ?? 'Balance fetch failed', isError: true);
+        }
       } else {
-        throw Exception(d['error'] ?? 'Balance fetch failed');
+        debugPrint('[Balance] non-200: ${res.statusCode}');
+        if (mounted) _showSnack('Balance fetch failed (${res.statusCode})', isError: true);
       }
-    } else {
-      final d = jsonDecode(res.body);
-      throw Exception(d['error'] ?? 'Balance fetch failed');
+    } catch (e) {
+      debugPrint('[Balance] exception: $e');
+      if (mounted) _showSnack('Network error fetching balance', isError: true);
     }
   }
 
   // ── GET /api/withdraw/history ──────
-  // Response: { success, data: [ { id, amount, wallet_address, network, status, created_at, approved_at } ] }
+  // Response: { success: true, data: [ { id, amount, wallet_address, network, status, created_at } ] }
   Future<void> _fetchHistory() async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/api/withdraw/history?page=1&limit=20'),
-      headers: _headers(),
-    );
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$_baseUrl/api/withdraw/history?page=1&limit=20'),
+            headers: _headers(),
+          )
+          .timeout(const Duration(seconds: 15));
 
-    if (res.statusCode == 200) {
-      final d = jsonDecode(res.body);
-      if (d['success'] == true) {
-        _withdrawHistory = d['data'] ?? [];
+      debugPrint('[History] status=${res.statusCode} body=${res.body}');
+
+      if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        if (d['success'] == true) {
+          _withdrawHistory = d['data'] ?? [];
+          debugPrint('[History] loaded ${_withdrawHistory.length} items');
+        } else {
+          debugPrint('[History] unexpected: ${d['error']}');
+        }
       } else {
-        throw Exception(d['error'] ?? 'History fetch failed');
+        debugPrint('[History] non-200: ${res.statusCode}');
       }
-    } else {
-      throw Exception('History fetch failed');
+    } catch (e) {
+      debugPrint('[History] exception: $e');
     }
   }
 
