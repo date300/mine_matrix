@@ -11,7 +11,7 @@ class MiningController {
 
   MiningController({required this.context, required this.setState});
 
-  // ─── State ───────────────────────────────────────────────────────────────
+  // ─── State ────────────────────────────────────────────────────────────────
   bool autoMining      = false;
   bool isLoading       = true;
   bool hasError        = false;
@@ -43,7 +43,7 @@ class MiningController {
   Timer? liveTimer;
   Timer? syncTimer;
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   String? _getToken() =>
       Provider.of<AuthProvider>(context, listen: false).token;
 
@@ -59,7 +59,7 @@ class MiningController {
   // ─── Apply status from server ─────────────────────────────────────────────
   void applyStatus(Map<String, dynamic> data) {
     miningActive    = data['miningActive'] == true;
-    autoMining      = data['autoMining'] == true;
+    autoMining      = data['autoMining'] == true; 
     minedCoins      = _toDouble(data['minedCoins']);
     equivalentUSD   = _toDouble(data['equivalentUSD']);
     withdrawableUSD = _toDouble(data['withdrawableUSD']);
@@ -155,59 +155,23 @@ class MiningController {
     }
   }
 
-  // ─── FIXED: doClaim ───────────────────────────────────────────────────────
   Future<Map<String, dynamic>> doClaim() async {
     final token = _getToken();
     if (token == null) throw Exception('No token');
-
-    // Timer বন্ধ করো claim করার আগেই
-    liveTimer?.cancel();
-    syncTimer?.cancel();
-
     setState(() => isLoading = true);
-
     try {
-      // Real API call
       final data = await MiningService(token: token).claim();
-
-      // API থেকে আসা withdrawable ও অন্য data দিয়ে state update
+      liveTimer?.cancel();
+      syncTimer?.cancel();
       setState(() {
         isLoading     = false;
         dayStarted    = false;
         isMining      = false;
-        miningActive  = false;
         lastSyncTime  = null;
-
-        // Server থেকে withdrawable update করো
-        if (data['withdrawable'] != null) {
-          withdrawableUSD = _toDouble(data['withdrawable']);
-        } else if (data['withdrawableUSD'] != null) {
-          withdrawableUSD = _toDouble(data['withdrawableUSD']);
-        }
-
-        // Server থেকে earned amount update করো
-        if (data['equivalentUSD'] != null) {
-          equivalentUSD = _toDouble(data['equivalentUSD']);
-        }
-
-        // Live counters reset করো
-        liveUSD       = 0.0;
-        liveSOL       = 0.0;
-        cycleProgress = 0.0;
-        baseUsdAtSync = 0.0;
-        baseSolAtSync = 0.0;
-        minedCoins    = 0.0;
-        minedSOL      = 0.0;
       });
-
       return data;
     } catch (e) {
-      // Error হলে timer আবার চালু করো (mining ছিল)
       setState(() => isLoading = false);
-      if (isMining) {
-        startLiveTimer();
-        startAutoSync();
-      }
       rethrow;
     }
   }
