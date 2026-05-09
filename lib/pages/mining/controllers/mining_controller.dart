@@ -82,10 +82,17 @@ class MiningController {
     cycleProgress = (equivalentUSD / kUsdTarget).clamp(0.0, 1.0);
 
     if (miningActive) {
+      // Server বলছে mining চলছে
       dayStarted = true;
       isMining   = true;
       startLiveTimer();
       startAutoSync();
+    } else {
+      // Mining active না, timer বন্ধ করো
+      isMining = false;
+      liveTimer?.cancel();
+      // FIXED: equivalentUSD > 0 থাকলে claim করা যাবে
+      dayStarted = equivalentUSD > 0;
     }
   }
 
@@ -160,37 +167,37 @@ class MiningController {
     final token = _getToken();
     if (token == null) throw Exception('No token');
 
-    // Timer বন্ধ করো claim করার আগেই
+    // Timer বন্ধ করো claim করার আগে
     liveTimer?.cancel();
     syncTimer?.cancel();
 
     setState(() => isLoading = true);
 
     try {
-      // Real API call
+      // ✅ Real API call — MiningService এর claim() কে call করছে
       final data = await MiningService(token: token).claim();
 
-      // API থেকে আসা withdrawable ও অন্য data দিয়ে state update
+      // ✅ Server response দিয়ে state update করো
       setState(() {
-        isLoading     = false;
-        dayStarted    = false;
-        isMining      = false;
-        miningActive  = false;
-        lastSyncTime  = null;
+        isLoading    = false;
+        dayStarted   = false;
+        isMining     = false;
+        miningActive = false;
+        lastSyncTime = null;
 
-        // Server থেকে withdrawable update করো
+        // Server থেকে withdrawable নাও — যেকোনো key হতে পারে
         if (data['withdrawable'] != null) {
           withdrawableUSD = _toDouble(data['withdrawable']);
         } else if (data['withdrawableUSD'] != null) {
           withdrawableUSD = _toDouble(data['withdrawableUSD']);
         }
 
-        // Server থেকে earned amount update করো
+        // Server থেকে earned amount
         if (data['equivalentUSD'] != null) {
           equivalentUSD = _toDouble(data['equivalentUSD']);
         }
 
-        // Live counters reset করো
+        // সব live counter reset
         liveUSD       = 0.0;
         liveSOL       = 0.0;
         cycleProgress = 0.0;
@@ -202,9 +209,9 @@ class MiningController {
 
       return data;
     } catch (e) {
-      // Error হলে timer আবার চালু করো (mining ছিল)
       setState(() => isLoading = false);
-      if (isMining) {
+      // Error হলে আগের অবস্থায় ফিরে যাও
+      if (dayStarted && isMining) {
         startLiveTimer();
         startAutoSync();
       }
