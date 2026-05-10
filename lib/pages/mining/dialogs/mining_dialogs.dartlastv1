@@ -6,9 +6,9 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../constants/mining_constants.dart';
 import '../controllers/mining_controller.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 // Claim Confirm Bottom Sheet
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 class ClaimConfirmSheet extends StatefulWidget {
   final MiningController c;
   final VoidCallback onConfirm;
@@ -167,7 +167,7 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                     border: Border.all(color: AppColors.accentPurple.withOpacity(0.25)),
                   ),
                   child: Text(
-                    "◎ ${widget.c.formatSol(widget.c.liveSOL)} SOL",
+                    "≈ ${widget.c.formatSol(widget.c.liveSOL)} SOL",
                     style: GoogleFonts.spaceMono(
                       color: AppColors.accentPurple,
                       fontSize: 11.sp,
@@ -259,11 +259,8 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                 flex: 2,
                 child: GestureDetector(
                   onTap: () {
-                    // ✅ FIX: আগে onConfirm() call করো, তারপর dialog বন্ধ করো
-                    // এতে context নষ্ট হওয়ার আগেই API call শুরু হবে
-                    final VoidCallback confirm = widget.onConfirm;
                     Navigator.pop(context);
-                    confirm();
+                    widget.onConfirm();
                   },
                   child: Container(
                     height: 52.h,
@@ -308,9 +305,9 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 // Claim Success Bottom Sheet
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 class ClaimSuccessSheet extends StatefulWidget {
   final MiningController c;
   final double earnedUSD;
@@ -370,6 +367,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle
           Center(
             child: Container(
               width: 40.w,
@@ -382,6 +380,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
           ),
           SizedBox(height: 28.h),
 
+          // Animated checkmark icon
           ScaleTransition(
             scale: _scaleAnim,
             child: FadeTransition(
@@ -441,6 +440,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
           ),
           SizedBox(height: 22.h),
 
+          // Stats row
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 16.w),
@@ -525,7 +525,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
                 ),
                 child: Center(
                   child: Text(
-                    "Awesome! 🎉",
+                    "Awesome! 🚀",
                     style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 15.sp,
@@ -562,9 +562,9 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 // Claim Not Ready Bottom Sheet
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 class ClaimNotReadySheet extends StatelessWidget {
   final MiningController c;
   const ClaimNotReadySheet({super.key, required this.c});
@@ -586,6 +586,7 @@ class ClaimNotReadySheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle
           Center(
             child: Container(
               width: 40.w,
@@ -598,6 +599,7 @@ class ClaimNotReadySheet extends StatelessWidget {
           ),
           SizedBox(height: 28.h),
 
+          // Warning icon
           Container(
             width: 72.w,
             height: 72.h,
@@ -606,7 +608,11 @@ class ClaimNotReadySheet extends StatelessWidget {
               color: Colors.orange.withOpacity(0.12),
               border: Border.all(color: Colors.orange.withOpacity(0.4), width: 1.5),
             ),
-            child: Icon(CupertinoIcons.lock_fill, color: Colors.orange, size: 32.sp),
+            child: Icon(
+              CupertinoIcons.lock_fill,
+              color: Colors.orange,
+              size: 32.sp,
+            ),
           ),
           SizedBox(height: 18.h),
 
@@ -630,6 +636,7 @@ class ClaimNotReadySheet extends StatelessWidget {
           ),
           SizedBox(height: 24.h),
 
+          // Progress section
           Container(
             width: double.infinity,
             padding: EdgeInsets.all(16.w),
@@ -643,15 +650,19 @@ class ClaimNotReadySheet extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Cycle Progress",
-                        style: GoogleFonts.inter(
-                            color: Colors.white54, fontSize: 10.sp)),
-                    Text("${pct.toStringAsFixed(1)}%",
-                        style: GoogleFonts.inter(
-                          color: Colors.orange,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w700,
-                        )),
+                    Text(
+                      "Cycle Progress",
+                      style: GoogleFonts.inter(
+                          color: Colors.white54, fontSize: 10.sp),
+                    ),
+                    Text(
+                      "${pct.toStringAsFixed(1)}%",
+                      style: GoogleFonts.inter(
+                        color: Colors.orange,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 10.h),
@@ -669,12 +680,16 @@ class ClaimNotReadySheet extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("\$${c.liveUSD.toStringAsFixed(4)} earned",
-                        style: GoogleFonts.spaceMono(
-                            color: Colors.white54, fontSize: 10.sp)),
-                    Text("\$${remaining.toStringAsFixed(2)} remaining",
-                        style: GoogleFonts.spaceMono(
-                            color: Colors.orange, fontSize: 10.sp)),
+                    Text(
+                      "\$${c.liveUSD.toStringAsFixed(4)} earned",
+                      style: GoogleFonts.spaceMono(
+                          color: Colors.white54, fontSize: 10.sp),
+                    ),
+                    Text(
+                      "\$${remaining.toStringAsFixed(2)} remaining",
+                      style: GoogleFonts.spaceMono(
+                          color: Colors.orange, fontSize: 10.sp),
+                    ),
                   ],
                 ),
               ],
@@ -682,6 +697,7 @@ class ClaimNotReadySheet extends StatelessWidget {
           ),
           SizedBox(height: 24.h),
 
+          // Tips
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -739,9 +755,9 @@ class ClaimNotReadySheet extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper functions
-// ─────────────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// Helper functions — mining_screen.dart এ একইভাবে call করো
+// ═══════════════════════════════════════════════════════════════════════════
 void showClaimDialog(
   BuildContext context,
   MiningController c,
