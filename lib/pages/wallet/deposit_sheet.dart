@@ -599,7 +599,7 @@ class _DepositSheetState extends State<DepositSheet> {
     );
   }
 
-  // ── Step 1: Enter TxHash & Verify ────────────────────────────────────────
+  // ── Step 1: Enter TxHash & Verify ──────────────────────────────────────
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
