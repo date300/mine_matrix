@@ -90,13 +90,13 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
       final double earnedUSD = (response['usd'] ?? 0.0).toDouble();
       final double earnedCoins = (response['coins'] ?? 0.0).toDouble();
       final double withdrawable = (response['withdrawable'] ?? 0.0).toDouble();
-      final double withdrawableAdded = response['message']?.toString().contains('Cycle complete') == true 
+      final double withdrawableAdded = response['message']?.toString().contains('complete') == true 
           ? 100.0 
           : 0.0;
       final double totalWithdrawable = withdrawable;
 
-      // Calculate SOL from USD using controller's SOL price
-      final double solPrice = widget.c.solPriceUSD > 0 ? widget.c.solPriceUSD : 150.0;
+      // FIXED: Use solPrice (not solPriceUSD) - matches MiningController field name
+      final double solPrice = widget.c.solPrice > 0 ? widget.c.solPrice : 150.0;
       final double earnedSOL = earnedUSD / solPrice;
 
       showClaimSuccessDialog(
@@ -415,6 +415,9 @@ class ClaimSuccessSheet extends StatefulWidget {
   final double earnedSOL;
   final double withdrawableAdded;
   final double totalWithdrawable;
+  // FIXED: Added missing parameters that mining_screen.dart passes
+  final double? savedCoinsUSD;
+  final bool? cycleComplete;
 
   const ClaimSuccessSheet({
     super.key,
@@ -423,6 +426,8 @@ class ClaimSuccessSheet extends StatefulWidget {
     required this.earnedSOL,
     required this.withdrawableAdded,
     required this.totalWithdrawable,
+    this.savedCoinsUSD,
+    this.cycleComplete,
   });
 
   @override
@@ -459,7 +464,8 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
 
   @override
   Widget build(BuildContext context) {
-    final bool cycleComplete = widget.withdrawableAdded >= 100.0;
+    // FIXED: Use cycleComplete parameter if passed, otherwise fall back to withdrawable check
+    final bool cycleComplete = widget.cycleComplete ?? widget.withdrawableAdded >= 100.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -881,6 +887,7 @@ void showClaimDialog(
   );
 }
 
+// FIXED: Added missing parameters to match mining_screen.dart call
 void showClaimSuccessDialog(
   BuildContext context,
   MiningController c, {
@@ -888,6 +895,8 @@ void showClaimSuccessDialog(
   required double earnedSOL,
   required double withdrawableAdded,
   required double totalWithdrawable,
+  double? savedCoinsUSD,
+  bool? cycleComplete,
 }) {
   if (!context.mounted) return;
   showModalBottomSheet(
@@ -900,6 +909,8 @@ void showClaimSuccessDialog(
       earnedSOL: earnedSOL,
       withdrawableAdded: withdrawableAdded,
       totalWithdrawable: totalWithdrawable,
+      savedCoinsUSD: savedCoinsUSD,
+      cycleComplete: cycleComplete,
     ),
   );
 }
@@ -912,3 +923,4 @@ void showClaimNotReadyDialog(BuildContext context, MiningController c) {
     builder: (_) => ClaimNotReadySheet(c: c),
   );
 }
+
