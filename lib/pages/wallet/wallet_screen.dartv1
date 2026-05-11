@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as developer;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -124,44 +123,29 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     try {
       final token = _getToken();
       if (token == null) { 
-        developer.log('ERROR: Token is null', name: 'WalletScreen');
         setState(() { _isLoading = false; _hasError = true; }); 
         return; 
       }
 
-      developer.log('Fetching deposit info...', name: 'WalletScreen');
-      final infoRes = await http.get(
-        Uri.parse('$_baseUrl/api/deposit/info'), 
-        headers: _headers(),
-      ).timeout(const Duration(seconds: 15));
+      final results = await Future.wait([
+        http.get(Uri.parse('$_baseUrl/api/deposit/info'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
+        http.get(Uri.parse('$_baseUrl/api/mining/status'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
+        http.get(Uri.parse('$_baseUrl/api/deposit/history'), headers: _headers())
+            .timeout(const Duration(seconds: 15)),
+      ]);
 
-      developer.log('Deposit info status: ${infoRes.statusCode}', name: 'WalletScreen');
-      developer.log('Deposit info body: ${infoRes.body}', name: 'WalletScreen');
+      if (!mounted) return;
+
+      final infoRes = results[0];
+      final statusRes = results[1];
+      final histRes = results[2];
 
       if (infoRes.statusCode == 200) {
         final info = jsonDecode(infoRes.body);
-        
-        // Try multiple possible field names for wallet address
-        _platformWallet = info['platformWallet']?.toString() ?? 
-                         info['bep20Wallet']?.toString() ?? 
-                         info['wallet']?.toString() ?? 
-                         info['walletAddress']?.toString() ?? 
-                         info['address']?.toString() ?? '';
-        
-        developer.log('Platform wallet parsed: $_platformWallet', name: 'WalletScreen');
-        
-        if (_platformWallet.isEmpty) {
-          developer.log('WARNING: platformWallet is empty! Available keys: ${info.keys}', name: 'WalletScreen');
-        }
-      } else {
-        developer.log('ERROR: deposit/info returned ${infoRes.statusCode}', name: 'WalletScreen');
+        _platformWallet = info['platformWallet'] ?? '';
       }
-
-      developer.log('Fetching mining status...', name: 'WalletScreen');
-      final statusRes = await http.get(
-        Uri.parse('$_baseUrl/api/mining/status'), 
-        headers: _headers(),
-      ).timeout(const Duration(seconds: 15));
 
       if (statusRes.statusCode == 200) {
         final status = jsonDecode(statusRes.body);
@@ -172,22 +156,13 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         }
       }
 
-      developer.log('Fetching deposit history...', name: 'WalletScreen');
-      final histRes = await http.get(
-        Uri.parse('$_baseUrl/api/deposit/history'), 
-        headers: _headers(),
-      ).timeout(const Duration(seconds: 15));
-
       if (histRes.statusCode == 200) {
         final h = jsonDecode(histRes.body);
         _history = List<Map<String, dynamic>>.from(h['deposits'] ?? []);
       }
 
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      setState(() => _isLoading = false);
     } on Exception catch (e) {
-      developer.log('ERROR in _loadAll: $e', name: 'WalletScreen');
       if (mounted) {
         setState(() { _isLoading = false; _hasError = true; });
         String errorMsg = 'Connection error. Please retry.';
@@ -897,13 +872,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   }
 
   void _showDepositSheet() {
-    developer.log('Opening deposit sheet with wallet: $_platformWallet', name: 'WalletScreen');
-    
-    if (_platformWallet.isEmpty) {
-      _showErrorSnackBar('Wallet address not loaded. Please refresh.');
-      return;
-    }
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
