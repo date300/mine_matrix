@@ -72,6 +72,11 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   double _displayBalance = 0;
   List<Map<String, dynamic>> _history = [];
   
+  // Debug info
+  String _debugApiStatus = '';
+  String _debugApiBody = '';
+  String _debugParsedWallet = '';
+  
   late AnimationController _balanceController;
   late Animation<double> _balanceAnimation;
 
@@ -118,14 +123,24 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
   Future<void> _loadAll({bool silent = false}) async {
     if (!silent) {
-      setState(() { _isLoading = true; _hasError = false; });
+      setState(() { 
+        _isLoading = true; 
+        _hasError = false; 
+        _debugApiStatus = 'Loading...';
+        _debugApiBody = '';
+        _debugParsedWallet = '';
+      });
     }
     
     try {
       final token = _getToken();
       if (token == null) { 
         developer.log('ERROR: Token is null', name: 'WalletScreen');
-        setState(() { _isLoading = false; _hasError = true; }); 
+        setState(() { 
+          _isLoading = false; 
+          _hasError = true; 
+          _debugApiStatus = 'Token null';
+        }); 
         return; 
       }
 
@@ -138,26 +153,46 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       developer.log('Deposit info status: ${infoRes.statusCode}', name: 'WalletScreen');
       developer.log('Deposit info body: ${infoRes.body}', name: 'WalletScreen');
 
+      if (!mounted) return;
+
       if (infoRes.statusCode == 200) {
         final info = jsonDecode(infoRes.body);
+        
+        setState(() {
+          _debugApiStatus = 'Status: ${infoRes.statusCode}';
+          _debugApiBody = infoRes.body.substring(0, infoRes.body.length > 500 ? 500 : infoRes.body.length);
+        });
         
         // Try multiple possible field names for wallet address
         _platformWallet = info['platformWallet']?.toString() ?? 
                          info['bep20Wallet']?.toString() ?? 
                          info['wallet']?.toString() ?? 
                          info['walletAddress']?.toString() ?? 
-                         info['address']?.toString() ?? '';
+                         info['address']?.toString() ??
+                         info['bep20_address']?.toString() ??
+                         info['bep20Address']?.toString() ??
+                         '';
+        
+        setState(() {
+          _debugParsedWallet = 'Parsed: $_platformWallet';
+        });
         
         developer.log('Platform wallet parsed: $_platformWallet', name: 'WalletScreen');
         
         if (_platformWallet.isEmpty) {
-          developer.log('WARNING: platformWallet is empty! Available keys: ${info.keys}', name: 'WalletScreen');
+          developer.log('WARNING: All wallet fields empty! Available keys: ${info.keys.toList()}', name: 'WalletScreen');
+          setState(() {
+            _debugParsedWallet = 'EMPTY! Keys: ${info.keys.toList()}';
+          });
         }
       } else {
         developer.log('ERROR: deposit/info returned ${infoRes.statusCode}', name: 'WalletScreen');
+        setState(() {
+          _debugApiStatus = 'Error: ${infoRes.statusCode}';
+          _debugApiBody = infoRes.body.substring(0, infoRes.body.length > 200 ? 200 : infoRes.body.length);
+        });
       }
 
-      developer.log('Fetching mining status...', name: 'WalletScreen');
       final statusRes = await http.get(
         Uri.parse('$_baseUrl/api/mining/status'), 
         headers: _headers(),
@@ -172,7 +207,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         }
       }
 
-      developer.log('Fetching deposit history...', name: 'WalletScreen');
       final histRes = await http.get(
         Uri.parse('$_baseUrl/api/deposit/history'), 
         headers: _headers(),
@@ -189,7 +223,11 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     } on Exception catch (e) {
       developer.log('ERROR in _loadAll: $e', name: 'WalletScreen');
       if (mounted) {
-        setState(() { _isLoading = false; _hasError = true; });
+        setState(() { 
+          _isLoading = false; 
+          _hasError = true; 
+          _debugApiStatus = 'Exception: $e';
+        });
         String errorMsg = 'Connection error. Please retry.';
         if (e.toString().contains('timeout')) {
           errorMsg = 'Connection timeout. Please try again.';
@@ -274,12 +312,93 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                         ),
                       ),
                       _buildHistoryList(),
+                      // Debug Panel
+                      SliverToBoxAdapter(
+                        child: _buildDebugPanel(),
+                      ),
                       SliverToBoxAdapter(
                         child: SizedBox(height: 80.h),
                       ),
                     ],
                   ),
                 ),
+    );
+  }
+
+  // ── Debug Panel ───────────────────────────────────────────────────────────
+  Widget _buildDebugPanel() {
+    if (_debugApiStatus.isEmpty) return const SizedBox.shrink();
+    
+    return Container(
+      margin: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.accentOrange.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bug_report, color: AppColors.accentOrange, size: 16),
+              SizedBox(width: 8.w),
+              Text(
+                'DEBUG INFO',
+                style: GoogleFonts.inter(
+                  color: AppColors.accentOrange,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'API Status: $_debugApiStatus',
+            style: GoogleFonts.spaceMono(
+              color: AppColors.textSecondary,
+              fontSize: 10.sp,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Parsed Wallet: $_debugParsedWallet',
+            style: GoogleFonts.spaceMono(
+              color: _platformWallet.isEmpty ? AppColors.accentRed : AppColors.accentGreen,
+              fontSize: 10.sp,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Response Body:',
+            style: GoogleFonts.inter(
+              color: AppColors.textMuted,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Text(
+              _debugApiBody,
+              style: GoogleFonts.spaceMono(
+                color: AppColors.textSecondary,
+                fontSize: 9.sp,
+              ),
+              maxLines: 10,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
