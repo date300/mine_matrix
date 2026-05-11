@@ -32,7 +32,7 @@ class AppColors {
 
 // Lottie Network URLs
 class AppLottie {
-  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
+  static const String usdtCoin     = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
   static const String refresh      = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
   static const String emptyHistory = 'https://assets10.lottiefiles.com/packages/lf20_s8pbrcfw.json';
   static const String txPending    = 'https://assets10.lottiefiles.com/packages/lf20_b88nh30c.json';
@@ -67,7 +67,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   bool   _hasError       = false;
   bool   _isRefreshing   = false;
   String _platformWallet = '';
-  double _solPrice       = 0;
   double _balance        = 0;
   double _displayBalance = 0;
   List<Map<String, dynamic>> _history = [];
@@ -146,7 +145,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       if (infoRes.statusCode == 200) {
         final info = jsonDecode(infoRes.body);
         _platformWallet = info['platformWallet'] ?? '';
-        _solPrice = double.tryParse(info['solPriceUSD']?.toString() ?? '0') ?? 0;
       }
 
       if (statusRes.statusCode == 200) {
@@ -345,7 +343,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
             ),
             SizedBox(height: 2.h),
             Text(
-              'Manage your SOL funds',
+              'Manage your USDT funds',
               style: GoogleFonts.inter(
                 color: AppColors.textSecondary,
                 fontSize: 12.sp,
@@ -467,11 +465,11 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                         SizedBox(
                           width: 18.w,
                           height: 18.h,
-                          child: Lottie.network(AppLottie.solCoin),
+                          child: Lottie.network(AppLottie.usdtCoin),
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          '\$${_solPrice.toStringAsFixed(2)}',
+                          'BEP20',
                           style: GoogleFonts.inter(
                             color: AppColors.textSecondary,
                             fontSize: 11.sp,
@@ -507,7 +505,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 ),
                 SizedBox(height: 6.h),
                 Text(
-                  '${(_displayBalance / (_solPrice > 0 ? _solPrice : 1)).toStringAsFixed(4)} SOL',
+                  'USDT (BEP20)',
                   style: GoogleFonts.spaceMono(
                     color: AppColors.accentPurple,
                     fontSize: 12.sp,
@@ -699,10 +697,9 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   }
 
   Widget _buildTransactionItem(Map<String, dynamic> data, int index) {
-    final sol = double.tryParse(data['sol_amount']?.toString() ?? '0') ?? 0;
-    final usd = double.tryParse(data['usd_amount']?.toString() ?? '0') ?? 0;
+    final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0;
     final status = data['status']?.toString() ?? 'pending';
-    final sig = data['tx_signature']?.toString() ?? '';
+    final txHash = data['tx_hash']?.toString() ?? '';
     final date = data['created_at']?.toString() ?? '';
     
     final bool isSuccess = status == 'confirmed';
@@ -729,7 +726,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
 
     return GestureDetector(
       onTap: () {
-        Clipboard.setData(ClipboardData(text: sig));
+        Clipboard.setData(ClipboardData(text: txHash));
         _showCopiedSnackBar();
       },
       child: Container(
@@ -762,7 +759,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Added Funds',
+                    'USDT Deposit',
                     style: GoogleFonts.inter(
                       color: AppColors.textPrimary,
                       fontSize: 13.sp,
@@ -771,7 +768,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    _formatSignature(sig),
+                    _formatTxHash(txHash),
                     style: GoogleFonts.spaceMono(
                       color: AppColors.textMuted,
                       fontSize: 10.sp,
@@ -792,7 +789,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '+\$${usd.toStringAsFixed(2)}',
+                  '+\$${amount.toStringAsFixed(2)}',
                   style: GoogleFonts.inter(
                     color: AppColors.accentGreen,
                     fontSize: 13.sp,
@@ -801,7 +798,7 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  '${sol.toStringAsFixed(4)} SOL',
+                  'USDT',
                   style: GoogleFonts.spaceMono(
                     color: AppColors.textSecondary,
                     fontSize: 11.sp,
@@ -831,15 +828,15 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2, end: 0);
   }
 
-  String _formatSignature(String sig) {
-    if (sig.length < 20) return sig;
-    return '${sig.substring(0, 8)}...${sig.substring(sig.length - 8)}';
+  String _formatTxHash(String txHash) {
+    if (txHash.length < 20) return txHash;
+    return '${txHash.substring(0, 8)}...${txHash.substring(txHash.length - 8)}';
   }
 
   String _formatDate(String date) {
     try {
       final dt = DateTime.parse(date);
-      return '${dt.day}/${dt.month}/${dt.year} ? ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+      return '${dt.day}/${dt.month}/${dt.year} · ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
     } catch (e) {
       return date;
     }
@@ -881,7 +878,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       backgroundColor: Colors.transparent,
       builder: (_) => DepositSheet(
         platformWallet: _platformWallet,
-        solPrice: _solPrice,
         headers: _headers(),
         onSuccess: () {
           Navigator.pop(context);
