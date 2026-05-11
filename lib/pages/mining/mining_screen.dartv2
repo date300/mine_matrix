@@ -40,37 +40,48 @@ class _MiningScreenState extends State<MiningScreen>
   }
 
   Future<void> _executeClaim() async {
-    final double earnedUSD        = _c.liveUSD;
-    final double earnedSOL        = _c.liveSOL;
+    final double earnedUSD = _c.liveUSD;
+    final double earnedSOL = _c.liveSOL;
     final double prevWithdrawable = _c.withdrawableUSD;
 
     try {
       final Map<String, dynamic> data = await _c.doClaim();
 
-      // ─── Backend response parse ───────────────────────────────────────
-      // Server response: { message, coins, usd, withdrawable }
-      // "usd" = remaining coins after cycle (not earned amount)
-      // "withdrawable" = updated total withdrawable
+      // Server থেকে withdrawable total নাও
+      double newWithdrawable = prevWithdrawable;
+      for (final key in ['withdrawable', 'withdrawableUSD', 'withdrawable_usd']) {
+        if (data[key] != null) {
+          newWithdrawable = double.tryParse(data[key].toString()) ?? prevWithdrawable;
+          break;
+        }
+      }
 
-      final double newWithdrawable =
-          double.tryParse(data['withdrawable']?.toString() ?? '') ??
-          prevWithdrawable;
+      // ✅ FIX: Server withdrawable না বাড়লে,
+      // server এর "usd" field থেকে earned amount নিয়ে যোগ করো
+      double withdrawableAdded = newWithdrawable - prevWithdrawable;
+      if (withdrawableAdded <= 0) {
+        // server এ usd/amount/earned যেটা আছে সেটা দিয়ে calculate করো
+        for (final key in ['usd', 'amount', 'earned', 'earnedUSD']) {
+          if (data[key] != null) {
+            final double serverEarned =
+                double.tryParse(data[key].toString()) ?? 0.0;
+            if (serverEarned > 0) {
+              withdrawableAdded = serverEarned;
+              // UI তে সঠিক total দেখাতে নতুন withdrawable calculate করো
+              newWithdrawable = prevWithdrawable + serverEarned;
+              break;
+            }
+          }
+        }
+      }
 
-      // Server এর "usd" = claim এর পর remaining coins in USD
-      // earnedUSD = আমরা session এ earn করেছিলাম
-      final double savedCoinsUSD =
-          double.tryParse(data['usd']?.toString() ?? '') ?? 0.0;
-
-      // $100 cycle complete হয়েছে কিনা
-      // backend: message = "Cycle complete $100 added" অথবা withdrawable বেড়েছে
+      // $100 cycle complete চেক
       final String message =
-          (data['message'] ?? '').toString().toLowerCase();
-      final bool cycleComplete = message.contains('complete') ||
-          (newWithdrawable - prevWithdrawable) >= 99.0;
+          (data['message'] ?? data['msg'] ?? '').toString().toLowerCase();
+      final bool cycleComplete =
+          message.contains('complete') || newWithdrawable >= 100.0;
 
-      final double withdrawableAdded = cycleComplete ? 100.0 : 0.0;
-
-      // UI refresh
+      // fetchStatus দিয়ে UI refresh
       await _c.fetchStatus();
 
       if (mounted) {
@@ -81,9 +92,16 @@ class _MiningScreenState extends State<MiningScreen>
           earnedSOL: earnedSOL,
           withdrawableAdded: withdrawableAdded,
           totalWithdrawable: newWithdrawable,
-          savedCoinsUSD: savedCoinsUSD,
-          cycleComplete: cycleComplete,
         );
+
+        if (cycleComplete) {
+          _showSnack(
+            'Cycle Complete!',
+            '\$100 added to withdrawable!',
+            AppColors.accentGreen,
+            Colors.black,
+          );
+        }
       }
     } catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -207,7 +225,7 @@ class _MiningScreenState extends State<MiningScreen>
               ],
             ),
             SizedBox(height: 24.h),
-            ...List.generate(5, (i) => Padding(
+            ...List.generate(5, (index) => Padding(
               padding: EdgeInsets.only(bottom: 12.h),
               child: Container(
                 width: double.infinity, height: 80.h,
@@ -261,6 +279,7 @@ class _MiningScreenState extends State<MiningScreen>
 
   Widget _buildMiningOrb() {
     final isPaused = _c.dayStarted && !_c.isMining;
+
     String orbLabel, orbSub = '';
     Color orbAccent;
     List<Color> borderColors;
@@ -317,10 +336,12 @@ class _MiningScreenState extends State<MiningScreen>
             width: 180.w, height: 180.h,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [
-                Colors.black.withOpacity(0.8),
-                Colors.black.withOpacity(0.4),
-              ]),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withOpacity(0.8),
+                  Colors.black.withOpacity(0.4),
+                ],
+              ),
               border: Border.all(color: borderColors[0], width: 3),
               boxShadow: [
                 BoxShadow(
@@ -379,13 +400,19 @@ class _MiningScreenState extends State<MiningScreen>
     return Row(
       children: [
         Expanded(
-          child: _buildActionButton('Claim', AppColors.accentGreen,
-              CupertinoIcons.money_dollar_circle_fill, _handleClaimTap),
+          child: _buildActionButton(
+            'Claim', AppColors.accentGreen,
+            CupertinoIcons.money_dollar_circle_fill,
+            _handleClaimTap,
+          ),
         ),
         SizedBox(width: 12.w),
         Expanded(
-          child: _buildActionButton('Refresh', Colors.blue,
-              CupertinoIcons.refresh, _c.fetchStatus),
+          child: _buildActionButton(
+            'Refresh', Colors.blue,
+            CupertinoIcons.refresh,
+            _c.fetchStatus,
+          ),
         ),
       ],
     );
@@ -402,8 +429,10 @@ class _MiningScreenState extends State<MiningScreen>
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: Colors.white24),
           boxShadow: [
-            BoxShadow(color: color.withOpacity(0.1),
-                blurRadius: 20, offset: const Offset(0, 4)),
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 20, offset: const Offset(0, 4),
+            ),
           ],
         ),
         child: Row(
@@ -465,7 +494,8 @@ class _MiningScreenState extends State<MiningScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 400.ms),
-        SlideEffect(begin: const Offset(0, 0.1),
+        SlideEffect(
+            begin: const Offset(0, 0.1),
             end: Offset.zero, duration: 400.ms),
       ],
       child: Container(
@@ -482,8 +512,10 @@ class _MiningScreenState extends State<MiningScreen>
           border: Border.all(
               color: AppColors.accentGreen.withOpacity(0.3), width: 1),
           boxShadow: [
-            BoxShadow(color: AppColors.accentGreen.withOpacity(0.1),
-                blurRadius: 20, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: AppColors.accentGreen.withOpacity(0.1),
+              blurRadius: 20, offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: ClipRRect(
@@ -530,7 +562,8 @@ class _MiningScreenState extends State<MiningScreen>
                         style: GoogleFonts.inter(
                             color: Colors.white54, fontSize: 10.sp)),
                       SizedBox(height: 4.h),
-                      Text("\$${_c.withdrawableUSD.toStringAsFixed(2)}",
+                      Text(
+                        "\$${_c.withdrawableUSD.toStringAsFixed(2)}",
                         style: GoogleFonts.spaceMono(
                           color: Colors.white70, fontSize: 14.sp,
                           fontWeight: FontWeight.w600)),
@@ -550,17 +583,20 @@ class _MiningScreenState extends State<MiningScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 400.ms),
-        SlideEffect(begin: const Offset(0, 0.1),
+        SlideEffect(
+            begin: const Offset(0, 0.1),
             end: Offset.zero, duration: 400.ms),
       ],
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20.r),
-          gradient: LinearGradient(colors: [
-            AppColors.accentPurple.withOpacity(active ? 0.15 : 0.05),
-            AppColors.bgCard,
-          ]),
+          gradient: LinearGradient(
+            colors: [
+              AppColors.accentPurple.withOpacity(active ? 0.15 : 0.05),
+              AppColors.bgCard,
+            ],
+          ),
           border: Border.all(
             color: AppColors.accentPurple
                 .withOpacity(active ? 0.3 : 0.15)),
@@ -573,8 +609,11 @@ class _MiningScreenState extends State<MiningScreen>
                 width: 48.w, height: 48.h,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(colors: [
-                    AppColors.accentPurple, AppColors.accentGreen]),
+                  gradient: const LinearGradient(
+                    colors: [
+                      AppColors.accentPurple,
+                      AppColors.accentGreen
+                    ]),
                 ),
                 child: Icon(CupertinoIcons.circle_fill,
                     color: Colors.white, size: 24.sp),
@@ -587,7 +626,8 @@ class _MiningScreenState extends State<MiningScreen>
                     Text("SOLANA MINING",
                       style: GoogleFonts.inter(
                         color: AppColors.accentPurple,
-                        fontSize: 11.sp, fontWeight: FontWeight.w800)),
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800)),
                     SizedBox(height: 4.h),
                     Text("1 SOL = \$${_c.solPrice.toStringAsFixed(2)}",
                       style: GoogleFonts.inter(
@@ -603,22 +643,26 @@ class _MiningScreenState extends State<MiningScreen>
                       color: active
                           ? AppColors.accentGreen
                           : Colors.white54,
-                      fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold)),
                   SizedBox(height: 4.h),
                   if (active)
-                    Row(children: [
-                      Container(
-                        width: 6.w, height: 6.h,
-                        decoration: BoxDecoration(
+                    Row(
+                      children: [
+                        Container(
+                          width: 6.w, height: 6.h,
+                          decoration: BoxDecoration(
                             color: AppColors.accentGreen,
-                            shape: BoxShape.circle),
-                      ),
-                      SizedBox(width: 4.w),
-                      Text("Active",
-                        style: GoogleFonts.inter(
-                            color: AppColors.accentGreen,
-                            fontSize: 10.sp)),
-                    ])
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        Text("Active",
+                          style: GoogleFonts.inter(
+                              color: AppColors.accentGreen,
+                              fontSize: 10.sp)),
+                      ],
+                    )
                   else
                     Text("Paused",
                       style: GoogleFonts.inter(
@@ -654,7 +698,8 @@ class _MiningScreenState extends State<MiningScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 400.ms),
-        SlideEffect(begin: const Offset(0, 0.1),
+        SlideEffect(
+            begin: const Offset(0, 0.1),
             end: Offset.zero, duration: 400.ms),
       ],
       child: Container(
@@ -675,15 +720,18 @@ class _MiningScreenState extends State<MiningScreen>
                   Text("CYCLE PROGRESS",
                     style: GoogleFonts.inter(
                       color: AppColors.accentGreen,
-                      fontSize: 10.sp, fontWeight: FontWeight.w700)),
-                  Row(children: [
-                    Icon(statusIcon, color: statusColor, size: 12.sp),
-                    SizedBox(width: 4.w),
-                    Text(statusText,
-                      style: GoogleFonts.inter(
-                        color: statusColor, fontSize: 10.sp,
-                        fontWeight: FontWeight.w600)),
-                  ]),
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700)),
+                  Row(
+                    children: [
+                      Icon(statusIcon, color: statusColor, size: 12.sp),
+                      SizedBox(width: 4.w),
+                      Text(statusText,
+                        style: GoogleFonts.inter(
+                          color: statusColor, fontSize: 10.sp,
+                          fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ],
               ),
               SizedBox(height: 12.h),
@@ -723,7 +771,8 @@ class _MiningScreenState extends State<MiningScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 400.ms),
-        SlideEffect(begin: const Offset(0, 0.1),
+        SlideEffect(
+            begin: const Offset(0, 0.1),
             end: Offset.zero, duration: 400.ms),
       ],
       child: Container(
@@ -754,7 +803,8 @@ class _MiningScreenState extends State<MiningScreen>
                   active
                       ? CupertinoIcons.checkmark_shield_fill
                       : CupertinoIcons.shield,
-                  color: active ? AppColors.accentGreen : Colors.white54,
+                  color:
+                      active ? AppColors.accentGreen : Colors.white54,
                   size: 22.sp,
                 ),
               ),
@@ -763,11 +813,14 @@ class _MiningScreenState extends State<MiningScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(active ? "AUTO MINING ON" : "AUTO MINING",
+                    Text(
+                      active ? "AUTO MINING ON" : "AUTO MINING",
                       style: GoogleFonts.inter(
-                        color:
-                            active ? AppColors.accentGreen : Colors.white,
-                        fontSize: 13.sp, fontWeight: FontWeight.w700)),
+                        color: active
+                            ? AppColors.accentGreen
+                            : Colors.white,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700)),
                     SizedBox(height: 4.h),
                     Text(
                       active
@@ -786,8 +839,11 @@ class _MiningScreenState extends State<MiningScreen>
                     padding: EdgeInsets.symmetric(
                         horizontal: 16.w, vertical: 8.h),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [
-                        AppColors.accentGreen, Color(0xFF00CC88)]),
+                      gradient: const LinearGradient(
+                        colors: [
+                          AppColors.accentGreen,
+                          Color(0xFF00CC88)
+                        ]),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text("BUY \$10",
@@ -800,7 +856,9 @@ class _MiningScreenState extends State<MiningScreen>
                 Container(
                   width: 8.w, height: 8.h,
                   decoration: BoxDecoration(
-                    color: AppColors.accentGreen, shape: BoxShape.circle),
+                    color: AppColors.accentGreen,
+                    shape: BoxShape.circle,
+                  ),
                 ),
             ],
           ),
@@ -814,7 +872,8 @@ class _MiningScreenState extends State<MiningScreen>
     return Animate(
       effects: [
         FadeEffect(duration: 400.ms),
-        SlideEffect(begin: const Offset(0, 0.1),
+        SlideEffect(
+            begin: const Offset(0, 0.1),
             end: Offset.zero, duration: 400.ms),
       ],
       child: Container(
@@ -833,15 +892,18 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(children: [
-                    Icon(CupertinoIcons.rocket_fill,
-                        color: AppColors.accentPurple, size: 18.sp),
-                    SizedBox(width: 8.w),
-                    Text("SPEED BOOST",
-                      style: GoogleFonts.inter(
-                        color: AppColors.accentPurple, fontSize: 12.sp,
-                        fontWeight: FontWeight.w800)),
-                  ]),
+                  Row(
+                    children: [
+                      Icon(CupertinoIcons.rocket_fill,
+                          color: AppColors.accentPurple, size: 18.sp),
+                      SizedBox(width: 8.w),
+                      Text("SPEED BOOST",
+                        style: GoogleFonts.inter(
+                          color: AppColors.accentPurple,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w800)),
+                    ],
+                  ),
                   Container(
                     padding: EdgeInsets.symmetric(
                         horizontal: 10.w, vertical: 4.h),
@@ -852,7 +914,8 @@ class _MiningScreenState extends State<MiningScreen>
                     child: Text(
                       "${_c.boostMultiplier.toStringAsFixed(2)}x",
                       style: GoogleFonts.spaceMono(
-                        color: AppColors.accentPurple, fontSize: 12.sp,
+                        color: AppColors.accentPurple,
+                        fontSize: 12.sp,
                         fontWeight: FontWeight.bold)),
                   ),
                 ],
@@ -861,7 +924,8 @@ class _MiningScreenState extends State<MiningScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Invested: \$${_c.boostAmount.toStringAsFixed(0)}",
+                  Text(
+                    "Invested: \$${_c.boostAmount.toStringAsFixed(0)}",
                     style: GoogleFonts.inter(
                         color: Colors.white54, fontSize: 11.sp)),
                   GestureDetector(
@@ -875,17 +939,19 @@ class _MiningScreenState extends State<MiningScreen>
                       decoration: BoxDecoration(
                         gradient: maxed
                             ? null
-                            : const LinearGradient(colors: [
-                                AppColors.accentPurple,
-                                Color(0xFFCC44FF)
-                              ]),
+                            : const LinearGradient(
+                                colors: [
+                                  AppColors.accentPurple,
+                                  Color(0xFFCC44FF)
+                                ]),
                         color: maxed ? Colors.white10 : null,
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                       child: Text(maxed ? "MAXED" : "+ BUY",
                         style: GoogleFonts.inter(
-                          color:
-                              maxed ? Colors.white38 : Colors.white,
+                          color: maxed
+                              ? Colors.white38
+                              : Colors.white,
                           fontSize: 11.sp,
                           fontWeight: FontWeight.bold)),
                     ),

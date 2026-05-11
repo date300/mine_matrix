@@ -44,12 +44,16 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
   Widget build(BuildContext context) {
     final double pct = (widget.c.cycleProgress * 100).clamp(0.0, 100.0);
 
+    // Backend logic: $100 পূর্ণ হলে cycle complete, নইলে শুধু progress save হবে
+    final bool willComplete = widget.c.liveUSD >= 100.0;
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF080B12),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
         border: Border(
-          top: BorderSide(color: AppColors.accentGreen.withOpacity(0.3), width: 1.5),
+          top: BorderSide(
+            color: AppColors.accentGreen.withOpacity(0.3), width: 1.5),
         ),
       ),
       padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 40.h),
@@ -59,8 +63,7 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
           // Handle
           Center(
             child: Container(
-              width: 40.w,
-              height: 4.h,
+              width: 40.w, height: 4.h,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
@@ -75,25 +78,21 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
             builder: (_, __) => Transform.scale(
               scale: _pulse.value,
               child: Container(
-                width: 72.w,
-                height: 72.h,
+                width: 72.w, height: 72.h,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                  ),
+                    colors: [AppColors.accentGreen, Color(0xFF00CC88)]),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.accentGreen.withOpacity(0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+                      blurRadius: 20, spreadRadius: 2,
                     ),
                   ],
                 ),
                 child: Icon(
                   CupertinoIcons.arrow_down_circle_fill,
-                  color: Colors.black,
-                  size: 32.sp,
+                  color: Colors.black, size: 32.sp,
                 ),
               ),
             ),
@@ -101,22 +100,21 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
           SizedBox(height: 16.h),
 
           Text(
-            "CLAIM REWARD",
+            willComplete ? "COMPLETE CYCLE!" : "CLAIM REWARD",
             style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
+              color: Colors.white, fontSize: 20.sp,
+              fontWeight: FontWeight.w900, letterSpacing: 1.2,
             ),
           ),
           SizedBox(height: 6.h),
           Text(
-            "Claim your earned USD & SOL.\nReach \$100 to complete a cycle.",
+            willComplete
+                ? "\$100 will be added to your withdrawable balance!"
+                : "Progress will be saved.\n\$100 needed to add to withdrawable.",
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: Colors.white54,
-              fontSize: 12.sp,
-              height: 1.5,
+              color: willComplete ? AppColors.accentGreen : Colors.white54,
+              fontSize: 12.sp, height: 1.5,
             ),
           ),
           SizedBox(height: 22.h),
@@ -128,7 +126,8 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
             decoration: BoxDecoration(
               color: AppColors.accentGreen.withOpacity(0.07),
               borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: AppColors.accentGreen.withOpacity(0.25)),
+              border: Border.all(
+                  color: AppColors.accentGreen.withOpacity(0.25)),
             ),
             child: Column(
               children: [
@@ -139,20 +138,17 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                     Text(
                       "\$${widget.c.liveUSD.toStringAsFixed(4)}",
                       style: GoogleFonts.spaceMono(
-                        color: AppColors.accentGreen,
-                        fontSize: 26.sp,
+                        color: AppColors.accentGreen, fontSize: 26.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(width: 6.w),
                     Padding(
                       padding: EdgeInsets.only(bottom: 3.h),
-                      child: Text(
-                        "USD",
+                      child: Text("USD",
                         style: GoogleFonts.inter(
                           color: AppColors.accentGreen.withOpacity(0.7),
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 12.sp, fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -160,25 +156,64 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                 ),
                 SizedBox(height: 6.h),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 12.w, vertical: 5.h),
                   decoration: BoxDecoration(
                     color: AppColors.accentPurple.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(color: AppColors.accentPurple.withOpacity(0.25)),
+                    border: Border.all(
+                        color: AppColors.accentPurple.withOpacity(0.25)),
                   ),
                   child: Text(
                     "◎ ${widget.c.formatSol(widget.c.liveSOL)} SOL",
                     style: GoogleFonts.spaceMono(
-                      color: AppColors.accentPurple,
-                      fontSize: 11.sp,
+                      color: AppColors.accentPurple, fontSize: 11.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                SizedBox(height: 8.h),
-                Text(
-                  "Current session earnings",
-                  style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.sp),
+                SizedBox(height: 10.h),
+                // Backend info: $100 হলেই withdrawable বাড়বে
+                Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 12.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: willComplete
+                        ? AppColors.accentGreen.withOpacity(0.1)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: willComplete
+                          ? AppColors.accentGreen.withOpacity(0.3)
+                          : Colors.white12,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        willComplete
+                            ? CupertinoIcons.checkmark_circle_fill
+                            : CupertinoIcons.info_circle,
+                        color: willComplete
+                            ? AppColors.accentGreen
+                            : Colors.white38,
+                        size: 12.sp,
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        willComplete
+                            ? "+\$100 → Withdrawable"
+                            : "Progress saved • \$${(100 - widget.c.liveUSD).toStringAsFixed(2)} remaining",
+                        style: GoogleFonts.inter(
+                          color: willComplete
+                              ? AppColors.accentGreen
+                              : Colors.white38,
+                          fontSize: 10.sp, fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -188,7 +223,8 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
           // Cycle progress
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            padding: EdgeInsets.symmetric(
+                horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.03),
               borderRadius: BorderRadius.circular(12.r),
@@ -199,15 +235,12 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "Cycle Progress",
-                      style: GoogleFonts.inter(color: Colors.white38, fontSize: 10.sp),
-                    ),
-                    Text(
-                      "${pct.toStringAsFixed(1)}% of \$100",
+                    Text("Cycle Progress",
                       style: GoogleFonts.inter(
-                        color: AppColors.accentGreen,
-                        fontSize: 10.sp,
+                          color: Colors.white38, fontSize: 10.sp)),
+                    Text("${pct.toStringAsFixed(1)}% of \$100",
+                      style: GoogleFonts.inter(
+                        color: AppColors.accentGreen, fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -219,8 +252,7 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                   percent: widget.c.cycleProgress.clamp(0.0, 1.0),
                   backgroundColor: Colors.white10,
                   linearGradient: const LinearGradient(
-                    colors: [AppColors.accentGreen, AppColors.accentPurple],
-                  ),
+                    colors: [AppColors.accentGreen, AppColors.accentPurple]),
                   barRadius: const Radius.circular(10),
                   padding: EdgeInsets.zero,
                 ),
@@ -243,11 +275,9 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                       border: Border.all(color: Colors.white12),
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      "Cancel",
+                    child: Text("Cancel",
                       style: GoogleFonts.inter(
-                        color: Colors.white54,
-                        fontSize: 14.sp,
+                        color: Colors.white54, fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -259,8 +289,7 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                 flex: 2,
                 child: GestureDetector(
                   onTap: () {
-                    // ✅ FIX: আগে onConfirm() call করো, তারপর dialog বন্ধ করো
-                    // এতে context নষ্ট হওয়ার আগেই API call শুরু হবে
+                    // ✅ reference আগে নাও, তারপর pop, তারপর call
                     final VoidCallback confirm = widget.onConfirm;
                     Navigator.pop(context);
                     confirm();
@@ -269,14 +298,12 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                     height: 52.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.accentGreen, Color(0xFF00CC88)],
-                      ),
+                        colors: [AppColors.accentGreen, Color(0xFF00CC88)]),
                       borderRadius: BorderRadius.circular(14.r),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.accentGreen.withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                          blurRadius: 16, offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -287,11 +314,9 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
                         Icon(CupertinoIcons.arrow_down_circle_fill,
                             color: Colors.black, size: 18.sp),
                         SizedBox(width: 8.w),
-                        Text(
-                          "Claim Now",
+                        Text("Claim Now",
                           style: GoogleFonts.inter(
-                            color: Colors.black,
-                            fontSize: 15.sp,
+                            color: Colors.black, fontSize: 15.sp,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -309,14 +334,16 @@ class _ClaimConfirmSheetState extends State<ClaimConfirmSheet>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Claim Success Bottom Sheet
+// Claim Success Bottom Sheet — backend logic অনুযায়ী
 // ─────────────────────────────────────────────────────────────────────────────
 class ClaimSuccessSheet extends StatefulWidget {
   final MiningController c;
-  final double earnedUSD;
-  final double earnedSOL;
-  final double withdrawableAdded;
-  final double totalWithdrawable;
+  final double earnedUSD;       // session এ earn করা USD
+  final double earnedSOL;       // session এ earn করা SOL
+  final double withdrawableAdded; // $100 হলে 100, নইলে 0
+  final double totalWithdrawable; // server থেকে আসা total withdrawable
+  final double savedCoinsUSD;   // $100 না হলে কত save হলো
+  final bool cycleComplete;     // $100 পূর্ণ হয়েছে কিনা
 
   const ClaimSuccessSheet({
     super.key,
@@ -325,6 +352,8 @@ class ClaimSuccessSheet extends StatefulWidget {
     required this.earnedSOL,
     required this.withdrawableAdded,
     required this.totalWithdrawable,
+    required this.savedCoinsUSD,
+    required this.cycleComplete,
   });
 
   @override
@@ -341,29 +370,29 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..forward();
+      vsync: this, duration: const Duration(milliseconds: 600))
+      ..forward();
     _scaleAnim = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
-    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _fadeAnim  = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
-    final bool cycleComplete = widget.withdrawableAdded >= 100.0;
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF080B12),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
         border: Border(
-          top: BorderSide(color: AppColors.accentLeaf.withOpacity(0.35), width: 1.5),
+          top: BorderSide(
+            color: (widget.cycleComplete
+                    ? AppColors.accentLeaf
+                    : AppColors.accentGreen)
+                .withOpacity(0.35),
+            width: 1.5,
+          ),
         ),
       ),
       padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 40.h),
@@ -372,8 +401,7 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
         children: [
           Center(
             child: Container(
-              width: 40.w,
-              height: 4.h,
+              width: 40.w, height: 4.h,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
@@ -382,30 +410,35 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
           ),
           SizedBox(height: 28.h),
 
+          // Icon
           ScaleTransition(
             scale: _scaleAnim,
             child: FadeTransition(
               opacity: _fadeAnim,
               child: Container(
-                width: 80.w,
-                height: 80.h,
+                width: 80.w, height: 80.h,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentLeaf, Color(0xFF2ECC71)],
+                  gradient: LinearGradient(
+                    colors: widget.cycleComplete
+                        ? [AppColors.accentLeaf, const Color(0xFF2ECC71)]
+                        : [AppColors.accentGreen, const Color(0xFF00CC88)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accentLeaf.withOpacity(0.45),
-                      blurRadius: 24,
-                      spreadRadius: 4,
+                      color: (widget.cycleComplete
+                              ? AppColors.accentLeaf
+                              : AppColors.accentGreen)
+                          .withOpacity(0.45),
+                      blurRadius: 24, spreadRadius: 4,
                     ),
                   ],
                 ),
                 child: Icon(
-                  CupertinoIcons.checkmark_seal_fill,
-                  color: Colors.white,
-                  size: 38.sp,
+                  widget.cycleComplete
+                      ? CupertinoIcons.checkmark_seal_fill
+                      : CupertinoIcons.checkmark_circle_fill,
+                  color: Colors.white, size: 38.sp,
                 ),
               ),
             ),
@@ -417,23 +450,25 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
             child: Column(
               children: [
                 Text(
-                  cycleComplete ? "Cycle Complete! 🎉" : "Claim Successful!",
+                  widget.cycleComplete
+                      ? "Cycle Complete! 🎉"
+                      : "Progress Saved!",
                   style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 22.sp,
+                    color: Colors.white, fontSize: 22.sp,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 SizedBox(height: 6.h),
                 Text(
-                  cycleComplete
+                  widget.cycleComplete
                       ? "\$100 added to your withdrawable balance!"
-                      : "Your earnings have been recorded.",
+                      : "Your mining progress has been saved.\nKeep mining to reach \$100!",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    color: cycleComplete ? AppColors.accentLeaf : Colors.white54,
-                    fontSize: 12.sp,
-                    height: 1.5,
+                    color: widget.cycleComplete
+                        ? AppColors.accentLeaf
+                        : Colors.white54,
+                    fontSize: 12.sp, height: 1.5,
                   ),
                 ),
               ],
@@ -441,72 +476,101 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
           ),
           SizedBox(height: 22.h),
 
+          // Stats
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 16.w),
+            padding: EdgeInsets.symmetric(
+                vertical: 14.h, horizontal: 16.w),
             decoration: BoxDecoration(
-              color: AppColors.accentLeaf.withOpacity(0.07),
+              color: (widget.cycleComplete
+                      ? AppColors.accentLeaf
+                      : AppColors.accentGreen)
+                  .withOpacity(0.07),
               borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: AppColors.accentLeaf.withOpacity(0.2)),
+              border: Border.all(
+                color: (widget.cycleComplete
+                        ? AppColors.accentLeaf
+                        : AppColors.accentGreen)
+                    .withOpacity(0.2),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _statItem(
-                  "Earned USD",
-                  "\$${widget.earnedUSD.toStringAsFixed(4)}",
-                  AppColors.accentLeaf,
-                ),
+                _statItem("Session USD",
+                    "\$${widget.earnedUSD.toStringAsFixed(4)}",
+                    AppColors.accentGreen),
                 Container(width: 1, height: 36.h, color: Colors.white10),
-                _statItem(
-                  "Earned SOL",
-                  widget.c.formatSol(widget.earnedSOL),
-                  AppColors.accentPurple,
-                ),
+                _statItem("Session SOL",
+                    widget.c.formatSol(widget.earnedSOL),
+                    AppColors.accentPurple),
                 Container(width: 1, height: 36.h, color: Colors.white10),
-                _statItem(
-                  "Withdrawable",
-                  "\$${widget.totalWithdrawable.toStringAsFixed(2)}",
-                  Colors.white70,
-                ),
+                _statItem("Withdrawable",
+                    "\$${widget.totalWithdrawable.toStringAsFixed(2)}",
+                    Colors.white70),
               ],
             ),
           ),
 
-          if (widget.withdrawableAdded > 0) ...[
-            SizedBox(height: 12.h),
+          SizedBox(height: 12.h),
+
+          // Cycle complete হলে +$100 badge, নইলে progress info
+          if (widget.cycleComplete)
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 16.w),
+              padding: EdgeInsets.symmetric(
+                  vertical: 10.h, horizontal: 16.w),
               decoration: BoxDecoration(
-                color: AppColors.accentGreen.withOpacity(0.08),
+                color: AppColors.accentLeaf.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: AppColors.accentGreen.withOpacity(0.2)),
+                border: Border.all(
+                    color: AppColors.accentLeaf.withOpacity(0.2)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(CupertinoIcons.plus_circle_fill,
-                      color: AppColors.accentGreen, size: 14.sp),
+                      color: AppColors.accentLeaf, size: 14.sp),
                   SizedBox(width: 6.w),
-                  Text(
-                    "\$${widget.withdrawableAdded.toStringAsFixed(2)} added to withdrawable",
+                  Text("\$100 added to withdrawable",
                     style: GoogleFonts.inter(
-                      color: AppColors.accentGreen,
-                      fontSize: 11.sp,
+                      color: AppColors.accentLeaf, fontSize: 11.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                  vertical: 10.h, horizontal: 16.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(CupertinoIcons.info_circle,
+                      color: Colors.white38, size: 14.sp),
+                  SizedBox(width: 6.w),
+                  Text(
+                    "\$${widget.savedCoinsUSD.toStringAsFixed(4)} saved • \$${(100 - widget.savedCoinsUSD).toStringAsFixed(2)} more to withdraw",
+                    style: GoogleFonts.inter(
+                      color: Colors.white38, fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
 
           SizedBox(height: 24.h),
 
           SizedBox(
-            width: double.infinity,
-            height: 52.h,
+            width: double.infinity, height: 52.h,
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
@@ -518,17 +582,18 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
               ),
               child: Ink(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentLeaf, Color(0xFF2E8B00)],
+                  gradient: LinearGradient(
+                    colors: widget.cycleComplete
+                        ? [AppColors.accentLeaf, const Color(0xFF2E8B00)]
+                        : [AppColors.accentGreen, const Color(0xFF00CC88)],
                   ),
                   borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Center(
                   child: Text(
-                    "Awesome! 🎉",
+                    widget.cycleComplete ? "Awesome! 🎉" : "Keep Mining!",
                     style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 15.sp,
+                      color: Colors.white, fontSize: 15.sp,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -544,19 +609,13 @@ class _ClaimSuccessSheetState extends State<ClaimSuccessSheet>
   Widget _statItem(String label, String value, Color color) {
     return Column(
       children: [
-        Text(
-          value,
+        Text(value,
           style: GoogleFonts.spaceMono(
-            color: color,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+              color: color, fontSize: 13.sp, fontWeight: FontWeight.w700)),
         SizedBox(height: 3.h),
-        Text(
-          label,
-          style: GoogleFonts.inter(color: Colors.white38, fontSize: 9.sp),
-        ),
+        Text(label,
+          style: GoogleFonts.inter(
+              color: Colors.white38, fontSize: 9.sp)),
       ],
     );
   }
@@ -571,15 +630,18 @@ class ClaimNotReadySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double pct = (c.liveUSD / kUsdTarget * 100).clamp(0.0, 100.0);
-    final double remaining = (kUsdTarget - c.liveUSD).clamp(0.0, kUsdTarget);
+    final double pct =
+        (c.liveUSD / kUsdTarget * 100).clamp(0.0, 100.0);
+    final double remaining =
+        (kUsdTarget - c.liveUSD).clamp(0.0, kUsdTarget);
 
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF080B12),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
         border: Border(
-          top: BorderSide(color: Colors.orange.withOpacity(0.35), width: 1.5),
+          top: BorderSide(
+              color: Colors.orange.withOpacity(0.35), width: 1.5),
         ),
       ),
       padding: EdgeInsets.fromLTRB(24.w, 16.h, 24.w, 40.h),
@@ -588,8 +650,7 @@ class ClaimNotReadySheet extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 40.w,
-              height: 4.h,
+              width: 40.w, height: 4.h,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2.r),
@@ -599,22 +660,21 @@ class ClaimNotReadySheet extends StatelessWidget {
           SizedBox(height: 28.h),
 
           Container(
-            width: 72.w,
-            height: 72.h,
+            width: 72.w, height: 72.h,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.orange.withOpacity(0.12),
-              border: Border.all(color: Colors.orange.withOpacity(0.4), width: 1.5),
+              border: Border.all(
+                  color: Colors.orange.withOpacity(0.4), width: 1.5),
             ),
-            child: Icon(CupertinoIcons.lock_fill, color: Colors.orange, size: 32.sp),
+            child: Icon(CupertinoIcons.lock_fill,
+                color: Colors.orange, size: 32.sp),
           ),
           SizedBox(height: 18.h),
 
-          Text(
-            "Mining Not Active",
+          Text("Mining Not Active",
             style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 20.sp,
+              color: Colors.white, fontSize: 20.sp,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -623,10 +683,7 @@ class ClaimNotReadySheet extends StatelessWidget {
             "Start mining first by tapping the ORB.\nClaim is only available during an active session.",
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: Colors.white54,
-              fontSize: 12.sp,
-              height: 1.5,
-            ),
+              color: Colors.white54, fontSize: 12.sp, height: 1.5),
           ),
           SizedBox(height: 24.h),
 
@@ -644,14 +701,14 @@ class ClaimNotReadySheet extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("Cycle Progress",
-                        style: GoogleFonts.inter(
-                            color: Colors.white54, fontSize: 10.sp)),
+                      style: GoogleFonts.inter(
+                          color: Colors.white54, fontSize: 10.sp)),
                     Text("${pct.toStringAsFixed(1)}%",
-                        style: GoogleFonts.inter(
-                          color: Colors.orange,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w700,
-                        )),
+                      style: GoogleFonts.inter(
+                        color: Colors.orange, fontSize: 10.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 10.h),
@@ -660,8 +717,7 @@ class ClaimNotReadySheet extends StatelessWidget {
                   percent: pct / 100,
                   backgroundColor: Colors.white10,
                   linearGradient: const LinearGradient(
-                    colors: [Colors.orange, Color(0xFFFFCC00)],
-                  ),
+                    colors: [Colors.orange, Color(0xFFFFCC00)]),
                   barRadius: const Radius.circular(10),
                   padding: EdgeInsets.zero,
                 ),
@@ -670,11 +726,11 @@ class ClaimNotReadySheet extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("\$${c.liveUSD.toStringAsFixed(4)} earned",
-                        style: GoogleFonts.spaceMono(
-                            color: Colors.white54, fontSize: 10.sp)),
+                      style: GoogleFonts.spaceMono(
+                          color: Colors.white54, fontSize: 10.sp)),
                     Text("\$${remaining.toStringAsFixed(2)} remaining",
-                        style: GoogleFonts.spaceMono(
-                            color: Colors.orange, fontSize: 10.sp)),
+                      style: GoogleFonts.spaceMono(
+                          color: Colors.orange, fontSize: 10.sp)),
                   ],
                 ),
               ],
@@ -684,7 +740,8 @@ class ClaimNotReadySheet extends StatelessWidget {
 
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            padding: EdgeInsets.symmetric(
+                horizontal: 16.w, vertical: 12.h),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.03),
               borderRadius: BorderRadius.circular(12.r),
@@ -697,11 +754,10 @@ class ClaimNotReadySheet extends StatelessWidget {
                 SizedBox(width: 10.w),
                 Expanded(
                   child: Text(
-                    "Tap the ORB on the mining screen to start your session, then come back to claim.",
+                    "Tap the ORB to start mining, then claim to save your progress.",
                     style: GoogleFonts.inter(
                       color: Colors.white38,
-                      fontSize: 11.sp,
-                      height: 1.5,
+                      fontSize: 11.sp, height: 1.5,
                     ),
                   ),
                 ),
@@ -711,8 +767,7 @@ class ClaimNotReadySheet extends StatelessWidget {
           SizedBox(height: 24.h),
 
           SizedBox(
-            width: double.infinity,
-            height: 52.h,
+            width: double.infinity, height: 52.h,
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -722,11 +777,9 @@ class ClaimNotReadySheet extends StatelessWidget {
                   border: Border.all(color: Colors.white12),
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  "Got it",
+                child: Text("Got it",
                   style: GoogleFonts.inter(
-                    color: Colors.white70,
-                    fontSize: 15.sp,
+                    color: Colors.white70, fontSize: 15.sp,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -762,6 +815,8 @@ void showClaimSuccessDialog(
   required double earnedSOL,
   required double withdrawableAdded,
   required double totalWithdrawable,
+  required double savedCoinsUSD,
+  required bool cycleComplete,
 }) {
   if (!context.mounted) return;
   showModalBottomSheet(
@@ -774,6 +829,8 @@ void showClaimSuccessDialog(
       earnedSOL: earnedSOL,
       withdrawableAdded: withdrawableAdded,
       totalWithdrawable: totalWithdrawable,
+      savedCoinsUSD: savedCoinsUSD,
+      cycleComplete: cycleComplete,
     ),
   );
 }
