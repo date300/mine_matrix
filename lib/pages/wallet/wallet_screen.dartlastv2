@@ -55,10 +55,6 @@ class AppLottie {
 
 const String _baseUrl = 'https://web3.ltcminematrix.com';
 
-// ── FALLBACK: If API doesn't have /deposit/info, use this ──────────────────
-// Replace with your actual BEP20 wallet address
-const String _fallbackWalletAddress = '0x0000000000000000000000000000000000000000';
-
 // --- Main Screen --------------------------------------------------------------
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -149,64 +145,54 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
       }
 
       developer.log('Fetching deposit info...', name: 'WalletScreen');
-      
-      // Try to fetch wallet from API first
-      String? apiWallet;
-      try {
-        final infoRes = await http.get(
-          Uri.parse('$_baseUrl/api/deposit/info'), 
-          headers: _headers(),
-        ).timeout(const Duration(seconds: 15));
+      final infoRes = await http.get(
+        Uri.parse('$_baseUrl/api/deposit/info'), 
+        headers: _headers(),
+      ).timeout(const Duration(seconds: 15));
 
-        developer.log('Deposit info status: ${infoRes.statusCode}', name: 'WalletScreen');
+      developer.log('Deposit info status: ${infoRes.statusCode}', name: 'WalletScreen');
+      developer.log('Deposit info body: ${infoRes.body}', name: 'WalletScreen');
 
-        if (infoRes.statusCode == 200) {
-          final info = jsonDecode(infoRes.body);
-          apiWallet = info['platformWallet']?.toString() ?? 
-                     info['bep20Wallet']?.toString() ?? 
-                     info['wallet']?.toString() ?? 
-                     info['walletAddress']?.toString() ?? 
-                     info['address']?.toString() ??
-                     info['bep20_address']?.toString() ??
-                     info['bep20Address']?.toString();
-          
-          setState(() {
-            _debugApiStatus = 'Status: ${infoRes.statusCode}';
-            _debugApiBody = infoRes.body.length > 500 
-                ? '${infoRes.body.substring(0, 500)}...' 
-                : infoRes.body;
-          });
-        } else {
-          setState(() {
-            _debugApiStatus = 'API Error: ${infoRes.statusCode}';
-            _debugApiBody = infoRes.body.length > 300 
-                ? infoRes.body.substring(0, 300) 
-                : infoRes.body;
-          });
-          developer.log('deposit/info returned ${infoRes.statusCode}', name: 'WalletScreen');
-        }
-      } catch (e) {
-        developer.log('deposit/info failed: $e', name: 'WalletScreen');
+      if (!mounted) return;
+
+      if (infoRes.statusCode == 200) {
+        final info = jsonDecode(infoRes.body);
+        
         setState(() {
-          _debugApiStatus = 'API Failed: $e';
+          _debugApiStatus = 'Status: ${infoRes.statusCode}';
+          _debugApiBody = infoRes.body.substring(0, infoRes.body.length > 500 ? 500 : infoRes.body.length);
+        });
+        
+        // Try multiple possible field names for wallet address
+        _platformWallet = info['platformWallet']?.toString() ?? 
+                         info['bep20Wallet']?.toString() ?? 
+                         info['wallet']?.toString() ?? 
+                         info['walletAddress']?.toString() ?? 
+                         info['address']?.toString() ??
+                         info['bep20_address']?.toString() ??
+                         info['bep20Address']?.toString() ??
+                         '';
+        
+        setState(() {
+          _debugParsedWallet = 'Parsed: $_platformWallet';
+        });
+        
+        developer.log('Platform wallet parsed: $_platformWallet', name: 'WalletScreen');
+        
+        if (_platformWallet.isEmpty) {
+          developer.log('WARNING: All wallet fields empty! Available keys: ${info.keys.toList()}', name: 'WalletScreen');
+          setState(() {
+            _debugParsedWallet = 'EMPTY! Keys: ${info.keys.toList()}';
+          });
+        }
+      } else {
+        developer.log('ERROR: deposit/info returned ${infoRes.statusCode}', name: 'WalletScreen');
+        setState(() {
+          _debugApiStatus = 'Error: ${infoRes.statusCode}';
+          _debugApiBody = infoRes.body.substring(0, infoRes.body.length > 200 ? 200 : infoRes.body.length);
         });
       }
 
-      // Use API wallet if available, otherwise fallback
-      _platformWallet = (apiWallet != null && apiWallet.isNotEmpty) 
-          ? apiWallet 
-          : _fallbackWalletAddress;
-
-      setState(() {
-        _debugParsedWallet = 'Wallet: $_platformWallet';
-        if (_platformWallet == _fallbackWalletAddress) {
-          _debugParsedWallet += ' (FALLBACK)';
-        }
-      });
-
-      developer.log('Using wallet: $_platformWallet', name: 'WalletScreen');
-
-      // Fetch balance
       final statusRes = await http.get(
         Uri.parse('$_baseUrl/api/mining/status'), 
         headers: _headers(),
@@ -221,7 +207,6 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
         }
       }
 
-      // Fetch history
       final histRes = await http.get(
         Uri.parse('$_baseUrl/api/deposit/history'), 
         headers: _headers(),
@@ -379,11 +364,9 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
           ),
           SizedBox(height: 4.h),
           Text(
-            _debugParsedWallet,
+            'Parsed Wallet: $_debugParsedWallet',
             style: GoogleFonts.spaceMono(
-              color: _platformWallet == _fallbackWalletAddress 
-                  ? AppColors.accentRed 
-                  : AppColors.accentGreen,
+              color: _platformWallet.isEmpty ? AppColors.accentRed : AppColors.accentGreen,
               fontSize: 10.sp,
             ),
           ),
@@ -1035,8 +1018,8 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
   void _showDepositSheet() {
     developer.log('Opening deposit sheet with wallet: $_platformWallet', name: 'WalletScreen');
     
-    if (_platformWallet.isEmpty || _platformWallet == _fallbackWalletAddress) {
-      _showErrorSnackBar('Wallet address not loaded. Please check API or update fallback address.');
+    if (_platformWallet.isEmpty) {
+      _showErrorSnackBar('Wallet address not loaded. Please refresh.');
       return;
     }
     
@@ -1055,4 +1038,3 @@ class _WalletScreenState extends State<WalletScreen> with TickerProviderStateMix
     );
   }
 }
-
