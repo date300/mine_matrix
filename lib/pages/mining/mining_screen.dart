@@ -47,7 +47,7 @@ class _MiningScreenState extends State<MiningScreen>
     try {
       final Map<String, dynamic> data = await _c.doClaim();
 
-      // ─── Backend response parse ───────────────────────────────────────
+      // ??? Backend response parse ???????????????????????????????????????
       // Server response: { message, coins, usd, withdrawable }
       // "usd" = remaining coins after cycle (not earned amount)
       // "withdrawable" = updated total withdrawable
@@ -56,13 +56,13 @@ class _MiningScreenState extends State<MiningScreen>
           double.tryParse(data['withdrawable']?.toString() ?? '') ??
           prevWithdrawable;
 
-      // Server এর "usd" = claim এর পর remaining coins in USD
-      // earnedUSD = আমরা session এ earn করেছিলাম
+      // Server ?? "usd" = claim ?? ?? remaining coins in USD
+      // earnedUSD = ???? session ? earn ????????
       final double savedCoinsUSD =
           double.tryParse(data['usd']?.toString() ?? '') ?? 0.0;
 
-      // $100 cycle complete হয়েছে কিনা
-      // backend: message = "Cycle complete $100 added" অথবা withdrawable বেড়েছে
+      // $100 cycle complete ?????? ????
+      // backend: message = "Cycle complete $100 added" ???? withdrawable ???????
       final String message =
           (data['message'] ?? '').toString().toLowerCase();
       final bool cycleComplete = message.contains('complete') ||
@@ -150,6 +150,9 @@ class _MiningScreenState extends State<MiningScreen>
                               SizedBox(height: 12.h),
                               _buildBoostCard(),
                               SizedBox(height: 30.h),
+                              // FIX: Bottom spacing to prevent content hiding behind navigation bar
+                              SizedBox(
+                                  height: MediaQuery.of(context).padding.bottom + 20.h),
                             ],
                           ),
                         ),
@@ -899,3 +902,4 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 }
+
