@@ -59,7 +59,7 @@ class DepositVerifyResponse {
   }
 }
 
-// ── Deposit Sheet ────────────────────────────────────────────────────────────
+// ── Add Funds Sheet ────────────────────────────────────────────────────────────
 class DepositSheet extends StatefulWidget {
   final String platformWallet;
   final double minDeposit;
@@ -88,7 +88,7 @@ class _DepositSheetState extends State<DepositSheet> {
   bool _copied = false;
   bool _isPending = false;
   int? _currentConfirmations;
-  
+
   static const String _baseUrl = 'https://web3.ltcminematrix.com';
 
   @override
@@ -171,7 +171,7 @@ class _DepositSheetState extends State<DepositSheet> {
 
   void _showSuccessDialog(DepositVerifyResponse response) {
     final isAuto = response.mode == 'auto';
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -210,7 +210,7 @@ class _DepositSheetState extends State<DepositSheet> {
                     ),
                     SizedBox(height: 16.h),
                     Text(
-                      isAuto ? 'Deposit Successful!' : 'Deposit Submitted',
+                      isAuto ? 'Funds Added Successfully!' : 'Add Funds Submitted',
                       style: GoogleFonts.inter(
                         color: AppColors.textPrimary,
                         fontSize: 20.sp,
@@ -236,9 +236,9 @@ class _DepositSheetState extends State<DepositSheet> {
                       SizedBox(height: 8.h),
                     ],
                     Text(
-                      response.message ?? (isAuto 
-                          ? 'Deposit successful and balance updated.' 
-                          : 'Deposit submitted for admin approval.'),
+                      response.message ?? (isAuto
+                          ? 'Funds added successfully and balance updated.'
+                          : 'Add funds request submitted for admin approval.'),
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         color: AppColors.textSecondary,
@@ -256,7 +256,7 @@ class _DepositSheetState extends State<DepositSheet> {
                         height: 52.h,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: isAuto 
+                            colors: isAuto
                                 ? [AppColors.accentGreen, AppColors.accentBlue]
                                 : [AppColors.accentOrange, AppColors.accentPurple],
                           ),
@@ -329,7 +329,7 @@ class _DepositSheetState extends State<DepositSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Deposit USDT (BEP20)',
+                        'Add Funds (BEP20)',
                         style: GoogleFonts.inter(
                           color: AppColors.textPrimary,
                           fontSize: 20.sp,
@@ -468,7 +468,7 @@ class _DepositSheetState extends State<DepositSheet> {
         ),
         SizedBox(height: 24.h),
         Text(
-          'Send USDT (BEP20) to this address',
+          'Send USDT (BEP20) to add funds',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -525,7 +525,7 @@ class _DepositSheetState extends State<DepositSheet> {
         SizedBox(height: 20.h),
         _buildInfoCard(
           Icons.info_outline,
-          'Minimum Deposit',
+          'Minimum Amount',
           '\$${widget.minDeposit.toStringAsFixed(2)} USDT required',
           AppColors.accentOrange,
         ),
@@ -585,7 +585,7 @@ class _DepositSheetState extends State<DepositSheet> {
         ),
         SizedBox(height: 8.h),
         Text(
-          'Paste the BEP20 transaction hash from your wallet to verify and credit your deposit.',
+          'Paste the BEP20 transaction hash from your wallet to verify and add funds to your account.',
           style: GoogleFonts.inter(
             color: AppColors.textSecondary,
             fontSize: 13.sp,
@@ -770,7 +770,7 @@ class _DepositSheetState extends State<DepositSheet> {
                     ],
                   )
                 : Text(
-                    'Verify & Credit',
+                    'Verify & Add Funds',
                     style: GoogleFonts.inter(
                       color: Colors.black,
                       fontSize: 16.sp,
@@ -862,3 +862,4 @@ class _DepositSheetState extends State<DepositSheet> {
     );
   }
 }
+
