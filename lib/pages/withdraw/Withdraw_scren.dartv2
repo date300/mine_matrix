@@ -90,6 +90,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     'Authorization': 'Bearer ${_getToken()}',
   };
 
+  // ── LOAD DATA ──────────────────────
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _hasError = false; });
 
@@ -100,6 +101,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       return;
     }
 
+    // Both fetches run independently — one failing won't block the other
     await Future.wait([_fetchBalance(), _fetchHistory()]);
 
     if (mounted) {
@@ -112,6 +114,8 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     }
   }
 
+  // ── GET /api/withdraw/balance ──────
+  // Response: { success: true, data: { balance, withdrawable } }
   Future<void> _fetchBalance() async {
     try {
       final res = await http
@@ -140,6 +144,8 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     }
   }
 
+  // ── GET /api/withdraw/history ──────
+  // Response: { success: true, data: [ { id, amount, wallet_address, network, status, created_at } ] }
   Future<void> _fetchHistory() async {
     try {
       final res = await http
@@ -167,6 +173,10 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     }
   }
 
+  // ── POST /api/withdraw ─────────────
+  // Body:     { amount, wallet, network }
+  // Success:  { success: true, data: { withdrawId, amount, wallet, network, status } }
+  // Error:    { success: false, error: "..." }
   Future<void> _submitWithdraw() async {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0;
     final wallet = _walletController.text.trim();
@@ -209,12 +219,13 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       final d = jsonDecode(res.body);
 
       if (res.statusCode == 200 && d['success'] == true) {
-        _showSnack("Cash request submitted successfully!");
+        _showSnack("Withdrawal request submitted successfully!");
         _amountController.clear();
         _walletController.clear();
         await _loadData();
       } else {
-        final errMsg = d['error'] ?? d['message'] ?? "Failed to process cash request";
+        // Show exact backend error message
+        final errMsg = d['error'] ?? d['message'] ?? "Failed to process withdrawal";
         debugPrint('[Withdraw] error: $errMsg');
         _showSnack(errMsg, isError: true);
       }
@@ -229,6 +240,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     }
   }
 
+  // ── Wallet validation (matches backend isValidWallet) ──
   bool _isValidWallet(String wallet, String network) {
     if (network == 'BEP20') {
       return RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(wallet);
@@ -252,6 +264,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     ));
   }
 
+  // ── BUILD ──────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -282,7 +295,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                               SizedBox(height: 24.h),
                               _inputForm().animate().fadeIn(delay: 200.ms),
                               SizedBox(height: 32.h),
-                              _sec("Cash History"),
+                              _sec("Withdrawal History"),
                               SizedBox(height: 16.h),
                               _historyList(),
                               SizedBox(height: 100.h),
@@ -296,12 +309,14 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     );
   }
 
+  // ── WIDGETS ────────────────────────
+
   Widget _header() => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
-          'Cash',
+          'Withdraw',
           style: GoogleFonts.inter(
             color: Colors.white,
             fontSize: 28.sp,
@@ -345,7 +360,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
             color: AppColors.accentBlue, size: 18.sp),
         SizedBox(width: 8.w),
         Text(
-          'AVAILABLE CASH BALANCE',
+          'WITHDRAWABLE BALANCE',
           style: GoogleFonts.inter(
             color: AppColors.textSecondary,
             fontSize: 11.sp,
@@ -365,7 +380,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       ),
       SizedBox(height: 8.h),
       Text(
-        'Available for instant cash out',
+        'Available for instant withdrawal',
         style: GoogleFonts.inter(
           color: AppColors.accentGreen.withOpacity(0.8),
           fontSize: 12.sp,
@@ -382,8 +397,10 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       border: Border.all(color: AppColors.border),
     ),
     child: Column(children: [
+      // ── Network Selector ──
       _networkSelector(),
       SizedBox(height: 20.h),
+      // ── Amount ──
       _customField(
         controller: _amountController,
         label: "Amount (USD)",
@@ -392,6 +409,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         isNumber: true,
       ),
       SizedBox(height: 20.h),
+      // ── Wallet Address (hint changes by network) ──
       _customField(
         controller: _walletController,
         label: "$_selectedNetwork Wallet Address",
@@ -403,6 +421,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     ]),
   );
 
+  // ── Network Toggle ─────────────────
   Widget _networkSelector() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -423,7 +442,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
               onTap: () {
                 setState(() {
                   _selectedNetwork = net;
-                  _walletController.clear();
+                  _walletController.clear(); // clear on network switch
                 });
               },
               child: AnimatedContainer(
@@ -498,7 +517,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
                 ),
               )
             : Text(
-                'Confirm Cash Out',
+                'Confirm Withdrawal',
                 style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 16.sp,
@@ -557,6 +576,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
         ],
       );
 
+  // ── HISTORY LIST ───────────────────
   Widget _historyList() {
     if (_withdrawHistory.isEmpty) return _emptyState();
     return ListView.builder(
@@ -582,6 +602,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
     if (status == 'approved') statusColor = AppColors.accentGreen;
     if (status == 'rejected') statusColor = AppColors.accentRed;
 
+    // Safely shorten wallet address
     final rawWallet = item['wallet_address']?.toString() ?? '';
     final shortWallet = rawWallet.length > 12
         ? '${rawWallet.substring(0, 6)}...${rawWallet.substring(rawWallet.length - 4)}'
@@ -633,6 +654,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
               ),
             ),
             SizedBox(height: 2.h),
+            // Show network badge
             Container(
               padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
               decoration: BoxDecoration(
@@ -689,7 +711,7 @@ class _WithdrawScreenState extends State<WithdrawScreen>
       ),
       SizedBox(height: 12.h),
       Text(
-        "No cash history found",
+        "No withdrawal history found",
         style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 14.sp),
       ),
     ]),
