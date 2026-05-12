@@ -5,10 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:lottie/lottie.dart';
 import 'package:http/http.dart' as http;
 
-// --- Colors (শেয়ার করা) ------------------------------------------------------
+// ── Colors ───────────────────────────────────────────────────────────────────
 class AppColors {
   static const Color background   = Color(0xFF0A0A0F);
   static const Color surface      = Color(0xFF12121A);
@@ -24,246 +23,274 @@ class AppColors {
   static const Color cardBg       = Color(0xFF161620);
 }
 
-// Lottie URLs
-class AppLottie {
-  static const String solCoin      = 'https://assets10.lottiefiles.com/packages/lf20_6wutsrox.json';
-  static const String txSuccess    = 'https://assets10.lottiefiles.com/packages/lf20_pqnfmkj9.json';
-  static const String txFailed     = 'https://assets10.lottiefiles.com/packages/lf20_tl52xzvn.json';
-  static const String copy         = 'https://assets10.lottiefiles.com/packages/lf20_3s913D.json';
-  static const String info         = 'https://assets10.lottiefiles.com/packages/lf20_b6cz19m8.json';
-  static const String warning      = 'https://assets10.lottiefiles.com/packages/lf20_Tkwjw8.json';
-  static const String secure       = 'https://assets10.lottiefiles.com/packages/lf20_5njp3vgg.json';
-  static const String question     = 'https://assets10.lottiefiles.com/packages/lf20_w51pcehl.json';
-  static const String arrowRight   = 'https://assets10.lottiefiles.com/packages/lf20_7z8wtyb0.json';
-  static const String confetti     = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+// ── API Response Models ─────────────────────────────────────────────────────
+class DepositVerifyResponse {
+  final bool success;
+  final String? mode;
+  final String? amount;
+  final String? message;
+  final bool? pending;
+  final int? confirmations;
+  final int? required;
+  final String? error;
+
+  DepositVerifyResponse({
+    this.success = false,
+    this.mode,
+    this.amount,
+    this.message,
+    this.pending,
+    this.confirmations,
+    this.required,
+    this.error,
+  });
+
+  factory DepositVerifyResponse.fromJson(Map<String, dynamic> json) {
+    return DepositVerifyResponse(
+      success: json['success'] ?? false,
+      mode: json['mode'],
+      amount: json['amount'],
+      message: json['message'],
+      pending: json['pending'],
+      confirmations: json['confirmations'],
+      required: json['required'],
+      error: json['error'],
+    );
+  }
 }
 
-const String _baseUrl = 'https://web3.ltcminematrix.com';
-
-// --- Deposit Sheet Widget ------------------------------------------------------
+// ── Deposit Sheet ────────────────────────────────────────────────────────────
 class DepositSheet extends StatefulWidget {
-  final String platformWallet;
-  final double solPrice;
-  final Map<String, String> headers;
+  final String platformWallet;    // BEP20_WALLET from backend
+  final double minDeposit;         // MIN_DEPOSIT (default 1.0)
+  final int requiredConfirmations; // REQUIRED_CONFIRMATIONS (default 12)
+  final Map<String, String> headers; // Auth headers with token
   final VoidCallback onSuccess;
 
   const DepositSheet({
     super.key,
     required this.platformWallet,
-    required this.solPrice,
     required this.headers,
     required this.onSuccess,
+    this.minDeposit = 1.0,
+    this.requiredConfirmations = 12,
   });
 
   @override
   State<DepositSheet> createState() => _DepositSheetState();
 }
 
-class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMixin {
+class _DepositSheetState extends State<DepositSheet> {
   int _step = 0;
-  final _sigController = TextEditingController();
+  final _txHashController = TextEditingController();
   bool _verifying = false;
-  String _verifyError = '';
+  String _errorMessage = '';
   bool _copied = false;
+  bool _isPending = false;
+  int? _currentConfirmations;
   
-  late AnimationController _confettiController;
-
-  @override
-  void initState() {
-    super.initState();
-    _confettiController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-  }
+  static const String _baseUrl = 'https://web3.ltcminematrix.com';
 
   @override
   void dispose() {
-    _sigController.dispose();
-    _confettiController.dispose();
+    _txHashController.dispose();
     super.dispose();
   }
 
+  // ── Validate txHash format: 0x + 64 hex characters ─────────────────────
+  bool _isValidTxHash(String txHash) {
+    return RegExp(r'^0x([A-Fa-f0-9]{64})$').hasMatch(txHash);
+  }
+
+  // ── API: Verify Deposit ──────────────────────────────────────────────────
   Future<void> _verifyDeposit() async {
-    final sig = _sigController.text.trim();
-    if (sig.length < 50) {
-      setState(() => _verifyError = 'Invalid transaction signature');
+    final txHash = _txHashController.text.trim();
+
+    // Validation
+    if (!_isValidTxHash(txHash)) {
+      setState(() => _errorMessage = 'Invalid transaction hash format. Must be 0x + 64 hex characters.');
       return;
     }
 
-    setState(() { _verifying = true; _verifyError = ''; });
+    setState(() {
+      _verifying = true;
+      _errorMessage = '';
+      _isPending = false;
+      _currentConfirmations = null;
+    });
 
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/api/deposit/verify'),
-        headers: widget.headers,
-        body: jsonEncode({'signature': sig}),
-      ).timeout(const Duration(seconds: 20));
+        headers: {
+          ...widget.headers,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'txHash': txHash}),
+      ).timeout(const Duration(seconds: 30));
 
       if (!mounted) return;
-      final data = jsonDecode(res.body);
 
-      if (res.statusCode == 200 && data['success'] == true) {
-        setState(() => _verifying = false);
-        _confettiController.forward();
-        _showSuccessDialog(data);
-      } else {
+      final data = jsonDecode(res.body);
+      final response = DepositVerifyResponse.fromJson(data);
+
+      // Handle 202 Pending (insufficient confirmations)
+      if (res.statusCode == 202 && response.pending == true) {
         setState(() {
           _verifying = false;
-          _verifyError = data['error'] ?? 'Verification failed';
+          _isPending = true;
+          _currentConfirmations = response.confirmations;
+          _errorMessage = 'Transaction pending. Confirmations: ${response.confirmations}/${response.required}. Please wait and verify again.';
         });
+        return;
       }
-    } on Exception catch (e) {
+
+      // Handle 400/500 errors
+      if (res.statusCode != 200 || response.success != true) {
+        setState(() {
+          _verifying = false;
+          _errorMessage = response.error ?? 'Verification failed. Please try again.';
+        });
+        return;
+      }
+
+      // Success: Auto mode or Manual mode
+      setState(() => _verifying = false);
+      _showSuccessDialog(response);
+
+    } on TimeoutException {
       if (mounted) {
         setState(() {
           _verifying = false;
-          _verifyError = e.toString().contains('timeout') 
-              ? 'Connection timeout. Try again.' 
-              : 'Connection error. Try again.';
+          _errorMessage = 'Connection timeout. Blockchain network is busy. Please try again.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _verifying = false;
+          _errorMessage = 'Connection error. Please check your internet and try again.';
         });
       }
     }
   }
 
-  void _showSuccessDialog(Map data) {
-    final usd = data['usdAmount']?.toString() ?? '0';
-    final sol = data['solAmount']?.toString() ?? '0';
-
+  // ── Success Dialog ───────────────────────────────────────────────────────
+  void _showSuccessDialog(DepositVerifyResponse response) {
+    final isAuto = response.mode == 'auto';
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Stack(
-        children: [
-          Center(
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: MediaQuery.of(ctx).size.width * 0.85,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(ctx).size.width * 0.85,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: isAuto ? AppColors.accentGreen.withOpacity(0.5) : AppColors.accentOrange.withOpacity(0.5),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(24.w),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: AppColors.accentGreen.withOpacity(0.5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.2),
-                      blurRadius: 40,
-                      offset: const Offset(0, 20),
-                    ),
-                  ],
+                  gradient: LinearGradient(
+                    colors: [
+                      isAuto ? AppColors.accentGreen.withOpacity(0.2) : AppColors.accentOrange.withOpacity(0.2),
+                      Colors.transparent,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                 ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(24.w),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.accentGreen.withOpacity(0.2),
-                            Colors.transparent,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                      ),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            width: 80.w,
-                            height: 80.h,
-                            child: Lottie.network(
-                              AppLottie.txSuccess,
-                              repeat: false,
-                              controller: _confettiController,
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'Deposit Successful!',
-                            style: GoogleFonts.inter(
-                              color: AppColors.textPrimary,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Icon(
+                      isAuto ? Icons.check_circle : Icons.pending_actions,
+                      color: isAuto ? AppColors.accentGreen : AppColors.accentOrange,
+                      size: 64,
                     ),
-                    Padding(
-                      padding: EdgeInsets.all(24.w),
-                      child: Column(
-                        children: [
-                          Text(
-                            '+\$$usd',
-                            style: GoogleFonts.inter(
-                              color: AppColors.accentGreen,
-                              fontSize: 36.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 16.w,
-                                height: 16.h,
-                                child: Lottie.network(AppLottie.solCoin),
-                              ),
-                              SizedBox(width: 6.w),
-                              Text(
-                                '$sol SOL deposited',
-                                style: GoogleFonts.spaceMono(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24.h),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              widget.onSuccess();
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              height: 52.h,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [AppColors.accentGreen, AppColors.accentBlue],
-                                ),
-                                borderRadius: BorderRadius.circular(14.r),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Awesome!',
-                                style: GoogleFonts.inter(
-                                  color: Colors.black,
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                    SizedBox(height: 16.h),
+                    Text(
+                      isAuto ? 'Deposit Successful!' : 'Deposit Submitted',
+                      style: GoogleFonts.inter(
+                        color: AppColors.textPrimary,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Lottie.network(
-                AppLottie.confetti,
-                controller: _confettiController,
-                fit: BoxFit.cover,
+              
+              // Body
+              Padding(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  children: [
+                    if (response.amount != null) ...[
+                      Text(
+                        '+\$${response.amount}',
+                        style: GoogleFonts.inter(
+                          color: isAuto ? AppColors.accentGreen : AppColors.accentOrange,
+                          fontSize: 36.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                    ],
+                    Text(
+                      response.message ?? (isAuto 
+                          ? 'Deposit successful and balance updated.' 
+                          : 'Deposit submitted for admin approval.'),
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: AppColors.textSecondary,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    
+                    // Action Button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        widget.onSuccess();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 52.h,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: isAuto 
+                                ? [AppColors.accentGreen, AppColors.accentBlue]
+                                : [AppColors.accentOrange, AppColors.accentPurple],
+                          ),
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isAuto ? 'Awesome!' : 'Got it',
+                          style: GoogleFonts.inter(
+                            color: Colors.black,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -279,6 +306,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
       ),
       child: Column(
         children: [
+          // Handle bar
           SizedBox(height: 12.h),
           Container(
             width: 40.w,
@@ -289,6 +317,8 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             ),
           ),
           SizedBox(height: 20.h),
+          
+          // Header
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
@@ -300,11 +330,11 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     color: AppColors.accentPurple.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(14.r),
                   ),
-                  child: Center(
-                    child: SizedBox(
-                      width: 28.w,
-                      height: 28.h,
-                      child: Lottie.network(AppLottie.solCoin),
+                  child: const Center(
+                    child: Icon(
+                      Icons.account_balance_wallet,
+                      color: AppColors.accentPurple,
+                      size: 24,
                     ),
                   ),
                 ),
@@ -314,7 +344,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Deposit SOL',
+                        'Deposit USDT (BEP20)',
                         style: GoogleFonts.inter(
                           color: AppColors.textPrimary,
                           fontSize: 20.sp,
@@ -322,7 +352,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                         ),
                       ),
                       Text(
-                        '1 SOL = \$${widget.solPrice.toStringAsFixed(2)}',
+                        'Min: \$${widget.minDeposit.toStringAsFixed(2)} | Confirmations: ${widget.requiredConfirmations}',
                         style: GoogleFonts.inter(
                           color: AppColors.accentPurple,
                           fontSize: 13.sp,
@@ -341,7 +371,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.close,
                       color: AppColors.textSecondary,
                       size: 20,
@@ -352,11 +382,13 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             ),
           ),
           SizedBox(height: 24.h),
+          
+          // Step Indicator
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
               children: [
-                _buildStepIndicator(0, 'Send SOL', Icons.send),
+                _buildStepIndicator(0, 'Send USDT', Icons.send),
                 Expanded(
                   child: Container(
                     height: 2,
@@ -375,6 +407,8 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             ),
           ),
           SizedBox(height: 32.h),
+          
+          // Content
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -397,7 +431,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           height: 44.h,
           decoration: BoxDecoration(
             gradient: isActive
-                ? LinearGradient(
+                ? const LinearGradient(
                     colors: [AppColors.accentGreen, AppColors.accentBlue],
                   )
                 : null,
@@ -407,15 +441,6 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               color: isActive ? Colors.transparent : AppColors.border,
               width: 2,
             ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: AppColors.accentGreen.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
           ),
           child: Center(
             child: isActive
@@ -443,21 +468,16 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
     );
   }
 
+  // ── Step 0: Show QR & Wallet Address ─────────────────────────────────────
   Widget _buildStep0() {
     return Column(
       children: [
+        // QR Code
         Container(
           padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20.r),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentPurple.withOpacity(0.2),
-                blurRadius: 30,
-                offset: const Offset(0, 10),
-              ),
-            ],
           ),
           child: QrImageView(
             data: widget.platformWallet,
@@ -468,8 +488,9 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ),
         SizedBox(height: 24.h),
+        
         Text(
-          'Send SOL to this address',
+          'Send USDT (BEP20) to this address',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 16.sp,
@@ -477,6 +498,8 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ),
         SizedBox(height: 16.h),
+        
+        // Wallet Address with Copy
         GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: widget.platformWallet));
@@ -516,76 +539,58 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: _copied
-                      ? Icon(Icons.check, color: AppColors.accentGreen, size: 18)
-                      : SizedBox(
-                          width: 18.w,
-                          height: 18.h,
-                          child: Lottie.network(AppLottie.copy),
-                        ),
+                      ? const Icon(Icons.check, color: AppColors.accentGreen, size: 18)
+                      : const Icon(Icons.copy, color: AppColors.accentPurple, size: 18),
                 ),
               ],
             ),
           ),
         ),
         SizedBox(height: 20.h),
+        
+        // Info Cards
         _buildInfoCard(
-          AppLottie.info,
+          Icons.info_outline,
           'Minimum Deposit',
-          '0.001 SOL required',
+          '\$${widget.minDeposit.toStringAsFixed(2)} USDT required',
           AppColors.accentOrange,
         ),
         SizedBox(height: 10.h),
         _buildInfoCard(
-          AppLottie.warning,
+          Icons.network_check,
           'Network',
-          'Only Solana Mainnet',
+          'Only BSC (BEP20) supported',
           AppColors.accentRed,
         ),
         SizedBox(height: 10.h),
         _buildInfoCard(
-          AppLottie.secure,
-          'Confirmation',
-          'Usually takes 5-30 seconds',
+          Icons.access_time,
+          'Confirmations',
+          '${widget.requiredConfirmations} blocks required',
           AppColors.accentGreen,
         ),
         SizedBox(height: 32.h),
+        
+        // Next Button
         GestureDetector(
           onTap: () => setState(() => _step = 1),
           child: Container(
             width: double.infinity,
             height: 56.h,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [AppColors.accentGreen, AppColors.accentBlue],
               ),
               borderRadius: BorderRadius.circular(16.r),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentGreen.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
             ),
             alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "I've Sent SOL",
-                  style: GoogleFonts.inter(
-                    color: Colors.black,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                SizedBox(
-                  width: 20.w,
-                  height: 20.h,
-                  child: Lottie.network(AppLottie.arrowRight),
-                ),
-              ],
+            child: Text(
+              "I've Sent USDT",
+              style: GoogleFonts.inter(
+                color: Colors.black,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -594,12 +599,13 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
     );
   }
 
+  // ── Step 1: Enter TxHash & Verify ────────────────────────────────────────
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Enter Transaction Signature',
+          'Enter Transaction Hash',
           style: GoogleFonts.inter(
             color: AppColors.textPrimary,
             fontSize: 18.sp,
@@ -608,7 +614,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
         ),
         SizedBox(height: 8.h),
         Text(
-          'Paste the transaction hash from your wallet to verify and credit your deposit.',
+          'Paste the BEP20 transaction hash from your wallet to verify and credit your deposit.',
           style: GoogleFonts.inter(
             color: AppColors.textSecondary,
             fontSize: 13.sp,
@@ -616,6 +622,8 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ),
         SizedBox(height: 20.h),
+        
+        // How to find guide
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -628,14 +636,10 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             children: [
               Row(
                 children: [
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: Lottie.network(AppLottie.question),
-                  ),
+                  const Icon(Icons.help_outline, color: AppColors.accentBlue, size: 20),
                   SizedBox(width: 8.w),
                   Text(
-                    'How to find your signature?',
+                    'How to find your txHash?',
                     style: GoogleFonts.inter(
                       color: AppColors.accentBlue,
                       fontSize: 13.sp,
@@ -646,7 +650,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               ),
               SizedBox(height: 8.h),
               Text(
-                'Phantom/Solflare: Activity → Tap transaction → Copy Signature',
+                'Trust Wallet/Metamask: Activity → Tap transaction → Copy Transaction Hash',
                 style: GoogleFonts.inter(
                   color: AppColors.textSecondary,
                   fontSize: 12.sp,
@@ -656,21 +660,23 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ),
         SizedBox(height: 24.h),
+        
+        // TxHash Input Field
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(16.r),
             border: Border.all(
-              color: _verifyError.isNotEmpty
+              color: _errorMessage.isNotEmpty
                   ? AppColors.accentRed
-                  : _sigController.text.isNotEmpty
+                  : _txHashController.text.isNotEmpty
                       ? AppColors.accentGreen
                       : AppColors.border,
-              width: _sigController.text.isNotEmpty ? 2 : 1,
+              width: _txHashController.text.isNotEmpty ? 2 : 1,
             ),
           ),
           child: TextField(
-            controller: _sigController,
+            controller: _txHashController,
             style: GoogleFonts.spaceMono(
               color: AppColors.textPrimary,
               fontSize: 12.sp,
@@ -678,7 +684,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             maxLines: 3,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'Paste transaction signature here...',
+              hintText: '0x... (64 characters)',
               hintStyle: GoogleFonts.inter(
                 color: AppColors.textMuted,
                 fontSize: 13.sp,
@@ -689,7 +695,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                 onTap: () async {
                   final data = await Clipboard.getData('text/plain');
                   if (data?.text != null) {
-                    _sigController.text = data!.text!.trim();
+                    _txHashController.text = data!.text!.trim();
                     setState(() {});
                   }
                 },
@@ -700,17 +706,43 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     color: AppColors.accentPurple.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: Lottie.network(AppLottie.copy),
-                  ),
+                  child: const Icon(Icons.paste, color: AppColors.accentPurple, size: 20),
                 ),
               ),
             ),
           ),
         ),
-        if (_verifyError.isNotEmpty) ...[
+        
+        // Pending Status
+        if (_isPending && _currentConfirmations != null) ...[
+          SizedBox(height: 12.h),
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: AppColors.accentOrange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.pending, color: AppColors.accentOrange, size: 18),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(
+                    'Pending: $_currentConfirmations/${widget.requiredConfirmations} confirmations. Please wait and verify again.',
+                    style: GoogleFonts.inter(
+                      color: AppColors.accentOrange,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        
+        // Error Message
+        if (_errorMessage.isNotEmpty) ...[
           SizedBox(height: 12.h),
           Container(
             padding: EdgeInsets.all(12.w),
@@ -721,15 +753,11 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
             ),
             child: Row(
               children: [
-                SizedBox(
-                  width: 18.w,
-                  height: 18.h,
-                  child: Lottie.network(AppLottie.txFailed, repeat: false),
-                ),
+                const Icon(Icons.error_outline, color: AppColors.accentRed, size: 18),
                 SizedBox(width: 10.w),
                 Expanded(
                   child: Text(
-                    _verifyError,
+                    _errorMessage,
                     style: GoogleFonts.inter(
                       color: AppColors.accentRed,
                       fontSize: 12.sp,
@@ -741,6 +769,8 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ],
         SizedBox(height: 32.h),
+        
+        // Verify Button
         GestureDetector(
           onTap: _verifying ? null : _verifyDeposit,
           child: Container(
@@ -753,15 +783,6 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                     : [AppColors.accentGreen, AppColors.accentBlue],
               ),
               borderRadius: BorderRadius.circular(16.r),
-              boxShadow: _verifying
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: AppColors.accentGreen.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
             ),
             alignment: Alignment.center,
             child: _verifying
@@ -771,14 +792,14 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
                       SizedBox(
                         width: 24.w,
                         height: 24.h,
-                        child: CircularProgressIndicator(
+                        child: const CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ),
                       SizedBox(width: 12.w),
                       Text(
-                        'Verifying...',
+                        'Verifying on Blockchain...',
                         style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 16.sp,
@@ -798,10 +819,14 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
           ),
         ),
         SizedBox(height: 16.h),
+        
+        // Back Button
         GestureDetector(
           onTap: () => setState(() {
             _step = 0;
-            _verifyError = '';
+            _errorMessage = '';
+            _isPending = false;
+            _currentConfirmations = null;
           }),
           child: Container(
             width: double.infinity,
@@ -827,7 +852,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
     );
   }
 
-  Widget _buildInfoCard(String lottieUrl, String title, String subtitle, Color color) {
+  Widget _buildInfoCard(IconData icon, String title, String subtitle, Color color) {
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
@@ -845,11 +870,7 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Center(
-              child: SizedBox(
-                width: 20.w,
-                height: 20.h,
-                child: Lottie.network(lottieUrl),
-              ),
+              child: Icon(icon, color: color, size: 20),
             ),
           ),
           SizedBox(width: 12.w),
@@ -882,4 +903,3 @@ class _DepositSheetState extends State<DepositSheet> with TickerProviderStateMix
     );
   }
 }
-

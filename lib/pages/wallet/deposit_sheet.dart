@@ -23,7 +23,7 @@ class AppColors {
   static const Color cardBg       = Color(0xFF161620);
 }
 
-// ── API Response Models ─────────────────────────────────────────────────────
+// ── API Response Model ──────────────────────────────────────────────────────
 class DepositVerifyResponse {
   final bool success;
   final String? mode;
@@ -61,10 +61,10 @@ class DepositVerifyResponse {
 
 // ── Deposit Sheet ────────────────────────────────────────────────────────────
 class DepositSheet extends StatefulWidget {
-  final String platformWallet;    // BEP20_WALLET from backend
-  final double minDeposit;         // MIN_DEPOSIT (default 1.0)
-  final int requiredConfirmations; // REQUIRED_CONFIRMATIONS (default 12)
-  final Map<String, String> headers; // Auth headers with token
+  final String platformWallet;
+  final double minDeposit;
+  final int requiredConfirmations;
+  final Map<String, String> headers;
   final VoidCallback onSuccess;
 
   const DepositSheet({
@@ -97,16 +97,13 @@ class _DepositSheetState extends State<DepositSheet> {
     super.dispose();
   }
 
-  // ── Validate txHash format: 0x + 64 hex characters ─────────────────────
   bool _isValidTxHash(String txHash) {
     return RegExp(r'^0x([A-Fa-f0-9]{64})$').hasMatch(txHash);
   }
 
-  // ── API: Verify Deposit ──────────────────────────────────────────────────
   Future<void> _verifyDeposit() async {
     final txHash = _txHashController.text.trim();
 
-    // Validation
     if (!_isValidTxHash(txHash)) {
       setState(() => _errorMessage = 'Invalid transaction hash format. Must be 0x + 64 hex characters.');
       return;
@@ -134,7 +131,6 @@ class _DepositSheetState extends State<DepositSheet> {
       final data = jsonDecode(res.body);
       final response = DepositVerifyResponse.fromJson(data);
 
-      // Handle 202 Pending (insufficient confirmations)
       if (res.statusCode == 202 && response.pending == true) {
         setState(() {
           _verifying = false;
@@ -145,7 +141,6 @@ class _DepositSheetState extends State<DepositSheet> {
         return;
       }
 
-      // Handle 400/500 errors
       if (res.statusCode != 200 || response.success != true) {
         setState(() {
           _verifying = false;
@@ -154,7 +149,6 @@ class _DepositSheetState extends State<DepositSheet> {
         return;
       }
 
-      // Success: Auto mode or Manual mode
       setState(() => _verifying = false);
       _showSuccessDialog(response);
 
@@ -175,7 +169,6 @@ class _DepositSheetState extends State<DepositSheet> {
     }
   }
 
-  // ── Success Dialog ───────────────────────────────────────────────────────
   void _showSuccessDialog(DepositVerifyResponse response) {
     final isAuto = response.mode == 'auto';
     
@@ -196,7 +189,6 @@ class _DepositSheetState extends State<DepositSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(24.w),
@@ -228,8 +220,6 @@ class _DepositSheetState extends State<DepositSheet> {
                   ],
                 ),
               ),
-              
-              // Body
               Padding(
                 padding: EdgeInsets.all(24.w),
                 child: Column(
@@ -256,8 +246,6 @@ class _DepositSheetState extends State<DepositSheet> {
                       ),
                     ),
                     SizedBox(height: 24.h),
-                    
-                    // Action Button
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(ctx);
@@ -306,7 +294,6 @@ class _DepositSheetState extends State<DepositSheet> {
       ),
       child: Column(
         children: [
-          // Handle bar
           SizedBox(height: 12.h),
           Container(
             width: 40.w,
@@ -317,8 +304,6 @@ class _DepositSheetState extends State<DepositSheet> {
             ),
           ),
           SizedBox(height: 20.h),
-          
-          // Header
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
@@ -382,8 +367,6 @@ class _DepositSheetState extends State<DepositSheet> {
             ),
           ),
           SizedBox(height: 24.h),
-          
-          // Step Indicator
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24.w),
             child: Row(
@@ -407,8 +390,6 @@ class _DepositSheetState extends State<DepositSheet> {
             ),
           ),
           SizedBox(height: 32.h),
-          
-          // Content
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -468,11 +449,9 @@ class _DepositSheetState extends State<DepositSheet> {
     );
   }
 
-  // ── Step 0: Show QR & Wallet Address ─────────────────────────────────────
   Widget _buildStep0() {
     return Column(
       children: [
-        // QR Code
         Container(
           padding: EdgeInsets.all(20.w),
           decoration: BoxDecoration(
@@ -488,7 +467,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 24.h),
-        
         Text(
           'Send USDT (BEP20) to this address',
           style: GoogleFonts.inter(
@@ -498,8 +476,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 16.h),
-        
-        // Wallet Address with Copy
         GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: widget.platformWallet));
@@ -547,8 +523,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 20.h),
-        
-        // Info Cards
         _buildInfoCard(
           Icons.info_outline,
           'Minimum Deposit',
@@ -570,8 +544,6 @@ class _DepositSheetState extends State<DepositSheet> {
           AppColors.accentGreen,
         ),
         SizedBox(height: 32.h),
-        
-        // Next Button
         GestureDetector(
           onTap: () => setState(() => _step = 1),
           child: Container(
@@ -599,7 +571,6 @@ class _DepositSheetState extends State<DepositSheet> {
     );
   }
 
-  // ── Step 1: Enter TxHash & Verify ────────────────────────────────────────
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,8 +593,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 20.h),
-        
-        // How to find guide
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -660,8 +629,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 24.h),
-        
-        // TxHash Input Field
         Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -712,8 +679,6 @@ class _DepositSheetState extends State<DepositSheet> {
             ),
           ),
         ),
-        
-        // Pending Status
         if (_isPending && _currentConfirmations != null) ...[
           SizedBox(height: 12.h),
           Container(
@@ -740,8 +705,6 @@ class _DepositSheetState extends State<DepositSheet> {
             ),
           ),
         ],
-        
-        // Error Message
         if (_errorMessage.isNotEmpty) ...[
           SizedBox(height: 12.h),
           Container(
@@ -769,8 +732,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ],
         SizedBox(height: 32.h),
-        
-        // Verify Button
         GestureDetector(
           onTap: _verifying ? null : _verifyDeposit,
           child: Container(
@@ -819,8 +780,6 @@ class _DepositSheetState extends State<DepositSheet> {
           ),
         ),
         SizedBox(height: 16.h),
-        
-        // Back Button
         GestureDetector(
           onTap: () => setState(() {
             _step = 0;
