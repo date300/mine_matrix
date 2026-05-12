@@ -212,12 +212,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       _appKitModal = ReownAppKitModal(
         context: context,
-        projectId: 'de4fd9cc5d44e0e8a830b232a38184da',
+        projectId: 'f352d8e55f53cd56d611211d9f554ae0',
         metadata: const PairingMetadata(
           name: 'Mine Matrix',
           description: 'Decentralized Mining Platform',
           url: 'https://web3.ltcminematrix.com',
-          icons: ['https://web3.ltcminematrix.com/logo.png'],
+          icons: ['assets/icon/icon.png'],
           redirect: Redirect(
             native: 'web3.ltcminematrix://',
             universal: 'https://web3.ltcminematrix.com',
