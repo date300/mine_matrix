@@ -47,13 +47,22 @@ class _MiningScreenState extends State<MiningScreen>
     try {
       final Map<String, dynamic> data = await _c.doClaim();
 
+      // ??? Backend response parse ???????????????????????????????????????
+      // Server response: { message, coins, usd, withdrawable }
+      // "usd" = remaining coins after cycle (not earned amount)
+      // "withdrawable" = updated total withdrawable
+
       final double newWithdrawable =
           double.tryParse(data['withdrawable']?.toString() ?? '') ??
           prevWithdrawable;
 
+      // Server ?? "usd" = claim ?? ?? remaining coins in USD
+      // earnedUSD = ???? session ? earn ????????
       final double savedCoinsUSD =
           double.tryParse(data['usd']?.toString() ?? '') ?? 0.0;
 
+      // $100 cycle complete ?????? ????
+      // backend: message = "Cycle complete $100 added" ???? withdrawable ???????
       final String message =
           (data['message'] ?? '').toString().toLowerCase();
       final bool cycleComplete = message.contains('complete') ||
@@ -61,6 +70,7 @@ class _MiningScreenState extends State<MiningScreen>
 
       final double withdrawableAdded = cycleComplete ? 100.0 : 0.0;
 
+      // UI refresh
       await _c.fetchStatus();
 
       if (mounted) {
@@ -140,6 +150,7 @@ class _MiningScreenState extends State<MiningScreen>
                               SizedBox(height: 12.h),
                               _buildBoostCard(),
                               SizedBox(height: 30.h),
+                              // FIX: Bottom spacing to prevent content hiding behind navigation bar
                               SizedBox(
                                   height: MediaQuery.of(context).padding.bottom + 20.h),
                             ],
@@ -568,27 +579,8 @@ class _MiningScreenState extends State<MiningScreen>
                   gradient: const LinearGradient(colors: [
                     AppColors.accentPurple, AppColors.accentGreen]),
                 ),
-                // ✅ UPDATED: Solana network image replaces static icon
-                child: Padding(
-                  padding: EdgeInsets.all(8.w),
-                  child: ClipOval(
-                    child: Image.network(
-                      'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(CupertinoIcons.info, color: Colors.white),
-                    ),
-                  ),
-                ),
+                child: Icon(CupertinoIcons.circle_fill,
+                    color: Colors.white, size: 24.sp),
               ),
               SizedBox(width: 16.w),
               Expanded(
@@ -910,3 +902,4 @@ class _MiningScreenState extends State<MiningScreen>
     );
   }
 }
+
