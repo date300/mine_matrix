@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
+import 'package:provider/provider.dart';
+import 'package:mine_matrix/providers/auth_provider.dart';
 
 // --- Colors ---
 class AppColors {
@@ -14,10 +16,9 @@ class AppColors {
   static const Color textSecondary = Color(0xFF8B8B9E);
 }
 
-// Lottie URLs
 class AppLottie {
-  static const String errorCloud = 'https://assets10.lottiefiles.com/packages/lf20_kcsr6fcp.json';
-  static const String refresh    = 'https://assets10.lottiefiles.com/packages/lf20_7fwvvesa.json';
+  static const String errorCloud =
+      'https://assets10.lottiefiles.com/packages/lf20_kcsr6fcp.json';
 }
 
 class CustomErrorWidget extends StatefulWidget {
@@ -43,75 +44,70 @@ class CustomErrorWidget extends StatefulWidget {
 class _CustomErrorWidgetState extends State<CustomErrorWidget>
     with SingleTickerProviderStateMixin {
 
-  late AnimationController _controller;
+  late final AnimationController _lottieController;
   Timer? _pollingTimer;
-  bool _isPolling = false;
-  int _retryCount = 0;
+  bool _isConnecting = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _lottieController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    if (!widget.hasToken) {
-      _startPolling();
-    }
+    if (!widget.hasToken) _startSilentPolling();
   }
 
   @override
   void didUpdateWidget(CustomErrorWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.hasToken && _isPolling) {
-      _stopPolling();
-    }
-    if (!widget.hasToken && !oldWidget.hasToken && !_isPolling) {
-      _startPolling();
+    if (widget.hasToken) {
+      _stopSilentPolling();
+    } else if (!oldWidget.hasToken) {
+      _startSilentPolling();
     }
   }
 
-  void _startPolling() {
-    setState(() => _isPolling = true);
-    _retry();
+  // ── Silent background polling ──────────────────────────────────────────────
+  void _startSilentPolling() {
+    _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(
       Duration(seconds: widget.pollingIntervalSeconds),
-      (_) => _retry(),
+      (_) { if (mounted) widget.onRetry(); },
     );
   }
 
-  void _retry() {
-    if (!mounted) return;
-    setState(() => _retryCount++);
-    widget.onRetry();
-  }
-
-  void _stopPolling() {
+  void _stopSilentPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
-    if (mounted) {
-      setState(() => _isPolling = false);
-    }
   }
 
-  void _manualRetry() {
-    _retryCount = 0;
-    _stopPolling();
-    _startPolling();
+  // ── Connect tap → same modal as TopBar ────────────────────────────────────
+  Future<void> _onConnectTap() async {
+    if (_isConnecting) return;
+    setState(() => _isConnecting = true);
+    try {
+      // TopBar এর মতো exactly same call
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.openModal(context);
+    } finally {
+      if (mounted) setState(() => _isConnecting = false);
+    }
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
-    _controller.dispose();
+    _lottieController.dispose();
     super.dispose();
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.transparent, // ✅ TRANSPARENT
+      color: Colors.transparent,
       child: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 20.h),
@@ -119,59 +115,9 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Lottie
-              SizedBox(
-                width: 100.w,
-                height: 100.h,
-                child: Lottie.network(
-                  AppLottie.errorCloud,
-                  fit: BoxFit.contain,
-                  controller: _controller,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.cloud_off_rounded,
-                    size: 60.w,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              SizedBox(height: 16.h),
-
-              // Title
-              Text(
-                widget.title ?? 'Connection Issue',
-                style: GoogleFonts.inter(
-                  color: AppColors.textPrimary,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8.h),
-
-              // Message
-              Text(
-                widget.message ?? "Couldn't load wallet data",
-                style: GoogleFonts.inter(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.sp,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 20.h),
-
-              // Polling indicator
-              _buildPollingIndicator(),
-
-              if (_retryCount > 0) ...[
-                SizedBox(height: 8.h),
-                Text(
-                  'Attempt $_retryCount',
-                  style: GoogleFonts.inter(
-                    color: AppColors.textSecondary.withOpacity(0.5),
-                    fontSize: 10.sp,
-                  ),
-                ),
-              ],
+              _buildTopIcon(),
+              SizedBox(height: 32.h),
+              _buildConnectButton(),
             ],
           ),
         ),
@@ -179,45 +125,78 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
-  Widget _buildPollingIndicator() {
-    return InkWell(
-      onTap: _manualRetry,
-      borderRadius: BorderRadius.circular(20.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+  Widget _buildTopIcon() {
+    return SizedBox(
+      width: 100.w,
+      height: 100.h,
+      child: Lottie.network(
+        AppLottie.errorCloud,
+        fit: BoxFit.contain,
+        controller: _lottieController,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.cloud_off_rounded,
+          size: 60.w,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectButton() {
+    return GestureDetector(
+      onTap: _isConnecting ? null : _onConnectTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 48.w, vertical: 16.h),
         decoration: BoxDecoration(
-          color: AppColors.surface.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(20.r),
+          gradient: _isConnecting
+              ? null
+              : const LinearGradient(
+                  colors: [AppColors.accentGreen, AppColors.accentBlue],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+          color: _isConnecting ? AppColors.surface : null,
+          borderRadius: BorderRadius.circular(14.r),
           border: Border.all(
-            color: AppColors.accentBlue.withOpacity(0.3),
+            color: _isConnecting
+                ? AppColors.accentBlue.withOpacity(0.3)
+                : Colors.transparent,
             width: 1,
           ),
+          boxShadow: _isConnecting
+              ? []
+              : [
+                  BoxShadow(
+                    color: AppColors.accentGreen.withOpacity(0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 16.w,
-              height: 16.h,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+            if (_isConnecting) ...[
+              SizedBox(
+                width: 16.w,
+                height: 16.h,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+                ),
               ),
-            ),
-            SizedBox(width: 10.w),
+              SizedBox(width: 10.w),
+            ],
             Text(
-              'Connecting...',
+              _isConnecting ? 'Connecting...' : 'Connect',
               style: GoogleFonts.inter(
-                color: AppColors.accentBlue,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
+                color: _isConnecting ? AppColors.accentBlue : Colors.black,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
               ),
-            ),
-            SizedBox(width: 8.w),
-            Icon(
-              Icons.refresh,
-              size: 14.w,
-              color: AppColors.accentBlue.withOpacity(0.7),
             ),
           ],
         ),
