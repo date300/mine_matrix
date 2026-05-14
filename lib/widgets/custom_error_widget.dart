@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
@@ -16,12 +14,6 @@ class AppColors {
   static const Color accentBlue    = Color(0xFF00D4FF);
   static const Color textPrimary   = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8B8B9E);
-
-  // iOS System Colors
-  static const Color iosBlue      = Color(0xFF007AFF);
-  static const Color iosBlueDark  = Color(0xFF0055D4);
-  static const Color iosBlueLight = Color(0xFF4DA3FF);
-  static const Color iosBlueMid   = Color(0xFF0A84FF); // iOS dark mode blue
 }
 
 class AppLottie {
@@ -50,25 +42,19 @@ class CustomErrorWidget extends StatefulWidget {
 }
 
 class _CustomErrorWidgetState extends State<CustomErrorWidget>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
 
   late final AnimationController _lottieController;
-  late final AnimationController _pulseController;
   Timer? _pollingTimer;
+  bool _isConnecting = false;
 
   @override
   void initState() {
     super.initState();
-
     _lottieController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
 
     if (!widget.hasToken) _startSilentPolling();
   }
@@ -83,6 +69,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     }
   }
 
+  // ── Silent background polling ──────────────────────────────────────────────
   void _startSilentPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(
@@ -96,7 +83,10 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     _pollingTimer = null;
   }
 
+  // ── Connect tap → same modal as TopBar ────────────────────────────────────
   void _onConnectTap() {
+    if (_isConnecting) return;
+    // TopBar এর মতো exactly same call — openModal is void, no await needed
     Provider.of<AuthProvider>(context, listen: false).openModal(context);
   }
 
@@ -104,10 +94,10 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
   void dispose() {
     _pollingTimer?.cancel();
     _lottieController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -120,8 +110,8 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildTopIcon(),
-              SizedBox(height: 40.h),
-              _buildIOSConnectButton(),
+              SizedBox(height: 32.h),
+              _buildConnectButton(),
             ],
           ),
         ),
@@ -129,7 +119,6 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
-  // ── Top Lottie icon ────────────────────────────────────────────────────────
   Widget _buildTopIcon() {
     return SizedBox(
       width: 100.w,
@@ -147,82 +136,65 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
-  // ── iOS-style Connect Button ───────────────────────────────────────────────
-  Widget _buildIOSConnectButton() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final double glowOpacity = 0.18 + (_pulseController.value * 0.14);
-
-        return GestureDetector(
-          onTap: _onConnectTap,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(50.r),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 36.w, vertical: 15.h),
-                constraints: BoxConstraints(minWidth: 160.w),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(50.r),
-
-                  // iOS translucent blue — like iOS modal / action sheet
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.iosBlueMid.withOpacity(0.85),
-                      AppColors.iosBlue.withOpacity(0.75),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-
-                  border: Border.all(
-                    color: AppColors.iosBlueLight.withOpacity(0.45),
-                    width: 1.2,
-                  ),
-
-                  boxShadow: [
-                    // iOS blue soft glow — pulses gently
-                    BoxShadow(
-                      color: AppColors.iosBlue.withOpacity(glowOpacity),
-                      blurRadius: 24,
-                      spreadRadius: 2,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.20),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+  Widget _buildConnectButton() {
+    return GestureDetector(
+      onTap: _isConnecting ? null : _onConnectTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 48.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          gradient: _isConnecting
+              ? null
+              : const LinearGradient(
+                  colors: [AppColors.accentGreen, AppColors.accentBlue],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      CupertinoIcons.link,
-                      color: Colors.white,
-                      size: 15.sp,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Connect',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ],
+          color: _isConnecting ? AppColors.surface : null,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(
+            color: _isConnecting
+                ? AppColors.accentBlue.withOpacity(0.3)
+                : Colors.transparent,
+            width: 1,
+          ),
+          boxShadow: _isConnecting
+              ? []
+              : [
+                  BoxShadow(
+                    color: AppColors.accentGreen.withOpacity(0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isConnecting) ...[
+              SizedBox(
+                width: 16.w,
+                height: 16.h,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
                 ),
               ),
+              SizedBox(width: 10.w),
+            ],
+            Text(
+              _isConnecting ? 'Connecting...' : 'Connect',
+              style: GoogleFonts.inter(
+                color: _isConnecting ? AppColors.accentBlue : Colors.black,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }
