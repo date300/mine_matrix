@@ -84,16 +84,10 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
   }
 
   // ── Connect tap → same modal as TopBar ────────────────────────────────────
-  Future<void> _onConnectTap() async {
+  void _onConnectTap() {
     if (_isConnecting) return;
-    setState(() => _isConnecting = true);
-    try {
-      // TopBar এর মতো exactly same call
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      await auth.openModal(context);
-    } finally {
-      if (mounted) setState(() => _isConnecting = false);
-    }
+    // TopBar এর মতো exactly same call — openModal is void, no await needed
+    Provider.of<AuthProvider>(context, listen: false).openModal(context);
   }
 
   @override
