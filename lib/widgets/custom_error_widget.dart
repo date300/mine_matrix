@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
@@ -14,6 +16,12 @@ class AppColors {
   static const Color accentBlue    = Color(0xFF00D4FF);
   static const Color textPrimary   = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8B8B9E);
+
+  // Gold palette
+  static const Color goldLight  = Color(0xFFFFD700);
+  static const Color goldMid    = Color(0xFFFFA500);
+  static const Color goldDark   = Color(0xFFB8860B);
+  static const Color goldGlow   = Color(0xFFFFD70040);
 }
 
 class AppLottie {
@@ -42,19 +50,26 @@ class CustomErrorWidget extends StatefulWidget {
 }
 
 class _CustomErrorWidgetState extends State<CustomErrorWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
 
   late final AnimationController _lottieController;
+  late final AnimationController _pulseController;
   Timer? _pollingTimer;
-  bool _isConnecting = false;
 
   @override
   void initState() {
     super.initState();
+
     _lottieController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
+
+    // Gold glow pulse animation
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
 
     if (!widget.hasToken) _startSilentPolling();
   }
@@ -69,7 +84,6 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     }
   }
 
-  // ── Silent background polling ──────────────────────────────────────────────
   void _startSilentPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(
@@ -83,10 +97,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     _pollingTimer = null;
   }
 
-  // ── Connect tap → same modal as TopBar ────────────────────────────────────
   void _onConnectTap() {
-    if (_isConnecting) return;
-    // TopBar এর মতো exactly same call — openModal is void, no await needed
     Provider.of<AuthProvider>(context, listen: false).openModal(context);
   }
 
@@ -94,10 +105,10 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
   void dispose() {
     _pollingTimer?.cancel();
     _lottieController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -110,8 +121,8 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildTopIcon(),
-              SizedBox(height: 32.h),
-              _buildConnectButton(),
+              SizedBox(height: 40.h),
+              _buildGoldConnectButton(),
             ],
           ),
         ),
@@ -119,6 +130,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
+  // ── Top Lottie icon ────────────────────────────────────────────────────────
   Widget _buildTopIcon() {
     return SizedBox(
       width: 100.w,
@@ -136,65 +148,101 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
-  Widget _buildConnectButton() {
-    return GestureDetector(
-      onTap: _isConnecting ? null : _onConnectTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 48.w, vertical: 16.h),
-        decoration: BoxDecoration(
-          gradient: _isConnecting
-              ? null
-              : const LinearGradient(
-                  colors: [AppColors.accentGreen, AppColors.accentBlue],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-          color: _isConnecting ? AppColors.surface : null,
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: _isConnecting
-                ? AppColors.accentBlue.withOpacity(0.3)
-                : Colors.transparent,
-            width: 1,
-          ),
-          boxShadow: _isConnecting
-              ? []
-              : [
-                  BoxShadow(
-                    color: AppColors.accentGreen.withOpacity(0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+  // ── Gold Professional Connect Button ──────────────────────────────────────
+  Widget _buildGoldConnectButton() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        // Pulse: glow spreads in and out
+        final double glowSpread = 2 + (_pulseController.value * 6);
+        final double glowBlur   = 12 + (_pulseController.value * 16);
+
+        return GestureDetector(
+          onTap: _onConnectTap,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(50.r), // pill/rounded
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: 32.w, vertical: 14.h),
+                constraints: BoxConstraints(minWidth: 160.w),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50.r),
+                  // Gold shimmer gradient — matches TopBar glass style
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.goldLight.withOpacity(0.18),
+                      AppColors.goldMid.withOpacity(0.10),
+                      AppColors.goldDark.withOpacity(0.06),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_isConnecting) ...[
-              SizedBox(
-                width: 16.w,
-                height: 16.h,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+                  border: Border.all(
+                    color: AppColors.goldLight.withOpacity(0.55),
+                    width: 1.4,
+                  ),
+                  boxShadow: [
+                    // Outer gold glow — pulses
+                    BoxShadow(
+                      color: AppColors.goldLight
+                          .withOpacity(0.20 + _pulseController.value * 0.15),
+                      blurRadius: glowBlur,
+                      spreadRadius: glowSpread,
+                    ),
+                    // Inner subtle shadow
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(width: 10.w),
-            ],
-            Text(
-              _isConnecting ? 'Connecting...' : 'Connect',
-              style: GoogleFonts.inter(
-                color: _isConnecting ? AppColors.accentBlue : Colors.black,
-                fontSize: 15.sp,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Chain-link icon — same pattern as TopBar
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          AppColors.goldLight,
+                          AppColors.goldMid,
+                        ],
+                      ).createShader(bounds),
+                      child: Icon(
+                        CupertinoIcons.link,
+                        color: Colors.white, // ShaderMask overrides this
+                        size: 15.sp,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          AppColors.goldLight,
+                          AppColors.goldMid,
+                          AppColors.goldDark,
+                        ],
+                      ).createShader(bounds),
+                      child: Text(
+                        'Connect',
+                        style: GoogleFonts.inter(
+                          color: Colors.white, // ShaderMask overrides
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
