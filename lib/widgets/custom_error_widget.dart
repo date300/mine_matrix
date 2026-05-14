@@ -17,11 +17,11 @@ class AppColors {
   static const Color textPrimary   = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF8B8B9E);
 
-  // Gold palette
-  static const Color goldLight  = Color(0xFFFFD700);
-  static const Color goldMid    = Color(0xFFFFA500);
-  static const Color goldDark   = Color(0xFFB8860B);
-  static const Color goldGlow   = Color(0xFFFFD70040);
+  // iOS System Colors
+  static const Color iosBlue      = Color(0xFF007AFF);
+  static const Color iosBlueDark  = Color(0xFF0055D4);
+  static const Color iosBlueLight = Color(0xFF4DA3FF);
+  static const Color iosBlueMid   = Color(0xFF0A84FF); // iOS dark mode blue
 }
 
 class AppLottie {
@@ -65,10 +65,9 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-    // Gold glow pulse animation
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
 
     if (!widget.hasToken) _startSilentPolling();
@@ -122,7 +121,7 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
             children: [
               _buildTopIcon(),
               SizedBox(height: 40.h),
-              _buildGoldConnectButton(),
+              _buildIOSConnectButton(),
             ],
           ),
         ),
@@ -148,92 +147,73 @@ class _CustomErrorWidgetState extends State<CustomErrorWidget>
     );
   }
 
-  // ── Gold Professional Connect Button ──────────────────────────────────────
-  Widget _buildGoldConnectButton() {
+  // ── iOS-style Connect Button ───────────────────────────────────────────────
+  Widget _buildIOSConnectButton() {
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
-        // Pulse: glow spreads in and out
-        final double glowSpread = 2 + (_pulseController.value * 6);
-        final double glowBlur   = 12 + (_pulseController.value * 16);
+        final double glowOpacity = 0.18 + (_pulseController.value * 0.14);
 
         return GestureDetector(
           onTap: _onConnectTap,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(50.r), // pill/rounded
+            borderRadius: BorderRadius.circular(50.r),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
                 padding: EdgeInsets.symmetric(
-                    horizontal: 32.w, vertical: 14.h),
+                    horizontal: 36.w, vertical: 15.h),
                 constraints: BoxConstraints(minWidth: 160.w),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(50.r),
-                  // Gold shimmer gradient — matches TopBar glass style
+
+                  // iOS translucent blue — like iOS modal / action sheet
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.goldLight.withOpacity(0.18),
-                      AppColors.goldMid.withOpacity(0.10),
-                      AppColors.goldDark.withOpacity(0.06),
+                      AppColors.iosBlueMid.withOpacity(0.85),
+                      AppColors.iosBlue.withOpacity(0.75),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
+
                   border: Border.all(
-                    color: AppColors.goldLight.withOpacity(0.55),
-                    width: 1.4,
+                    color: AppColors.iosBlueLight.withOpacity(0.45),
+                    width: 1.2,
                   ),
+
                   boxShadow: [
-                    // Outer gold glow — pulses
+                    // iOS blue soft glow — pulses gently
                     BoxShadow(
-                      color: AppColors.goldLight
-                          .withOpacity(0.20 + _pulseController.value * 0.15),
-                      blurRadius: glowBlur,
-                      spreadRadius: glowSpread,
+                      color: AppColors.iosBlue.withOpacity(glowOpacity),
+                      blurRadius: 24,
+                      spreadRadius: 2,
                     ),
-                    // Inner subtle shadow
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withOpacity(0.20),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
+
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Chain-link icon — same pattern as TopBar
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [
-                          AppColors.goldLight,
-                          AppColors.goldMid,
-                        ],
-                      ).createShader(bounds),
-                      child: Icon(
-                        CupertinoIcons.link,
-                        color: Colors.white, // ShaderMask overrides this
-                        size: 15.sp,
-                      ),
+                    Icon(
+                      CupertinoIcons.link,
+                      color: Colors.white,
+                      size: 15.sp,
                     ),
                     SizedBox(width: 8.w),
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [
-                          AppColors.goldLight,
-                          AppColors.goldMid,
-                          AppColors.goldDark,
-                        ],
-                      ).createShader(bounds),
-                      child: Text(
-                        'Connect',
-                        style: GoogleFonts.inter(
-                          color: Colors.white, // ShaderMask overrides
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
+                    Text(
+                      'Connect',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],
